@@ -1,0 +1,350 @@
+/*
+ * Beck diagram styles. Everything themeable is a CSS custom property.
+ *
+ * Three-tier cascade (custom properties pierce the Shadow DOM boundary, so a
+ * diagram reads the host site's palette automatically):
+ *     --beck-*  ──default──▶  host palette --color-*  ──default──▶  literal fallback
+ *
+ * Light/dark is purely a matter of redefining the var values under
+ * [data-theme="dark"] — components never special-case the theme, and there are
+ * no `.dark { …hex… }` overrides.
+ */
+
+:host,
+.beck-root {
+  /* surfaces */
+  --beck-surface: var(--color-base-50, #ffffff);
+  --beck-node-bg: var(--color-base-50, #ffffff);
+  --beck-node-border: var(--color-base-200, #e2e8f0);
+  --beck-node-shadow: 0 1px 3px rgb(0 0 0 / 0.05), 0 4px 12px rgb(0 0 0 / 0.06);
+
+  /* text */
+  --beck-text: var(--color-base-800, #1e293b);
+  --beck-text-muted: var(--color-base-500, #64748b);
+  --beck-text-faint: var(--color-base-400, #94a3b8);
+
+  /* semantic accents — each maps to a host ramp with a literal fallback */
+  --beck-primary: var(--color-primary-600, #175ddc);
+  --beck-success: var(--color-emerald-500, #10b981);
+  --beck-warn: var(--color-amber-500, #f59e0b);
+  --beck-danger: var(--color-red-500, #ef4444);
+  --beck-info: var(--color-violet-500, #8b5cf6);
+  --beck-neutral: var(--color-base-400, #94a3b8);
+
+  /* groups */
+  --beck-group-border: color-mix(in srgb, var(--beck-neutral) 45%, transparent);
+  --beck-group-label: var(--beck-text-muted);
+
+  /* edges + flow */
+  --beck-edge: var(--color-base-300, #cbd5e1);
+  --beck-packet: var(--beck-primary);
+
+  /* status pill + icon chip */
+  --beck-icon-bg: var(--color-base-100, #f1f5f9);
+
+  /* per-node accent (overridden inline per node) */
+  --beck-accent: var(--beck-primary);
+
+  --beck-font: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.beck-root[data-theme='dark'],
+:host([mode='dark']) {
+  --beck-surface: var(--color-base-950, #0d1117);
+  --beck-node-bg: var(--color-base-900, #161b22);
+  --beck-node-border: var(--color-base-700, #30363d);
+  --beck-node-shadow: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.4);
+  --beck-text: var(--color-base-50, #f0f6fc);
+  --beck-text-muted: var(--color-base-400, #8b949e);
+  --beck-text-faint: var(--color-base-500, #6e7681);
+  --beck-edge: var(--color-base-700, #30363d);
+  --beck-icon-bg: var(--color-base-800, #21262d);
+}
+
+/* ---- container ---- */
+
+.beck-root {
+  position: relative;
+  color: var(--beck-text);
+  font-family: var(--beck-font);
+  line-height: 1.4;
+}
+
+.beck-title {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--beck-text);
+}
+.beck-subtitle {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  text-align: center;
+  color: var(--beck-text-muted);
+}
+
+.beck-viewport {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+.beck-canvas {
+  position: relative;
+  transform-origin: top left;
+}
+
+/* ---- node card ---- */
+
+.beck-node-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform;
+}
+
+.beck-node {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 180px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--beck-node-bg);
+  border: 1.5px solid var(--beck-node-border);
+  box-shadow: var(--beck-node-shadow);
+  color: var(--beck-text);
+  transition: box-shadow 0.3s, border-color 0.3s, background-color 0.4s, transform 0.2s;
+}
+.beck-node--external {
+  border-style: dashed;
+}
+.beck-node--subtle {
+  opacity: 0.72;
+}
+.beck-node--ghost {
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 14px;
+  border-radius: 16px;
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
+.beck-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  margin-top: 1px;
+  border-radius: 9px;
+  background: var(--beck-icon-bg);
+  color: var(--beck-accent);
+}
+.beck-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.beck-node-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.beck-node-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--beck-text);
+}
+.beck-node-subtitle {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--beck-text-muted);
+}
+
+/* ---- ghost node internals ---- */
+
+.beck-ghost-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.beck-node--ghost .beck-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border-radius: 6px;
+  background: transparent;
+}
+.beck-node--ghost .beck-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.beck-ghost-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--beck-text-muted);
+  white-space: nowrap;
+}
+.beck-status-inline {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--beck-accent);
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+/* ---- status pill ---- */
+
+.beck-status {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--beck-accent) 14%, transparent);
+  color: var(--beck-accent);
+  transition: color 0.15s, background-color 0.15s;
+}
+
+/* ---- group ---- */
+
+.beck-group {
+  position: absolute;
+  z-index: 1;
+  border: 1.5px dashed var(--beck-group-border);
+  border-radius: 18px;
+  pointer-events: none;
+}
+.beck-group-label {
+  position: absolute;
+  z-index: 4;
+  padding: 0 0.35rem;
+  background: var(--beck-surface);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--beck-group-label);
+  white-space: nowrap;
+}
+
+/* ---- edges ---- */
+
+.beck-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+.beck-edge-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  fill: var(--beck-text-muted);
+}
+.beck-packet-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--beck-surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* ---- flow effects (CSS-driven, so they keep running while the timeline is paused) ---- */
+
+@keyframes beck-working {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--beck-working, var(--beck-accent)) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--beck-working, var(--beck-accent)) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--beck-working, var(--beck-accent)) 0%, transparent);
+  }
+}
+.beck-node.beck-working {
+  border-color: var(--beck-working, var(--beck-accent));
+  animation: beck-working 1.5s ease-in-out infinite;
+}
+
+@keyframes beck-stream {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+/* ---- playback controls ---- */
+
+.beck-playback {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 1rem;
+}
+.beck-playback-btn {
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--beck-node-border);
+  background: var(--beck-node-bg);
+  color: var(--beck-text-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.beck-playback-btn:hover {
+  border-color: var(--beck-accent);
+  color: var(--beck-text);
+}
+.beck-playback-btn.is-active {
+  background: var(--beck-primary);
+  border-color: var(--beck-primary);
+  color: #fff;
+}
+
+/* ---- fenced-block embed wrappers ---- */
+
+.beck-embed {
+  margin: 1.25rem 0;
+}
+.beck-error {
+  margin: 1rem 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #e11d48 10%, transparent);
+  color: #e11d48;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beck-node {
+    transition: none;
+  }
+  .beck-node.beck-working {
+    animation: none;
+  }
+}

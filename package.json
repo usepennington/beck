@@ -1,0 +1,29 @@
+{
+  "name": "beck",
+  "version": "0.1.0",
+  "description": "Beck — declarative, animated, CSS-var-themed architecture diagrams from YAML.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "build:lib": "vite build --config vite.config.lib.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.19.21",
+    "gsap": "^3.12.7",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}

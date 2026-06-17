@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Beck</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Enum members in this API are self-descriptive; don't require doc comments on each. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <PackageId>Beck</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Declarative, animated architecture diagrams from YAML. Ships the prebuilt Beck client as a static web asset (served at _content/Beck/beck.global.js) that hydrates fenced ```beck code blocks, plus a dependency-free .NET authoring API (DiagramBuilder) for emitting Beck YAML from code.</Description>
+    <PackageTags>diagram;architecture;yaml;pennington;static-web-assets;svg;animation</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!--
+    The client is built from the TypeScript engine by `npm run build:lib`, which
+    writes wwwroot/beck.global.js. That committed asset is what the Razor SDK packs
+    as a static web asset, so `dotnet pack` never needs Node. Regenerate + commit it
+    when the engine source changes.
+  -->
+
+</Project>

@@ -1,0 +1,24 @@
+meta:
+  title: Web Platform
+  subtitle: Gateway fan-out into grouped services and stores
+nodes:
+  - { id: web, title: Web App, kind: user, subtitle: Browser SPA }
+  - { id: gw, title: API Gateway, kind: gateway, subtitle: Routing + auth }
+  - { id: auth, title: Auth Service }
+  - { id: catalog, title: Catalog Service }
+  - { id: orders, title: Orders Service }
+  - { id: authdb, title: Auth DB, kind: db }
+  - { id: catalogdb, title: Catalog DB, kind: db }
+  - { id: events, title: Events, kind: queue, subtitle: Message bus }
+groups:
+  - { id: services, label: Services, members: [auth, catalog, orders], accent: primary }
+  - { id: data, label: Data Stores, members: [authdb, catalogdb, events], accent: info }
+edges:
+  - { from: web, to: gw }
+  - { from: gw, to: auth }
+  - { from: gw, to: catalog }
+  - { from: gw, to: orders }
+  - { from: auth, to: authdb }
+  - { from: catalog, to: catalogdb }
+  - { from: orders, to: catalogdb }
+  - { from: orders, to: events, kind: async }
