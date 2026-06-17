@@ -9,18 +9,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-    @* Set the theme before first paint to avoid a flash of the wrong palette. *@
+    @* Set the theme before first paint to avoid a flash of the wrong palette.
+       MonorailCSS keys dark mode off the `.dark` class; the Beck engine keys its
+       hydrated-fence theming off `data-theme`. Set both up front. *@
     <script>
         (function () {
             try {
-                var t = localStorage.getItem('beck-theme');
-                if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                document.documentElement.setAttribute('data-theme', t);
+                var stored = localStorage.getItem('theme');
+                var dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+                var root = document.documentElement;
+                root.classList.toggle('dark', dark);
+                root.setAttribute('data-theme', dark ? 'dark' : 'light');
             } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
         })();
     </script>
 
-    <link rel="stylesheet" href="/css/site.css" />
+    @* MonorailCSS runtime stylesheet (utilities + ExtraStyles). *@
+    <link rel="stylesheet" href="/styles.css" />
 
     @* The Beck engine: auto-registers <beck-diagram> and hydrates ```beck fences. *@
     <script src="/_content/Beck/beck.global.js" defer></script>
@@ -28,17 +33,20 @@
 
     <HeadOutlet />
 </head>
-<body>
+<body class="bg-white text-base-800 antialiased dark:bg-base-950 dark:text-base-100">
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         </Found>
         <NotFound>
             <MainLayout>
-                <section class="container" style="padding:80px 32px;text-align:center;">
-                    <div class="eyebrow">404</div>
-                    <h1 style="font-size:38px;font-weight:600;margin:0 0 12px;">Page not found</h1>
-                    <p style="color:var(--text-soft);">The page you're looking for doesn't exist. <a class="mono" style="color:var(--accent-text);" href="/">Back home →</a></p>
+                <section class="mx-auto max-w-[1240px] px-8 py-20 text-center">
+                    <div class="mb-5 font-mono text-xs uppercase tracking-[0.15em] text-primary-700 dark:text-primary-400">404</div>
+                    <h1 class="mb-3 text-4xl font-semibold text-base-900 dark:text-base-50">Page not found</h1>
+                    <p class="text-base-600 dark:text-base-400">
+                        The page you're looking for doesn't exist.
+                        <a class="font-mono text-primary-700 dark:text-primary-400" href="/">Back home →</a>
+                    </p>
                 </section>
             </MainLayout>
         </NotFound>

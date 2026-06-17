@@ -2,9 +2,9 @@
 
 <PageTitle>Playground — Beck</PageTitle>
 
-<div class="pg">
-    <div class="pg-toolbar">
-        <select id="pg-examples" class="pg-tool" style="appearance:auto;">
+<div class="h-[calc(100vh-62px)] flex flex-col">
+    <div class="flex items-center gap-2.5 px-5 py-[9px] border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
+        <select id="pg-examples" class="inline-flex items-center gap-1.5 text-[13px] text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 rounded-lg px-[11px] py-1.5 bg-white dark:bg-base-900 cursor-pointer appearance-auto">
             <option value="">Examples ▾</option>
             <option data-src="/examples/microservices.beck.yaml">Microservices platform</option>
             <option data-src="/examples/event-driven.beck.yaml">Event-driven orders</option>
@@ -13,14 +13,14 @@
             <option data-src="/examples/cicd.beck.yaml">Deploy pipeline</option>
             <option data-src="/examples/nested-groups.beck.yaml">Nested groups</option>
         </select>
-        <span class="pg-tool">Format</span>
-        <span class="pg-tool" style="margin-left:auto;">⤓ Export SVG</span>
-        <span class="pg-tool" style="background:var(--accent);color:#fff;border-color:var(--accent);">Share</span>
+        <span class="inline-flex items-center gap-1.5 text-[13px] text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 rounded-lg px-[11px] py-1.5 bg-white dark:bg-base-900 cursor-pointer">Format</span>
+        <span class="inline-flex items-center gap-1.5 text-[13px] text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 rounded-lg px-[11px] py-1.5 bg-white dark:bg-base-900 cursor-pointer ml-auto">⤓ Export SVG</span>
+        <span class="inline-flex items-center gap-1.5 text-[13px] text-white border rounded-lg px-[11px] py-1.5 cursor-pointer bg-primary-600 border-primary-600 dark:bg-primary-500 dark:border-primary-500">Share</span>
     </div>
 
-    <div class="pg-split">
-        <div class="pg-pane editor">
-            <div class="pg-pane-head">system.beck.yaml</div>
+    <div class="flex-1 grid grid-cols-2 min-h-0 max-md:grid-cols-1 max-md:grid-rows-2">
+        <div class="flex flex-col min-h-0 border-r border-base-200 dark:border-base-800">
+            <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-base-50 dark:bg-base-900">system.beck.yaml</div>
             <div id="pg-editor-host"></div>
             <textarea id="pg-initial" hidden>meta:
   title: Checkout flow
@@ -36,21 +36,21 @@ edges:
   - { from: pay, to: ledger, label: record }
 </textarea>
         </div>
-        <div class="pg-pane preview">
-            <div class="pg-pane-head">
+        <div class="flex flex-col min-h-0">
+            <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-white dark:bg-base-950">
                 preview
-                <span class="live-badge" style="margin-left:auto;"><span class="pulse"></span>live</span>
+                <span class="inline-flex items-center gap-1.5 font-mono text-[11px] text-primary-700 dark:text-primary-400 ml-auto"><span class="h-[7px] w-[7px] rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse"></span>live</span>
             </div>
-            <div class="pg-preview-canvas">
-                <div id="pg-host" style="width:100%;"></div>
+            <div class="dot-grid flex-1 min-h-0 overflow-auto p-6 flex items-center justify-center">
+                <div id="pg-host" class="w-full"></div>
             </div>
         </div>
     </div>
 
-    <div class="pg-statusbar">
+    <div class="flex items-center gap-4 px-5 py-[7px] border-t border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 font-mono text-[11.5px] text-base-400 dark:text-base-500">
         <span id="pg-status" class="ok">✓ valid</span>
         <span id="pg-nodes">0 nodes</span>
         <span id="pg-edges">0 edges</span>
-        <span style="margin-left:auto;">Rendered live by Beck · SVG · PNG</span>
+        <span class="ml-auto">Rendered live by Beck · SVG · PNG</span>
     </div>
 </div>

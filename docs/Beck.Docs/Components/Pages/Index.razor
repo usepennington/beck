@@ -2,46 +2,46 @@
 
 <PageTitle>Beck — architecture diagrams from YAML</PageTitle>
 
-<section class="hero">
+<section class="mx-auto max-w-[1240px] px-8 pt-[78px] pb-[60px] grid grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)] gap-[52px] items-center max-[820px]:grid-cols-1 max-[820px]:pt-12">
     <div>
-        <div class="eyebrow">Diagrams as code · for .NET</div>
-        <h1>Your architecture,<br />drawn from YAML.</h1>
-        <p class="lead">
+        <div class="font-mono text-xs uppercase tracking-[0.15em] text-primary-700 dark:text-primary-400 mb-5">Diagrams as code · for .NET</div>
+        <h1 class="text-[54px] font-semibold leading-[1.04] tracking-[-0.025em] mb-5 text-base-900 dark:text-base-50">Your architecture,<br />drawn from YAML.</h1>
+        <p class="text-lg leading-relaxed text-base-600 dark:text-base-400 mb-[30px] max-w-[460px]">
             Describe your system once in a few lines of YAML. Beck handles layout, routing, and
             styling — and renders clean, animated architecture diagrams you can drop straight into
             docs and pull requests.
         </p>
-        <div class="hero-cta">
-            <a class="btn btn-primary" href="/get-started/">Get started <span class="mono">→</span></a>
-            <a class="btn btn-ghost" href="/playground">Open playground</a>
+        <div class="flex gap-3 mb-[26px]">
+            <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400" href="/get-started/">Get started <span class="font-mono">→</span></a>
+            <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-transparent border border-base-300 dark:border-base-700 text-base-900 dark:text-base-50 hover:bg-base-50 dark:hover:bg-base-900" href="/playground">Open playground</a>
         </div>
-        <div class="install-chip">
-            <span class="dollar">$</span>
-            <span class="cmd">dotnet add package Beck</span>
-            <span class="copy" data-copy="dotnet add package Beck">copy</span>
+        <div class="inline-flex items-center gap-3 bg-base-50 dark:bg-base-900 border border-base-200 dark:border-base-800 rounded-[10px] px-[14px] py-[11px] font-mono text-[13.5px]">
+            <span class="text-primary-700 dark:text-primary-400">$</span>
+            <span>dotnet add package Beck</span>
+            <span class="ml-1.5 text-base-400 dark:text-base-500 border-l border-base-200 dark:border-base-800 pl-3 cursor-pointer" data-copy="dotnet add package Beck">copy</span>
         </div>
     </div>
 
-    <div class="editor-card">
-        <div class="editor-titlebar">
-            <span class="tl-dot r"></span><span class="tl-dot y"></span><span class="tl-dot g"></span>
-            <span class="fname">system.beck.yaml</span>
-            <span class="live-badge"><span class="pulse"></span>live</span>
+    <div class="border border-base-200 dark:border-base-800 rounded-2xl bg-white dark:bg-base-900 shadow-[0_12px_40px_-16px_rgba(20,45,35,0.12)] overflow-hidden">
+        <div class="flex items-center gap-2 px-[14px] py-[11px] border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
+            <span class="h-[11px] w-[11px] rounded-full bg-[#e6685b]"></span><span class="h-[11px] w-[11px] rounded-full bg-[#e0b341]"></span><span class="h-[11px] w-[11px] rounded-full bg-[#5fb866]"></span>
+            <span class="ml-1.5 font-mono text-[11.5px] text-base-400 dark:text-base-500">system.beck.yaml</span>
+            <span class="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-primary-700 dark:text-primary-400"><span class="h-[7px] w-[7px] rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse"></span>live</span>
         </div>
-        <div style="display:grid;grid-template-columns:minmax(0,0.92fr) minmax(0,1.08fr);">
-            <div class="code-body" style="border-right:1px solid var(--border);background:var(--code-bg);font-size:12px;line-height:1.85;"><span class="k">meta</span><span class="c">:</span>
-  <span class="k">direction</span><span class="c">:</span> <span class="s">TB</span>
-<span class="k">nodes</span><span class="c">:</span>
-  <span class="c">-</span> { id: client, title: <span class="s">Client</span> }
-  <span class="c">-</span> { id: api, title: <span class="s">API Gateway</span> }
-  <span class="c">-</span> { id: orders, title: <span class="s">Orders</span> }
-  <span class="c">-</span> { id: users, title: <span class="s">Users</span> }
-<span class="k">edges</span><span class="c">:</span>
-  <span class="c">-</span> { from: client, to: api }
-  <span class="c">-</span> { from: api, to: orders }
-  <span class="c">-</span> { from: api, to: users }</div>
-            <div class="diagram-surface" style="border:none;border-radius:0;margin:0;min-height:300px;padding:16px;overflow:hidden;">
-                <beck-diagram mode="auto" style="width:100%;">
+        <div class="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+            <div class="font-mono whitespace-pre border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 text-[12px] leading-[1.85] p-4"><span class="tok-key">meta</span><span class="tok-punct">:</span>
+  <span class="tok-key">direction</span><span class="tok-punct">:</span> <span class="tok-str">TB</span>
+<span class="tok-key">nodes</span><span class="tok-punct">:</span>
+  <span class="tok-punct">-</span> { id: client, title: <span class="tok-str">Client</span> }
+  <span class="tok-punct">-</span> { id: api, title: <span class="tok-str">API Gateway</span> }
+  <span class="tok-punct">-</span> { id: orders, title: <span class="tok-str">Orders</span> }
+  <span class="tok-punct">-</span> { id: users, title: <span class="tok-str">Users</span> }
+<span class="tok-key">edges</span><span class="tok-punct">:</span>
+  <span class="tok-punct">-</span> { from: client, to: api }
+  <span class="tok-punct">-</span> { from: api, to: orders }
+  <span class="tok-punct">-</span> { from: api, to: users }</div>
+            <div class="dot-grid min-h-[300px] p-4 overflow-hidden">
+                <beck-diagram mode="auto" class="w-full">
                     <script type="application/yaml">
 meta:
   title: Web Platform
@@ -62,31 +62,31 @@ edges:
     </div>
 </section>
 
-<section class="feature-row">
-    <div class="feature-card">
-        <div class="feature-icon">yaml</div>
-        <h3>Plain YAML, real diagrams</h3>
-        <p>List your nodes and edges. Beck takes care of layout, edge routing, grouping, and theming automatically.</p>
+<section class="mx-auto max-w-[1240px] px-8 pt-[18px] pb-16 grid grid-cols-3 gap-6 max-[820px]:grid-cols-1">
+    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
+        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">yaml</div>
+        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Plain YAML, real diagrams</h3>
+        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">List your nodes and edges. Beck takes care of layout, edge routing, grouping, and theming automatically.</p>
     </div>
-    <div class="feature-card">
-        <div class="feature-icon">git</div>
-        <h3>Lives in your repo</h3>
-        <p>Diagrams are text. Review them in pull requests, diff every change, and never let architecture docs drift again.</p>
+    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
+        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">git</div>
+        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Lives in your repo</h3>
+        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">Diagrams are text. Review them in pull requests, diff every change, and never let architecture docs drift again.</p>
     </div>
-    <div class="feature-card">
-        <div class="feature-icon">C#</div>
-        <h3>.NET native</h3>
-        <p>Author diagrams from C# with <span class="mono" style="font-size:13px;">Beck.Authoring</span>, or render them live in any ASP.NET site.</p>
+    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
+        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">C#</div>
+        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">.NET native</h3>
+        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">Author diagrams from C# with <span class="font-mono text-[13px]">Beck.Authoring</span>, or render them live in any ASP.NET site.</p>
     </div>
 </section>
 
-<section class="cta-band">
-    <div class="inner">
-        <h2>Start diagramming in five minutes.</h2>
-        <p>Add the package, write a few lines of YAML, and render your first diagram. No accounts, no canvas wrangling.</p>
-        <div class="cta-actions">
-            <a class="btn btn-primary" href="/get-started/">Read the guide</a>
-            <a class="btn btn-ghost" href="/examples/">Browse examples</a>
+<section class="border-t border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
+    <div class="mx-auto max-w-[1240px] px-8 py-[72px] text-center">
+        <h2 class="text-3xl font-semibold tracking-[-0.02em] mb-3 text-base-900 dark:text-base-50">Start diagramming in five minutes.</h2>
+        <p class="text-[17px] text-base-600 dark:text-base-400 mb-[26px] mx-auto max-w-[480px]">Add the package, write a few lines of YAML, and render your first diagram. No accounts, no canvas wrangling.</p>
+        <div class="flex gap-3 justify-center">
+            <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400" href="/get-started/">Read the guide</a>
+            <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-transparent border border-base-300 dark:border-base-700 text-base-900 dark:text-base-50 hover:bg-base-50 dark:hover:bg-base-900" href="/examples/">Browse examples</a>
         </div>
     </div>
 </section>

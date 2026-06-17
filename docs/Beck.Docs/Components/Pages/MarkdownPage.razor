@@ -6,36 +6,36 @@
 @if (_html is not null)
 {
     <PageTitle>@_title — Beck</PageTitle>
-    <div class="docs-shell">
+    <div class="mx-auto max-w-[1240px] px-8 grid grid-cols-[230px_1fr] gap-12 items-start max-lg:grid-cols-1">
         <Sidebar />
-        <article class="docs-article">
-            <div class="breadcrumb">
-                <a href="@_areaHref" style="color:var(--text-faint);">@_areaLabel</a>
-                <span class="sep">/</span>@_title
+        <article class="py-[34px] pb-[90px] min-w-0 max-w-[760px]">
+            <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">
+                <a href="@_areaHref" class="text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400">@_areaLabel</a>
+                <span class="mx-1.5">/</span>@_title
             </div>
-            <div class="prose">
+            <div class="prose dark:prose-invert max-w-none">
                 <h1>@_title</h1>
                 @((MarkupString)_html)
             </div>
 
             @if (_prev is not null || _next is not null)
             {
-                <div class="next-cards">
+                <div class="grid grid-cols-2 gap-4 mt-12 max-sm:grid-cols-1">
                     @if (_prev is not null)
                     {
-                        <a class="next-card" href="@_prev.Url">
-                            <div class="knd">← PREVIOUS</div>
-                            <div class="ttl">@_prev.Title</div>
-                            <div class="dsc">@_prev.Description</div>
+                        <a class="block border border-base-200 dark:border-base-800 rounded-[11px] p-[18px] bg-white dark:bg-base-900 hover:border-base-300 dark:hover:border-base-700" href="@_prev.Url">
+                            <div class="font-mono text-[11px] text-base-400 dark:text-base-500 mb-1.5">← PREVIOUS</div>
+                            <div class="text-base font-semibold text-base-900 dark:text-base-50 mb-1">@_prev.Title</div>
+                            <div class="text-[13.5px] text-base-600 dark:text-base-400">@_prev.Description</div>
                         </a>
                     }
                     else { <span></span> }
                     @if (_next is not null)
                     {
-                        <a class="next-card" href="@_next.Url" style="@(_prev is null ? "grid-column:2;" : "")">
-                            <div class="knd">NEXT →</div>
-                            <div class="ttl">@_next.Title</div>
-                            <div class="dsc">@_next.Description</div>
+                        <a class="block border border-base-200 dark:border-base-800 rounded-[11px] p-[18px] bg-white dark:bg-base-900 hover:border-base-300 dark:hover:border-base-700 @(_prev is null ? "col-start-2" : "")" href="@_next.Url">
+                            <div class="font-mono text-[11px] text-base-400 dark:text-base-500 mb-1.5">NEXT →</div>
+                            <div class="text-base font-semibold text-base-900 dark:text-base-50 mb-1">@_next.Title</div>
+                            <div class="text-[13.5px] text-base-600 dark:text-base-400">@_next.Description</div>
                         </a>
                     }
                 </div>
@@ -46,10 +46,10 @@
 else
 {
     <PageTitle>Not found — Beck</PageTitle>
-    <section class="container" style="padding:80px 32px;text-align:center;">
-        <div class="eyebrow">404</div>
-        <h1 style="font-size:38px;font-weight:600;margin:0 0 12px;">Page not found</h1>
-        <p style="color:var(--text-soft);">No content matches <span class="mono">@Path</span>. <a class="mono" style="color:var(--accent-text);" href="/">Back home →</a></p>
+    <section class="mx-auto max-w-[1240px] px-8 py-20 text-center">
+        <div class="font-mono text-xs uppercase tracking-[0.15em] text-primary-700 dark:text-primary-400">404</div>
+        <h1 class="text-4xl font-semibold mb-3 text-base-900 dark:text-base-50">Page not found</h1>
+        <p class="text-base-600 dark:text-base-400">No content matches <span class="font-mono">@Path</span>. <a class="font-mono text-primary-700 dark:text-primary-400" href="/">Back home →</a></p>
     </section>
 }
 

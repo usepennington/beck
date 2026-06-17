@@ -6,15 +6,7 @@
   'use strict';
 
   function currentTheme() {
-    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-  }
-
-  function applyToggleGlyphs() {
-    var dark = currentTheme() === 'dark';
-    document.querySelectorAll('.theme-toggle').forEach(function (b) {
-      b.textContent = dark ? '☀' : '☾'; // ☀ when dark (click=light), ☾ when light
-      b.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
-    });
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   }
 
   // <beck-diagram> custom elements pick their theme from the `mode` attribute, not from
@@ -25,9 +17,13 @@
   }
 
   function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    try { localStorage.setItem('beck-theme', theme); } catch (e) {}
-    applyToggleGlyphs();
+    var root = document.documentElement;
+    // MonorailCSS keys dark mode off the `.dark` class; the Beck engine keys its
+    // hydrated-fence theming off `data-theme`. Drive both from one toggle. The
+    // sun/moon glyphs swap purely in CSS via the `.dark` class — no JS needed.
+    root.classList.toggle('dark', theme === 'dark');
+    root.setAttribute('data-theme', theme);
+    try { localStorage.setItem('theme', theme); } catch (e) {}
     syncDiagramModes(theme);
     window.dispatchEvent(new CustomEvent('beck:themechange', { detail: { theme: theme } }));
   }
@@ -189,7 +185,6 @@
 
   // ---- boot ---------------------------------------------------------------
   function boot() {
-    applyToggleGlyphs();
     document.querySelectorAll('.theme-toggle').forEach(function (b) {
       if (b.__wired) return; b.__wired = true;
       b.addEventListener('click', toggleTheme);

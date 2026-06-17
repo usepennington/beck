@@ -14,6 +14,10 @@
     <!-- Pennington content engine (bare host) + tree-sitter :symbol source embeds. -->
     <ProjectReference Include="..\..\..\penn\src\Pennington\Pennington.csproj" />
     <ProjectReference Include="..\..\..\penn\src\Pennington.TreeSitter\Pennington.TreeSitter.csproj" />
+    <!-- MonorailCSS: runtime utility-class discovery + the /styles.css endpoint. The
+         semantic primary/accent/base palette also feeds the embedded Beck engine via
+         the emitted color CSS variables. -->
+    <ProjectReference Include="..\..\..\penn\src\Pennington.MonorailCss\Pennington.MonorailCss.csproj" />
   </ItemGroup>
 
   <ItemGroup>

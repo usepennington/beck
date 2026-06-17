@@ -18,6 +18,9 @@ dotnet/**/obj/
 /*.png
 .playwright-mcp/
 
+# Pennington static build output
+docs/Beck.Docs/output/
+
 # IDE
 .idea/
 .vs/

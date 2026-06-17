@@ -1,0 +1,109 @@
+namespace Beck.Docs;
+
+/// <summary>
+/// Raw CSS appended to the generated <c>/styles.css</c> via
+/// <c>MonorailCssOptions.ExtraStyles</c>. Everything here is something MonorailCSS's
+/// utility/discovery pipeline can't (or shouldn't) produce:
+/// <list type="bullet">
+///   <item>the IBM Plex font wiring (<c>--font-sans</c> / <c>--font-mono</c>);</item>
+///   <item>the signature dot-grid surface (<c>.dot-grid</c>) reused by every diagram frame;</item>
+///   <item>syntax tokens for the <b>hand-authored</b> code snippets in the hero/API pages
+///         (Markdig fences are colored by <c>SyntaxTheme</c> instead);</item>
+///   <item>framing for the <c>.beck-embed</c> wrapper the Beck engine injects when it
+///         hydrates a <c>```beck</c> fence — we can't put utility classes on DOM we don't render;</item>
+///   <item>playground elements created or class-toggled by <c>site.js</c>: the runtime
+///         IL scan that discovers utility classes never sees a class that only exists in a
+///         JavaScript string, so those stay declarative CSS.</item>
+/// </list>
+/// All colors resolve from the palette variables MonorailCSS emits for the mapped
+/// primary/accent/base slots (and flip under <c>.dark</c>), so this CSS themes itself.
+/// </summary>
+internal static class BrandStyling
+{
+    public const string ExtraStyles = """
+        /* ---- reset safety net (harmless if MonorailCSS preflight already does it) ---- */
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; }
+        html { scroll-padding-top: 5rem; }
+
+        /* ---- fonts: IBM Plex is part of the brand identity ---- */
+        :root {
+          --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+          --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+        }
+        body { font-family: var(--font-sans); }
+
+        /* ---- signature dot-grid surface (apply to our own diagram frames) ---- */
+        .dot-grid {
+          background-color: var(--color-base-50);
+          background-image: radial-gradient(var(--color-base-200) 1px, transparent 1px);
+          background-size: 16px 16px;
+        }
+        .dark .dot-grid {
+          background-color: var(--color-base-900);
+          background-image: radial-gradient(var(--color-base-800) 1px, transparent 1px);
+        }
+
+        /* ---- hand-authored code-sample syntax tokens (hero + API pages) ---- */
+        .tok-key    { color: var(--color-primary-700); }
+        .tok-accent { color: var(--color-primary-700); }
+        .tok-punct  { color: var(--color-base-400); }
+        .tok-str    { color: #b45309; }
+        .dark .tok-key    { color: var(--color-primary-400); }
+        .dark .tok-accent { color: var(--color-primary-400); }
+        .dark .tok-punct  { color: var(--color-base-500); }
+        .dark .tok-str    { color: #e0b341; }
+
+        /* ---- Beck engine embeds (Beck injects this DOM; can't utility-class it) ---- */
+        /* A hydrated ```beck fence becomes <div class="beck-embed">; frame it on the
+           dot-grid surface so every live diagram reads as a framed preview. */
+        .beck-embed {
+          position: relative;
+          border: 1px solid var(--color-base-200);
+          border-radius: 12px;
+          background-color: var(--color-base-50);
+          background-image: radial-gradient(var(--color-base-200) 1px, transparent 1px);
+          background-size: 16px 16px;
+          padding: 26px 18px;
+          margin: 0 0 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 200px;
+          max-width: 100%;
+          overflow: auto;
+        }
+        .dark .beck-embed {
+          border-color: var(--color-base-800);
+          background-color: var(--color-base-900);
+          background-image: radial-gradient(var(--color-base-800) 1px, transparent 1px);
+        }
+        .prose .beck-embed > .beck-root { max-width: 100%; }
+        beck-diagram { display: block; max-width: 100%; }
+        /* The playground renders into its own canvas — strip the fence frame there. */
+        .pg-preview-canvas .beck-embed {
+          border: 0; background: none; padding: 0; margin: 0; min-height: 0;
+        }
+
+        /* ---- playground: elements created / class-toggled by site.js ---- */
+        /* IL discovery can't see classes that exist only inside a JS string, so these
+           stay declarative CSS rather than utilities. */
+        #pg-editor-host { flex: 1 1 0%; min-height: 0; width: 100%; overflow: hidden; background: var(--color-base-50); }
+        .dark #pg-editor-host { background: var(--color-base-900); }
+        #pg-editor-host .monaco-editor, #pg-editor-host .monaco-editor .overflow-guard { border-radius: 0; }
+        .pg-editor {
+          flex: 1; border: none; outline: none; resize: none; width: 100%;
+          padding: 16px 18px; font-family: var(--font-mono); font-size: 14px; line-height: 1.8;
+          background: var(--color-base-50); color: var(--color-base-900); tab-size: 2;
+        }
+        .dark .pg-editor { background: var(--color-base-900); color: var(--color-base-50); }
+        #pg-status.ok  { color: var(--color-primary-600); }
+        #pg-status.err { color: #e6685b; }
+
+        /* ---- global scrollbar polish ---- */
+        ::-webkit-scrollbar { width: 11px; height: 11px; }
+        ::-webkit-scrollbar-thumb { background: var(--color-base-300); border-radius: 7px; }
+        .dark ::-webkit-scrollbar-thumb { background: var(--color-base-700); }
+        ::-webkit-scrollbar-track { background: transparent; }
+        """;
+}

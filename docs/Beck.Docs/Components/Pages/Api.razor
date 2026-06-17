@@ -2,61 +2,61 @@
 
 <PageTitle>API reference — Beck</PageTitle>
 
-<div class="docs-shell" style="max-width:1180px;grid-template-columns:250px 1fr;">
-    <aside class="sidebar">
-        <div class="sidebar-label" style="text-transform:none;">Beck.Authoring</div>
-        <div class="api-symbols">
-            <a class="symbol-link active" href="#diagrambuilder">DiagramBuilder</a>
-            <a class="symbol-link" href="#nodebuilder">NodeBuilder</a>
-            <a class="symbol-link" href="#edgebuilder">EdgeBuilder</a>
-            <a class="symbol-link" href="#groupbuilder">GroupBuilder</a>
-            <a class="symbol-link" href="#flowbuilder">FlowBuilder</a>
+<div class="mx-auto max-w-[1180px] px-8 grid grid-cols-[250px_1fr] gap-12 items-start max-lg:grid-cols-1">
+    <aside class="sticky top-[62px] self-start max-h-[calc(100vh-62px)] overflow-y-auto py-[34px]">
+        <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck.Authoring</div>
+        <div class="flex flex-col gap-px mb-[22px]">
+            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-950/40" href="#diagrambuilder">DiagramBuilder</a>
+            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#nodebuilder">NodeBuilder</a>
+            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#edgebuilder">EdgeBuilder</a>
+            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#groupbuilder">GroupBuilder</a>
+            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#flowbuilder">FlowBuilder</a>
         </div>
-        <div class="sidebar-label" style="text-transform:none;">Beck (client)</div>
-        <div class="api-symbols">
-            <a class="symbol-link" href="#beckassets">BeckAssets</a>
-            <span class="symbol-link">&lt;beck-diagram&gt;</span>
+        <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck (client)</div>
+        <div class="flex flex-col gap-px mb-[22px]">
+            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#beckassets">BeckAssets</a>
+            <span class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 dark:text-base-400">&lt;beck-diagram&gt;</span>
         </div>
     </aside>
 
-    <article class="docs-article" style="max-width:760px;">
-        <div class="breadcrumb">API <span class="sep">/</span> Beck.Authoring <span class="sep">/</span> DiagramBuilder</div>
-        <div id="diagrambuilder" style="display:flex;align-items:center;gap:11px;margin-bottom:12px;">
-            <span class="badge-kind">class</span>
-            <h1 class="api-h1">DiagramBuilder</h1>
+    <article class="max-w-[760px] min-w-0 py-[34px] pb-[90px]">
+        <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">API <span class="mx-1.5">/</span> Beck.Authoring <span class="mx-1.5">/</span> DiagramBuilder</div>
+        <div id="diagrambuilder" class="flex items-center gap-[11px] mb-3">
+            <span class="font-mono text-[11px] uppercase tracking-[0.08em] text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-[9px] py-0.5">class</span>
+            <h1 class="font-mono text-3xl font-semibold tracking-[-0.01em] text-base-900 dark:text-base-50">DiagramBuilder</h1>
         </div>
-        <p style="font-size:16px;line-height:1.65;color:var(--text-soft);margin:0 0 14px;">
+        <p class="text-base leading-[1.65] text-base-600 dark:text-base-400 m-0 mb-3.5">
             A dependency-free fluent builder that turns code into Beck YAML — or a fenced
-            <span class="mono" style="font-size:13.5px;color:var(--text);">```beck</span> Markdown block.
+            <span class="font-mono text-[13.5px] text-base-900 dark:text-base-50">```beck</span> Markdown block.
             Walk any model (an Aspire app graph, an EF model, a service registry) into one and
             emit a diagram.
         </p>
-        <div class="mono" style="font-size:12.5px;color:var(--text-faint);margin-bottom:34px;">namespace Beck <span style="margin:0 8px;">·</span> assembly Beck.dll</div>
+        <div class="font-mono text-[12.5px] text-base-400 dark:text-base-500 mb-[34px]">namespace Beck <span class="mx-2">·</span> assembly Beck.dll</div>
 
-        <h2 class="api-section-h">Methods</h2>
-        <div style="margin-bottom:40px;">
+        <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 pb-[9px] border-b border-base-200 dark:border-base-800">Methods</h2>
+        <div class="mb-10">
             @foreach (var m in Methods)
             {
-                <div class="member-card">
-                    <div class="member-sig">@((MarkupString)m.Sig)</div>
-                    <p>@((MarkupString)m.Doc)</p>
+                <div class="border border-base-200 dark:border-base-800 rounded-[11px] overflow-hidden bg-white dark:bg-base-900 mb-3.5">
+                    <div class="px-[15px] py-3 font-mono text-[13.5px] bg-base-50 dark:bg-base-900 border-b border-base-200 dark:border-base-800">@((MarkupString)m.Sig)</div>
+                    <p class="m-0 px-[15px] py-3 text-sm leading-snug text-base-600 dark:text-base-400">@((MarkupString)m.Doc)</p>
                 </div>
             }
         </div>
 
-        <h2 class="api-section-h">Example</h2>
-        <div class="code-block">
-            <div class="code-titlebar">Program.cs<span class="copy" data-copy="">copy</span></div>
-            <div class="code-body"><span class="k">var</span> fence = <span class="k">new</span> DiagramBuilder(<span class="s">"Web Platform"</span>)
+        <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 pb-[9px] border-b border-base-200 dark:border-base-800">Example</h2>
+        <div class="border border-base-200 dark:border-base-800 rounded-[10px] overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
+            <div class="flex items-center px-[13px] py-2 border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500">Program.cs<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
+            <div class="px-[15px] py-[13px] font-mono text-[13.5px] leading-[1.75] whitespace-pre overflow-auto text-base-900 dark:text-base-50"><span class="tok-key">var</span> fence = <span class="tok-key">new</span> DiagramBuilder(<span class="tok-str">"Web Platform"</span>)
     .Direction(Direction.TB)
-    .Node(<span class="s">"web"</span>, n => n.Title(<span class="s">"Web App"</span>).Kind(NodeKind.User))
-    .Node(<span class="s">"api"</span>, <span class="s">"API Server"</span>)
-    .Edge(<span class="s">"web"</span>, <span class="s">"api"</span>)
-    .ToFence();   <span class="c">// drop straight into a .md file</span></div>
+    .Node(<span class="tok-str">"web"</span>, n => n.Title(<span class="tok-str">"Web App"</span>).Kind(NodeKind.User))
+    .Node(<span class="tok-str">"api"</span>, <span class="tok-str">"API Server"</span>)
+    .Edge(<span class="tok-str">"web"</span>, <span class="tok-str">"api"</span>)
+    .ToFence();   <span class="tok-punct">// drop straight into a .md file</span></div>
         </div>
 
-        <p style="font-size:15px;color:var(--text-soft);">
-            Authoring more than a snippet? The <a href="/docs/authoring-from-csharp" style="color:var(--accent-text);">Authoring from C#</a>
+        <p class="text-[15px] text-base-600 dark:text-base-400">
+            Authoring more than a snippet? The <a href="/docs/authoring-from-csharp" class="text-primary-700 dark:text-primary-400">Authoring from C#</a>
             guide shows the full builder driving a live diagram, with the source pulled straight
             from the compiled sample.
         </p>
@@ -68,21 +68,21 @@
 
     private static readonly Member[] Methods =
     [
-        new("<span class=\"kw\">DiagramBuilder</span>(<span class=\"ty\">string</span> title)",
+        new("<span class=\"tok-key\">DiagramBuilder</span>(<span class=\"tok-str\">string</span> title)",
             "Create a builder, optionally with a diagram title."),
-        new("<span class=\"ty\">DiagramBuilder</span> <span class=\"nm\">Direction</span>(<span class=\"ty\">Direction</span> direction)",
-            "Set the layout direction — <span class=\"mono\">TB</span> (default), <span class=\"mono\">BT</span>, <span class=\"mono\">LR</span>, or <span class=\"mono\">RL</span>."),
-        new("<span class=\"ty\">DiagramBuilder</span> <span class=\"nm\">Node</span>(<span class=\"ty\">string</span> id, <span class=\"ty\">Action&lt;NodeBuilder&gt;</span> configure)",
-            "Add a node and configure it — title, <span class=\"mono\">Kind</span>, <span class=\"mono\">Icon</span>, <span class=\"mono\">Accent</span>, <span class=\"mono\">Link</span>, and more."),
-        new("<span class=\"ty\">DiagramBuilder</span> <span class=\"nm\">Group</span>(<span class=\"ty\">string</span> id, <span class=\"ty\">Action&lt;GroupBuilder&gt;</span> configure)",
+        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Direction</span>(<span class=\"tok-str\">Direction</span> direction)",
+            "Set the layout direction — <span class=\"font-mono\">TB</span> (default), <span class=\"font-mono\">BT</span>, <span class=\"font-mono\">LR</span>, or <span class=\"font-mono\">RL</span>."),
+        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Node</span>(<span class=\"tok-str\">string</span> id, <span class=\"tok-str\">Action&lt;NodeBuilder&gt;</span> configure)",
+            "Add a node and configure it — title, <span class=\"font-mono\">Kind</span>, <span class=\"font-mono\">Icon</span>, <span class=\"font-mono\">Accent</span>, <span class=\"font-mono\">Link</span>, and more."),
+        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Group</span>(<span class=\"tok-str\">string</span> id, <span class=\"tok-str\">Action&lt;GroupBuilder&gt;</span> configure)",
             "Add a labelled, boxed cluster. Members may be node ids <em>or</em> other group ids — groups nest to any depth."),
-        new("<span class=\"ty\">DiagramBuilder</span> <span class=\"nm\">Edge</span>(<span class=\"ty\">string</span> from, <span class=\"ty\">string</span> to, <span class=\"ty\">Action&lt;EdgeBuilder&gt;</span> configure)",
-            "Connect two nodes (or groups). Configure label, style, curve, <span class=\"mono\">Kind</span>, color, and arrowheads."),
-        new("<span class=\"ty\">DiagramBuilder</span> <span class=\"nm\">Flow</span>(<span class=\"ty\">Action&lt;FlowBuilder&gt;</span> configure)",
+        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Edge</span>(<span class=\"tok-str\">string</span> from, <span class=\"tok-str\">string</span> to, <span class=\"tok-str\">Action&lt;EdgeBuilder&gt;</span> configure)",
+            "Connect two nodes (or groups). Configure label, style, curve, <span class=\"font-mono\">Kind</span>, color, and arrowheads."),
+        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Flow</span>(<span class=\"tok-str\">Action&lt;FlowBuilder&gt;</span> configure)",
             "Script the animation: packets, status pills, pulses, working/idle, fail beats, and parallel steps. Omit it and Beck auto-derives a flow from the edges."),
-        new("<span class=\"ty\">string</span> <span class=\"nm\">ToYaml</span>()",
+        new("<span class=\"tok-str\">string</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">ToYaml</span>()",
             "Render the diagram as Beck YAML."),
-        new("<span class=\"ty\">string</span> <span class=\"nm\">ToFence</span>()",
-            "Render as a fenced <span class=\"mono\">```beck</span> Markdown block — the client renders it on any page."),
+        new("<span class=\"tok-str\">string</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">ToFence</span>()",
+            "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
     ];
 }

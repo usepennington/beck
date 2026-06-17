@@ -45,7 +45,7 @@ edges:
 
 Every themeable value is a `--beck-*` CSS custom property that **defaults to your site's
 palette** (`--color-primary-600`, `--color-base-*`, …). That's why every diagram on this site
-is violet and flips with the theme toggle — the page sets those variables once, light and dark,
+is emerald-green and flips with the theme toggle — the page sets those variables once, light and dark,
 and the diagrams inherit them. There's no per-theme JavaScript and no hardcoded hex in the
 renderer.
 

@@ -1,21 +1,33 @@
 @inject NavigationManager Nav
 
-<header class="site-header">
-    <div class="header-inner">
-        <a class="brand" href="/">
-            <span class="glyph">@Glyph</span>
-            <span class="name">Beck</span>
+<header class="sticky top-0 z-50 border-b border-base-200 bg-white/85 backdrop-blur-md backdrop-saturate-150 dark:border-base-800 dark:bg-base-950/85">
+    <div class="mx-auto flex h-[62px] max-w-[1240px] items-center gap-[26px] px-8">
+        <a class="flex items-center gap-[9px] text-base-900 dark:text-base-50" href="/">
+            <span class="inline-flex text-primary-600 dark:text-primary-400">@Glyph</span>
+            <span class="text-lg font-semibold tracking-tight">Beck</span>
         </a>
-        <nav class="nav">
-            <a href="/docs/" class="@Active("docs")">Docs</a>
-            <a href="/syntax" class="@Active("syntax")">Syntax</a>
-            <a href="/examples/" class="@Active("examples")">Examples</a>
-            <a href="/playground" class="@Active("playground")">Playground</a>
-            <a href="/api" class="@Active("api")">API</a>
+        <nav class="ml-1.5 flex items-center gap-[22px]">
+            <a href="/docs/" class="@NavLink("docs")">Docs</a>
+            <a href="/syntax" class="@NavLink("syntax")">Syntax</a>
+            <a href="/examples/" class="@NavLink("examples")">Examples</a>
+            <a href="/playground" class="@NavLink("playground")">Playground</a>
+            <a href="/api" class="@NavLink("api")">API</a>
         </nav>
-        <div class="header-actions">
-            <button class="theme-toggle" type="button" title="Toggle theme">☾</button>
-            <a class="btn btn-primary btn-sm" href="/get-started/">Get started</a>
+        <div class="ml-auto flex items-center gap-3">
+            <button class="theme-toggle flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-base-200 bg-base-50 text-base-600 transition-colors hover:text-base-900 dark:border-base-800 dark:bg-base-900 dark:text-base-400 dark:hover:text-base-50"
+                    type="button" title="Toggle theme" aria-label="Toggle theme">
+                @* moon: shown in light mode (click → dark) *@
+                <svg class="h-[18px] w-[18px] dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                </svg>
+                @* sun: shown in dark mode (click → light) *@
+                <svg class="hidden h-[18px] w-[18px] dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                </svg>
+            </button>
+            <a class="inline-flex items-center gap-2 rounded-[10px] bg-primary-600 px-[15px] py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400"
+               href="/get-started/">Get started</a>
         </div>
     </div>
 </header>
@@ -34,8 +46,15 @@
         return rel.ToLowerInvariant();
     }
 
-    private string Active(string section) =>
-        _path.StartsWith("/" + section, StringComparison.Ordinal) ? "active" : "";
+    // Base nav-link utilities plus an active-state color. Both branches are string
+    // literals in the compiled component, so MonorailCSS's IL scan discovers every class.
+    private string NavLink(string section)
+    {
+        const string baseCls = "py-1 text-sm font-medium transition-colors";
+        return _path.StartsWith("/" + section, StringComparison.Ordinal)
+            ? $"{baseCls} text-primary-700 dark:text-primary-400"
+            : $"{baseCls} text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-50";
+    }
 
     public static readonly MarkupString Glyph = new(
         "<svg width=\"22\" height=\"22\" viewBox=\"0 0 22 22\" fill=\"none\">" +

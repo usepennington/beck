@@ -2,34 +2,34 @@
 
 <PageTitle>Syntax cheatsheet — Beck</PageTitle>
 
-<div class="container-narrow" style="padding-top:44px;padding-bottom:90px;">
-    <div class="breadcrumb">Docs <span class="sep">/</span> Syntax</div>
-    <h1 style="font-size:40px;font-weight:600;letter-spacing:-.02em;margin:0 0 14px;">Syntax cheatsheet</h1>
-    <p style="font-size:17px;line-height:1.65;color:var(--text-soft);margin:0 0 26px;max-width:600px;">
+<div class="mx-auto max-w-[1180px] px-8 pt-[44px] pb-[90px]">
+    <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">Docs <span class="mx-1.5">/</span> Syntax</div>
+    <h1 class="text-[40px] font-semibold tracking-[-0.02em] mb-3.5 text-base-900 dark:text-base-50">Syntax cheatsheet</h1>
+    <p class="text-[17px] leading-[1.65] text-base-600 dark:text-base-400 mb-[26px] max-w-[600px]">
         Every construct in the Beck language, with the YAML on the left and what it renders — live — on
         the right. Copy any snippet straight into your file.
     </p>
 
-    <div class="filter-chips">
-        <span class="chip active">All</span>
-        <span class="chip">Nodes</span>
-        <span class="chip">Edges</span>
-        <span class="chip">Groups</span>
-        <span class="chip">Shapes</span>
-        <span class="chip">Layout</span>
+    <div class="flex gap-2 flex-wrap mb-[30px]">
+        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-primary-600 text-white border border-primary-600 dark:bg-primary-500 dark:border-primary-500 cursor-pointer">All</span>
+        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Nodes</span>
+        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Edges</span>
+        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Groups</span>
+        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Shapes</span>
+        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Layout</span>
     </div>
 
-    <div class="cheat-grid">
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(460px,1fr))] gap-5">
         @foreach (var c in Cheats)
         {
-            <div class="cheat-card">
-                <div class="cheat-head">
-                    <span class="ttl">@c.Title</span>
-                    <span class="tag">@c.Tag</span>
+            <div class="border border-base-200 dark:border-base-800 rounded-xl overflow-hidden bg-white dark:bg-base-900 flex flex-col">
+                <div class="flex items-center gap-2.5 px-4 pt-[14px]">
+                    <span class="text-[15.5px] font-semibold text-base-900 dark:text-base-50">@c.Title</span>
+                    <span class="ml-auto font-mono text-[10.5px] text-base-400 dark:text-base-500 border border-base-300 dark:border-base-700 rounded px-[7px] py-px">@c.Tag</span>
                 </div>
-                <div class="cheat-desc">@c.Desc</div>
-                <div class="cheat-code">@c.Code</div>
-                <div class="cheat-preview">@Diagram(c.Render)</div>
+                <div class="px-4 pt-[5px] pb-[13px] text-[13.5px] leading-snug text-base-600 dark:text-base-400">@c.Desc</div>
+                <div class="px-4 py-[14px] font-mono text-[13px] leading-[1.75] whitespace-pre bg-base-50 dark:bg-base-900 border-t border-base-200 dark:border-base-800 overflow-x-auto text-base-900 dark:text-base-50">@c.Code</div>
+                <div class="dot-grid flex items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto">@Diagram(c.Render)</div>
             </div>
         }
     </div>
