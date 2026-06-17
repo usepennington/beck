@@ -88,6 +88,15 @@ public enum Side
     Right,
 }
 
+/// <summary>Which ends of an edge carry an arrowhead.</summary>
+public enum ArrowEnds
+{
+    None,
+    End,
+    Start,
+    Both,
+}
+
 internal static class Tokens
 {
     public static string Of(Direction d) => d.ToString();
@@ -98,6 +107,7 @@ internal static class Tokens
     public static string Of(EdgeKind k) => k.ToString().ToLowerInvariant();
     public static string Of(AccentToken a) => a.ToString().ToLowerInvariant();
     public static string Of(Side s) => s.ToString().ToLowerInvariant();
+    public static string Of(ArrowEnds a) => a.ToString().ToLowerInvariant();
 
     public static string Of(EdgeCurve c) => c switch
     {

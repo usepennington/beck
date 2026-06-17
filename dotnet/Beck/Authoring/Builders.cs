@@ -138,7 +138,7 @@ public sealed class EdgeBuilder
     private EdgeStyle? _style;
     private EdgeCurve? _curve;
     private EdgeKind? _kind;
-    private bool? _arrow;
+    private string? _arrow;
     private Side? _fromSide;
     private Side? _toSide;
 
@@ -166,8 +166,11 @@ public sealed class EdgeBuilder
     /// <summary>Set the stroke to a raw color.</summary>
     public EdgeBuilder Color(string color) { _color = color; return this; }
 
-    /// <summary>Toggle the arrowhead (default true).</summary>
-    public EdgeBuilder Arrow(bool arrow) { _arrow = arrow; return this; }
+    /// <summary>Toggle the arrowhead (default on). <c>false</c> draws no arrows.</summary>
+    public EdgeBuilder Arrow(bool arrow) { _arrow = arrow ? "end" : "none"; return this; }
+
+    /// <summary>Choose which ends carry an arrowhead (e.g. <see cref="ArrowEnds.Both"/>).</summary>
+    public EdgeBuilder Arrows(ArrowEnds ends) { _arrow = Tokens.Of(ends); return this; }
 
     /// <summary>Pin the edge's exit side on the source node.</summary>
     public EdgeBuilder FromSide(Side side) { _fromSide = side; return this; }
@@ -187,7 +190,7 @@ public sealed class EdgeBuilder
         if (_curve is { } c) pairs.Add(("curve", Tokens.Of(c)));
         if (_kind is { } k) pairs.Add(("kind", Tokens.Of(k)));
         if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
-        if (_arrow is { } a) pairs.Add(("arrow", a ? "true" : "false"));
+        if (_arrow != null) pairs.Add(("arrow", _arrow));
         if (_fromSide is { } fs) pairs.Add(("fromSide", Tokens.Of(fs)));
         if (_toSide is { } ts) pairs.Add(("toSide", Tokens.Of(ts)));
         return YamlWriter.FlowMap(pairs);

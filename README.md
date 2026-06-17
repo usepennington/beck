@@ -47,7 +47,7 @@ edges. Validation errors are reported with friendly messages (and a line number 
 - **`groups[]`** — `id` (required), `label`, `members: [nodeId…]`, `accent`.
 - **`edges[]`** — `from`, `to` (node or group id), `label`, `style` (`solid`/`dashed`),
   `curve` (`step-round`/`straight`/`s`), `kind` (`data`/`control`/`async`/`dependency`),
-  `color`, `arrow`, `fromSide`/`toSide`.
+  `color`, `arrow` (`true`/`false`, or `end`/`start`/`both`/`none`), `fromSide`/`toSide`.
 - **`flow`** — `repeat`, `repeatDelay`, `steps[]`, where each step is one of: `packet`
   (`{from, to, via?, color?, label?}`), `status` (`{node, text, color?}`), `highlight`/`pulse`
   (`{node, color?}`), `activate`/`stream` (`{from, to, color?}` — persistently recolor an edge /

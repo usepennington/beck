@@ -18,6 +18,8 @@ export type EdgeStyle = 'solid' | 'dashed'
 export type EdgeCurve = 'step-round' | 'straight' | 's'
 export type EdgeKind = 'data' | 'control' | 'async' | 'dependency'
 export type Side = 'top' | 'bottom' | 'left' | 'right'
+/** Which ends of an edge carry an arrowhead. */
+export type ArrowEnds = 'none' | 'end' | 'start' | 'both'
 export type AccentToken = 'primary' | 'success' | 'warn' | 'danger' | 'info' | 'neutral'
 
 export interface Spacing {
@@ -78,7 +80,8 @@ export interface EdgeModel {
   kind: EdgeKind
   /** CSS color value for the stroke. */
   color: string
-  arrow: boolean
+  /** Which ends carry an arrowhead (`true`/`false` authoring maps to end/none). */
+  arrow: ArrowEnds
   fromSide?: Side
   toSide?: Side
 }

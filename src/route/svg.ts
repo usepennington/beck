@@ -59,7 +59,12 @@ function drawEdge(svg: SVGSVGElement, d: string, edge: EdgeModel): SVGPathElemen
   path.setAttribute('stroke-linecap', 'round')
   path.setAttribute('stroke-linejoin', 'round')
   if (edge.style === 'dashed') path.setAttribute('stroke-dasharray', '7 5')
-  if (edge.arrow) path.setAttribute('marker-end', `url(#${ensureMarker(svg, edge.color)})`)
+  // The marker uses orient="auto-start-reverse", so the same def points the
+  // right way at either end.
+  if (edge.arrow === 'end' || edge.arrow === 'both')
+    path.setAttribute('marker-end', `url(#${ensureMarker(svg, edge.color)})`)
+  if (edge.arrow === 'start' || edge.arrow === 'both')
+    path.setAttribute('marker-start', `url(#${ensureMarker(svg, edge.color)})`)
   path.dataset.from = edge.from
   path.dataset.to = edge.to
   path.dataset.edge = edge.id

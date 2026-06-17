@@ -184,6 +184,15 @@ function buildGroups(
   return order.map((id) => groups.get(id)!)
 }
 
+const ARROW_ENDS = ['none', 'end', 'start', 'both'] as const
+
+/** Arrowheads: accept the legacy bool (true→end, false→none) or an end token. */
+function arrowEnds(v: unknown): 'none' | 'end' | 'start' | 'both' {
+  if (v == null || v === true) return 'end'
+  if (v === false) return 'none'
+  return oneOf(v, ARROW_ENDS, 'edge.arrow', 'end')
+}
+
 function buildEdges(rawEdges: unknown[], validTargets: Set<string>): EdgeModel[] {
   return rawEdges.map((re, i) => {
     const e = asObject(re, 'edge')
@@ -202,7 +211,7 @@ function buildEdges(rawEdges: unknown[], validTargets: Set<string>): EdgeModel[]
       curve: oneOf(e.curve, ['step-round', 'straight', 's'] as const, 'edge.curve', 'step-round'),
       kind,
       color: optColor(e.color) ?? kd.color,
-      arrow: optBool(e.arrow, 'edge.arrow', true),
+      arrow: arrowEnds(e.arrow),
       fromSide: e.fromSide != null ? (oneOf(e.fromSide, SIDES, 'edge.fromSide', 'bottom') as Side) : undefined,
       toSide: e.toSide != null ? (oneOf(e.toSide, SIDES, 'edge.toSide', 'top') as Side) : undefined,
     }
