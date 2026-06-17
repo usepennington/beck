@@ -100,6 +100,14 @@ internal static class BrandStyling
         #pg-status.ok  { color: var(--color-primary-600); }
         #pg-status.err { color: #e6685b; }
 
+        /* ---- hero: typed.js writes the YAML while the diagram renders in step ---- */
+        /* #hero-code is the typed.js target (Tailwind classes do the framing); only the
+           cursor it injects needs colouring, and the host wants a clean overflow. */
+        #hero-code { overflow: hidden; }
+        #hero-code .typed-cursor { color: var(--color-primary-600); font-weight: 400; }
+        .dark #hero-code .typed-cursor { color: var(--color-primary-400); }
+        #hero-host .beck-root { max-width: 100%; }
+
         /* ---- global scrollbar polish ---- */
         ::-webkit-scrollbar { width: 11px; height: 11px; }
         ::-webkit-scrollbar-thumb { background: var(--color-base-300); border-radius: 7px; }

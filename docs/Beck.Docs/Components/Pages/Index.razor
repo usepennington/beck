@@ -29,34 +29,16 @@
             <span class="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-primary-700 dark:text-primary-400"><span class="h-[7px] w-[7px] rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse"></span>live</span>
         </div>
         <div class="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-            <div class="font-mono whitespace-pre border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 text-[12px] leading-[1.85] p-4"><span class="tok-key">meta</span><span class="tok-punct">:</span>
-  <span class="tok-key">direction</span><span class="tok-punct">:</span> <span class="tok-str">TB</span>
-<span class="tok-key">nodes</span><span class="tok-punct">:</span>
-  <span class="tok-punct">-</span> { id: client, title: <span class="tok-str">Client</span> }
-  <span class="tok-punct">-</span> { id: api, title: <span class="tok-str">API Gateway</span> }
-  <span class="tok-punct">-</span> { id: orders, title: <span class="tok-str">Orders</span> }
-  <span class="tok-punct">-</span> { id: users, title: <span class="tok-str">Users</span> }
-<span class="tok-key">edges</span><span class="tok-punct">:</span>
-  <span class="tok-punct">-</span> { from: client, to: api }
-  <span class="tok-punct">-</span> { from: api, to: orders }
-  <span class="tok-punct">-</span> { from: api, to: users }</div>
-            <div class="dot-grid min-h-[300px] p-4 overflow-hidden">
-                <beck-diagram mode="auto" class="w-full">
-                    <script type="application/yaml">
-meta:
-  title: Web Platform
-  direction: TB
-nodes:
-  - { id: client, title: Client, kind: user }
-  - { id: api, title: API Gateway, kind: gateway }
-  - { id: orders, title: Orders }
-  - { id: users, title: Users, kind: db }
-edges:
-  - { from: client, to: api }
-  - { from: api, to: orders }
-  - { from: api, to: users }
-                    </script>
-                </beck-diagram>
+            @* Left: site.js types the YAML here via typed.js (syntax-highlighted HTML).
+               The wrapper IS the grid column — typed.js appends its blinking cursor as a
+               sibling of #hero-code, so it must live inside the column, not steal a track.
+               #hero-code is inline so that cursor trails the last character. *@
+            <div class="border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 p-4 min-h-[300px] overflow-hidden">
+                <code id="hero-code" class="inline whitespace-pre font-mono text-[12px] leading-[1.85] text-base-700 dark:text-base-300" aria-hidden="true"></code>
+            </div>
+            @* Right: the live diagram re-renders in lock-step as each line lands. *@
+            <div class="dot-grid min-h-[300px] p-4 overflow-hidden flex items-center justify-center">
+                <div id="hero-host" class="w-full"></div>
             </div>
         </div>
     </div>
