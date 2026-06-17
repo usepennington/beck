@@ -153,13 +153,26 @@ function buildGroups(
     return g
   }
 
+  // Pass 1: register every explicit group + any inline `node.group`, so members
+  // may reference a (possibly nested) group declared later in the list.
+  for (const rg of rawGroups) {
+    const g = asObject(rg, 'group')
+    ensure(asString(g.id, 'group.id'), optString(g.label), optString(g.accent))
+  }
+  for (const n of nodes) if (n.group) ensure(n.group)
+
+  const groupIds = new Set(groups.keys())
+  const isMember = (mid: string) => nodeIds.has(mid) || groupIds.has(mid)
+
+  // Pass 2: members may be node ids OR group ids (nesting).
   for (const rg of rawGroups) {
     const g = asObject(rg, 'group')
     const id = asString(g.id, 'group.id')
-    const grp = ensure(id, optString(g.label), optString(g.accent))
+    const grp = groups.get(id)!
     for (const m of asArray(g.members, `group "${id}" members`)) {
       const mid = asString(m, `group "${id}" member`)
-      if (!nodeIds.has(mid)) throw new BeckError(`Group "${id}" references unknown node "${mid}"`)
+      if (!isMember(mid)) throw new BeckError(`Group "${id}" references unknown node or group "${mid}"`)
+      if (mid === id) throw new BeckError(`Group "${id}" cannot contain itself`)
       if (!grp.members.includes(mid)) grp.members.push(mid)
     }
   }
@@ -167,17 +180,28 @@ function buildGroups(
   // Inline `node.group` membership.
   for (const n of nodes) {
     if (!n.group) continue
-    const grp = ensure(n.group)
+    const grp = groups.get(n.group)!
     if (!grp.members.includes(n.id)) grp.members.push(n.id)
   }
 
-  // A node may belong to at most one group (layout treats groups as contiguous bands).
-  const seen = new Map<string, string>()
+  // Each node/group belongs to at most one parent (membership is a tree).
+  const parentOf = new Map<string, string>()
   for (const id of order) {
     for (const m of groups.get(id)!.members) {
-      const prev = seen.get(m)
-      if (prev) throw new BeckError(`Node "${m}" is in two groups ("${prev}" and "${id}")`)
-      seen.set(m, id)
+      const prev = parentOf.get(m)
+      if (prev) throw new BeckError(`"${m}" is in two groups ("${prev}" and "${id}")`)
+      parentOf.set(m, id)
+    }
+  }
+
+  // No cycles: a group cannot be its own ancestor.
+  for (const id of order) {
+    let cur = parentOf.get(id)
+    let guard = 0
+    while (cur) {
+      if (cur === id) throw new BeckError(`Group "${id}" is nested inside itself`)
+      cur = parentOf.get(cur)
+      if (++guard > order.length + 1) break
     }
   }
 

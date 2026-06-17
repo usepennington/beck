@@ -110,7 +110,15 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
       rn.wrap.style.visibility = ''
     }
 
-    for (const g of model.groups) {
+    // Paint larger (outer) boxes first so nested group boxes stack on top.
+    const groupsBackToFront = [...model.groups]
+      .filter((g) => layout.groups.has(g.id))
+      .sort((a, b) => {
+        const ra = layout.groups.get(a.id)!
+        const rb = layout.groups.get(b.id)!
+        return rb.w * rb.h - ra.w * ra.h
+      })
+    for (const g of groupsBackToFront) {
       const gr = layout.groups.get(g.id)
       if (!gr) continue
       const { box, label } = createGroup(g)

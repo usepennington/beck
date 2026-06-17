@@ -43,7 +43,9 @@ Each stage is a near-pure function with an explicit contract; `core.ts` orchestr
 ```
 YAML → model/ (parse → validate+defaults) → DiagramModel
      → measure (render cards off-flow, read getBoundingClientRect)
-     → layout/ (Sugiyama-lite: rank → order(+virtual nodes) → coords; groups = same-rank constraint)
+     → layout/ (Sugiyama-lite: rank → order(+virtual nodes) → coords; groups = recursive compound
+       sub-layout — each group is laid out then fed to its parent as one sized super-node, so groups
+       nest and span ranks; `layoutLayer` is the group-free engine, `layeredLayout` the recursive driver)
      → route/ (auto orthogonal step-round edges + obstacle avoidance) → SVG overlay
      → render/ (position DOM via transform, group boxes)
      → animate/ (compile flow → GSAP timeline; play on scroll-into-view)

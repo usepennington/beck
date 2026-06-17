@@ -5,51 +5,53 @@ const FALLBACK = { w: 180, h: 64 }
 const GROUP_PAD = { top: 28, side: 16, bottom: 16 }
 const CANVAS_PAD = 16
 
-/**
- * A small Sugiyama-style layered layout:
- *   1. rank assignment (cycle-break, longest-path, group snap + repair)
- *   2. ordering within ranks (virtual nodes on long edges, barycenter sweeps,
- *      group members kept contiguous)
- *   3. coordinate assignment (measured sizes, neighbor alignment)
- *   4. direction transform (TB/BT/LR/RL)
- *
- * Works internally in (primary = along ranks, secondary = across) coordinates,
- * then maps to x/y based on `direction` so the router/animation layers stay
- * orientation-agnostic.
- */
-export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult {
-  const dir: Direction = model.meta.direction
-  const horizontal = dir === 'LR' || dir === 'RL'
-  const gap = model.meta.spacing.node
-  const rankGap = model.meta.spacing.rank
+/** One thing to place in a layer: a node, or a group rendered as a super-node. */
+interface LayItem {
+  id: string
+  w: number
+  h: number
+  rank?: number
+  order?: number
+}
 
-  const nodes = model.nodes
-  const nodeIds = nodes.map((n) => n.id)
+interface LayerResult {
+  rects: Map<string, Rect>
+  width: number
+  height: number
+}
+
+/**
+ * Single-level Sugiyama-style layout (rank → order(+virtual nodes) → coords →
+ * direction transform). Group-agnostic: it places a flat set of items connected
+ * by item-level edges. Nesting is handled by the recursive driver below, which
+ * feeds each group in as a sized super-node. Returns rects in local coordinates
+ * with the top-left corner normalized to (0, 0).
+ */
+function layoutLayer(
+  items: LayItem[],
+  edges: Array<[string, string]>,
+  dir: Direction,
+  gap: number,
+  rankGap: number,
+): LayerResult {
+  const horizontal = dir === 'LR' || dir === 'RL'
+  const nodeIds = items.map((i) => i.id)
+  const itemMap = new Map(items.map((i) => [i.id, i]))
   const idIndex = new Map(nodeIds.map((id, i) => [id, i]))
-  const sizeOf = (id: string) => sizes.get(id) ?? FALLBACK
+  const sizeOf = (id: string) => itemMap.get(id) ?? FALLBACK
   const depthOf = (id: string) => (horizontal ? sizeOf(id).w : sizeOf(id).h)
   const breadthOf = (id: string) => (horizontal ? sizeOf(id).h : sizeOf(id).w)
 
-  // node id -> group id (a node is in at most one group)
-  const groupOf = new Map<string, string>()
-  for (const g of model.groups) for (const m of g.members) groupOf.set(m, g.id)
-  const groupIds = new Set(model.groups.map((g) => g.id))
-  const membersOf = (id: string) => model.groups.find((g) => g.id === id)?.members ?? []
-
-  // ---- expand edges to node->node pairs (group endpoints -> their members) ----
+  // ---- expand to valid node->node pairs ----
   const expanded: Array<[string, string]> = []
-  for (const e of model.edges) {
-    const froms = groupIds.has(e.from) ? membersOf(e.from) : [e.from]
-    const tos = groupIds.has(e.to) ? membersOf(e.to) : [e.to]
-    for (const f of froms) for (const t of tos) if (f !== t && idIndex.has(f) && idIndex.has(t)) expanded.push([f, t])
-  }
+  for (const [f, t] of edges) if (f !== t && idIndex.has(f) && idIndex.has(t)) expanded.push([f, t])
 
   // ---- 1a. cycle break: mark back edges via iterative DFS ----
   const adj = new Map<string, string[]>()
   for (const id of nodeIds) adj.set(id, [])
   for (const [f, t] of expanded) adj.get(f)!.push(t)
 
-  const color = new Map<string, 0 | 1 | 2>() // 0 white, 1 gray, 2 black
+  const color = new Map<string, 0 | 1 | 2>()
   for (const id of nodeIds) color.set(id, 0)
   const back = new Set<string>()
   const edgeKey = (f: string, t: string) => `${f} ${t}`
@@ -103,33 +105,7 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
   }
 
   // explicit rank overrides
-  for (const n of nodes) if (n.rank != null) rank.set(n.id, n.rank)
-
-  // ---- 1c. group snap to a shared rank, then repair forward monotonicity ----
-  for (let iter = 0; iter < 4; iter++) {
-    let changed = false
-    for (const g of model.groups) {
-      if (g.members.length < 2) continue
-      const r = Math.max(...g.members.map((m) => rank.get(m) ?? 0))
-      for (const m of g.members)
-        if ((rank.get(m) ?? 0) !== r) {
-          rank.set(m, r)
-          changed = true
-        }
-    }
-    for (let pass = 0; pass < nodeIds.length; pass++) {
-      let moved = false
-      for (const [f, t] of forward) {
-        if ((rank.get(t) ?? 0) <= (rank.get(f) ?? 0)) {
-          rank.set(t, (rank.get(f) ?? 0) + 1)
-          moved = true
-          changed = true
-        }
-      }
-      if (!moved) break
-    }
-    if (!changed) break
-  }
+  for (const it of items) if (it.rank != null) rank.set(it.id, it.rank)
 
   // compress ranks to 0..R (remove empty layers)
   const distinct = [...new Set(nodeIds.map((id) => rank.get(id) ?? 0))].sort((a, b) => a - b)
@@ -142,15 +118,13 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
   for (const id of nodeIds) order[rank.get(id)!].push(id)
 
   const isVirtual = new Set<string>()
-  const down = new Map<string, string[]>() // node -> neighbors one rank below
-  const up = new Map<string, string[]>() // node -> neighbors one rank above
+  const down = new Map<string, string[]>()
+  const up = new Map<string, string[]>()
   const link = (a: string, b: string) => {
     ;(down.get(a) ?? down.set(a, []).get(a)!).push(b)
     ;(up.get(b) ?? up.set(b, []).get(b)!).push(a)
   }
 
-  // Build adjacency + virtual chains from every forward (node->node, group-expanded)
-  // pair so ordering and alignment account for long and group-to-group edges.
   let vCounter = 0
   for (const [f, t] of forward) {
     const rf = rank.get(f)!
@@ -179,7 +153,7 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
   const breadthAny = (id: string) => (isVirtual.has(id) ? 0 : breadthOf(id))
   const depthAny = (id: string) => (isVirtual.has(id) ? 0 : depthOf(id))
 
-  // ---- 2b. ordering: barycenter sweeps with group contiguity ----
+  // ---- 2b. ordering: barycenter sweeps ----
   const orderIndex = (r: number) => {
     const m = new Map<string, number>()
     order[r].forEach((id, i) => m.set(id, i))
@@ -205,32 +179,12 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
   const reorderRank = (r: number, adjacentIsDown: boolean) => {
     const adjIndex = orderIndex(adjacentIsDown ? r + 1 : r - 1)
     const current = order[r]
-    const bary = new Map<string, number>()
-    current.forEach((id, i) => {
+    const units = current.map((id, i) => {
       const b = baryOf(id, adjIndex, adjacentIsDown)
-      bary.set(id, b < 0 ? i : b)
+      return { id, key: b < 0 ? i : b, tie: tieOf(id) }
     })
-
-    type Unit = { ids: string[]; key: number; tie: number }
-    const units: Unit[] = []
-    const clusters = new Map<string, string[]>()
-    for (const id of current) {
-      const g = groupOf.get(id)
-      if (g && membersOf(g).filter((m) => rank.get(m) === r).length > 1) {
-        if (!clusters.has(g)) clusters.set(g, [])
-        clusters.get(g)!.push(id)
-      } else {
-        units.push({ ids: [id], key: bary.get(id)!, tie: tieOf(id) })
-      }
-    }
-    for (const [, ids] of clusters) {
-      ids.sort((a, b) => bary.get(a)! - bary.get(b)! || tieOf(a) - tieOf(b))
-      const key = ids.reduce((s, id) => s + bary.get(id)!, 0) / ids.length
-      const tie = Math.min(...ids.map((id) => tieOf(id)))
-      units.push({ ids, key, tie })
-    }
     units.sort((a, b) => a.key - b.key || a.tie - b.tie)
-    order[r] = units.flatMap((u) => u.ids)
+    order[r] = units.map((u) => u.id)
   }
 
   for (let sweep = 0; sweep < 6; sweep++) {
@@ -241,15 +195,15 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
     }
   }
 
-  // honor explicit node.order as a final per-rank sort
+  // honor explicit item.order as a final per-rank sort
   for (let r = 0; r <= maxRank; r++) {
-    const hasExplicit = order[r].some((id) => nodes[idIndex.get(id) ?? -1]?.order != null)
+    const hasExplicit = order[r].some((id) => itemMap.get(id)?.order != null)
     if (!hasExplicit) continue
     order[r] = order[r]
       .map((id, i) => ({ id, i }))
       .sort((a, b) => {
-        const oa = nodes[idIndex.get(a.id) ?? -1]?.order
-        const ob = nodes[idIndex.get(b.id) ?? -1]?.order
+        const oa = itemMap.get(a.id)?.order
+        const ob = itemMap.get(b.id)?.order
         if (oa != null && ob != null) return oa - ob || a.i - b.i
         if (oa != null) return -1
         if (ob != null) return 1
@@ -345,47 +299,159 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
     return { x: dir === 'RL' ? totalPrimary - p : p, y: s }
   }
 
-  const nodeRects = new Map<string, Rect>()
+  const rects = new Map<string, Rect>()
   for (const id of nodeIds) {
     const c = centerXY(id)
     const sz = sizeOf(id)
-    nodeRects.set(id, { x: c.x - sz.w / 2, y: c.y - sz.h / 2, w: sz.w, h: sz.h })
+    rects.set(id, { x: c.x - sz.w / 2, y: c.y - sz.h / 2, w: sz.w, h: sz.h })
   }
 
-  const groupRects = new Map<string, Rect>()
-  for (const g of model.groups) {
-    const rects = g.members.map((m) => nodeRects.get(m)).filter((r): r is Rect => !!r)
-    if (!rects.length) continue
-    const minX = Math.min(...rects.map((r) => r.x))
-    const minY = Math.min(...rects.map((r) => r.y))
-    const maxX = Math.max(...rects.map((r) => r.x + r.w))
-    const maxY = Math.max(...rects.map((r) => r.y + r.h))
-    groupRects.set(g.id, {
-      x: minX - GROUP_PAD.side,
-      y: minY - GROUP_PAD.top,
-      w: maxX - minX + GROUP_PAD.side * 2,
-      h: maxY - minY + GROUP_PAD.top + GROUP_PAD.bottom,
-    })
+  // normalize so the top-left corner sits at (0, 0)
+  const all = [...rects.values()]
+  if (all.length === 0) return { rects, width: 0, height: 0 }
+  const minX = Math.min(...all.map((r) => r.x))
+  const minY = Math.min(...all.map((r) => r.y))
+  for (const [id, r] of rects) rects.set(id, { x: r.x - minX, y: r.y - minY, w: r.w, h: r.h })
+  const width = Math.max(...[...rects.values()].map((r) => r.x + r.w))
+  const height = Math.max(...[...rects.values()].map((r) => r.y + r.h))
+  return { rects, width, height }
+}
+
+interface Composed {
+  nodeRects: Map<string, Rect>
+  groupRects: Map<string, Rect>
+  width: number
+  height: number
+}
+
+/**
+ * Recursive compound layout. A group is laid out as its own sub-graph, then
+ * fed into its parent as a single sized super-node; the result is un-nested into
+ * absolute node/group rects. Groups can therefore span ranks and nest
+ * arbitrarily, and a group box provably never encloses a non-member (a foreign
+ * node is simply a different super-node at that level). Edges are projected to
+ * each container level (an edge lifts to the topmost ancestor-child that holds
+ * its endpoint); cross-boundary edges are routed globally afterward.
+ */
+export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult {
+  const dir = model.meta.direction
+  const gap = model.meta.spacing.node
+  const rankGap = model.meta.spacing.rank
+
+  const nodeById = new Map(model.nodes.map((n) => [n.id, n]))
+  const groupById = new Map(model.groups.map((g) => [g.id, g]))
+  const sizeOf = (id: string) => sizes.get(id) ?? FALLBACK
+
+  // member -> containing group (first declared parent wins; validate guards the tree)
+  const parent = new Map<string, string>()
+  for (const g of model.groups)
+    for (const m of g.members)
+      if ((nodeById.has(m) || groupById.has(m)) && !parent.has(m)) parent.set(m, g.id)
+  const parentOf = (id: string): string | null => parent.get(id) ?? null
+
+  const directChildren = (containerId: string | null): string[] => {
+    if (containerId === null) {
+      const kids: string[] = []
+      for (const n of model.nodes) if (parentOf(n.id) === null) kids.push(n.id)
+      for (const g of model.groups) if (parentOf(g.id) === null) kids.push(g.id)
+      return kids
+    }
+    return (groupById.get(containerId)?.members ?? []).filter((m) => nodeById.has(m) || groupById.has(m))
   }
 
-  // ---- normalize: shift so everything starts at CANVAS_PAD ----
-  const allRects = [...nodeRects.values(), ...groupRects.values()]
-  const minX = Math.min(...allRects.map((r) => r.x))
-  const minY = Math.min(...allRects.map((r) => r.y))
-  const dx = CANVAS_PAD - minX
-  const dy = CANVAS_PAD - minY
-  const shiftRect = (r: Rect): Rect => ({ x: r.x + dx, y: r.y + dy, w: r.w, h: r.h })
-  for (const [id, r] of nodeRects) nodeRects.set(id, shiftRect(r))
-  for (const [id, r] of groupRects) groupRects.set(id, shiftRect(r))
+  // The direct child of `containerId` that holds `x` (x itself or an ancestor group of it).
+  const repIn = (x: string, containerId: string | null): string | null => {
+    let cur = x
+    let guard = 0
+    while (parentOf(cur) !== containerId) {
+      const p = parentOf(cur)
+      if (p === null || ++guard > 10000) return null // x is not inside this container
+      cur = p
+    }
+    return cur
+  }
 
-  const placed = [...nodeRects.values(), ...groupRects.values()]
-  const maxXEnd = Math.max(...placed.map((r) => r.x + r.w))
-  const maxYEnd = Math.max(...placed.map((r) => r.y + r.h))
+  const projectedEdges = (containerId: string | null, childSet: Set<string>): Array<[string, string]> => {
+    const out: Array<[string, string]> = []
+    const seen = new Set<string>()
+    for (const e of model.edges) {
+      const cu = repIn(e.from, containerId)
+      const cv = repIn(e.to, containerId)
+      if (cu === null || cv === null || cu === cv) continue
+      if (!childSet.has(cu) || !childSet.has(cv)) continue
+      const key = `${cu} ${cv}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push([cu, cv])
+    }
+    return out
+  }
+
+  const visiting = new Set<string>()
+  const offset = (r: Rect, dx: number, dy: number): Rect => ({ x: r.x + dx, y: r.y + dy, w: r.w, h: r.h })
+
+  const layoutContainer = (containerId: string | null): Composed => {
+    if (containerId !== null) {
+      if (visiting.has(containerId)) return { nodeRects: new Map(), groupRects: new Map(), width: 0, height: 0 }
+      visiting.add(containerId)
+    }
+    const children = directChildren(containerId)
+    const subs = new Map<string, Composed>()
+    const items: LayItem[] = []
+    for (const c of children) {
+      if (groupById.has(c)) {
+        const sub = layoutContainer(c)
+        if (sub.nodeRects.size === 0) continue // skip empty groups (no renderable members)
+        subs.set(c, sub)
+        items.push({ id: c, w: sub.width, h: sub.height })
+      } else {
+        const s = sizeOf(c)
+        const n = nodeById.get(c)!
+        items.push({ id: c, w: s.w, h: s.h, rank: n.rank, order: n.order })
+      }
+    }
+    if (containerId !== null) visiting.delete(containerId)
+
+    const childSet = new Set(items.map((i) => i.id))
+    const edges = projectedEdges(containerId, childSet)
+    const layer = items.length
+      ? layoutLayer(items, edges, dir, gap, rankGap)
+      : { rects: new Map<string, Rect>(), width: 0, height: 0 }
+
+    const inset = containerId !== null
+    const padL = inset ? GROUP_PAD.side : 0
+    const padT = inset ? GROUP_PAD.top : 0
+    const padR = inset ? GROUP_PAD.side : 0
+    const padB = inset ? GROUP_PAD.bottom : 0
+
+    const nodeRects = new Map<string, Rect>()
+    const groupRects = new Map<string, Rect>()
+    for (const c of childSet) {
+      const lr = layer.rects.get(c)
+      if (!lr) continue
+      const r = offset(lr, padL, padT)
+      if (groupById.has(c)) {
+        const sub = subs.get(c)!
+        for (const [nid, nr] of sub.nodeRects) nodeRects.set(nid, offset(nr, r.x, r.y))
+        for (const [gid, gr] of sub.groupRects) groupRects.set(gid, offset(gr, r.x, r.y))
+        groupRects.set(c, r)
+      } else {
+        nodeRects.set(c, r)
+      }
+    }
+    return { nodeRects, groupRects, width: layer.width + padL + padR, height: layer.height + padT + padB }
+  }
+
+  const root = layoutContainer(null)
+  const nodes = new Map<string, Rect>()
+  const groups = new Map<string, Rect>()
+  for (const [id, r] of root.nodeRects) nodes.set(id, offset(r, CANVAS_PAD, CANVAS_PAD))
+  for (const [id, r] of root.groupRects) groups.set(id, offset(r, CANVAS_PAD, CANVAS_PAD))
 
   return {
-    nodes: nodeRects,
-    groups: groupRects,
-    width: Math.ceil(maxXEnd + CANVAS_PAD),
-    height: Math.ceil(maxYEnd + CANVAS_PAD),
+    nodes,
+    groups,
+    width: Math.ceil(root.width + CANVAS_PAD * 2),
+    height: Math.ceil(root.height + CANVAS_PAD * 2),
   }
 }

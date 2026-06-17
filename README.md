@@ -44,7 +44,8 @@ edges. Validation errors are reported with friendly messages (and a line number 
   (`solid` `subtle` `ghost`), `status`, `accent` (token `primary|success|warn|danger|info|neutral`
   or a raw color), `href`/`target` (renders the card as a link), `surface`/`textColor` (per-node
   color overrides), `width`, `rank`, `order`, `group`.
-- **`groups[]`** — `id` (required), `label`, `members: [nodeId…]`, `accent`.
+- **`groups[]`** — `id` (required), `label`, `members: [nodeId | groupId…]` (a member that is a
+  group id nests it — groups compose to arbitrary depth and may span ranks), `accent`.
 - **`edges[]`** — `from`, `to` (node or group id), `label`, `style` (`solid`/`dashed`),
   `curve` (`step-round`/`straight`/`s`), `kind` (`data`/`control`/`async`/`dependency`),
   `color`, `arrow` (`true`/`false`, or `end`/`start`/`both`/`none`), `fromSide`/`toSide`.

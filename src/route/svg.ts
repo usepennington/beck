@@ -110,9 +110,21 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
   const radius = model.meta.spacing.cornerRadius
   const primaryHorizontal = model.meta.direction === 'LR' || model.meta.direction === 'RL'
   const rectOf = (id: string): Rect | undefined => layout.nodes.get(id) ?? layout.groups.get(id)
+  const groupById = new Map(model.groups.map((g) => [g.id, g]))
+  // All leaf-node rects under a group (recursing through nested sub-groups), so
+  // an edge to/from a group is never forced to dodge its own descendants.
   const memberRects = (id: string): Rect[] => {
-    const g = model.groups.find((gr) => gr.id === id)
-    return g ? (g.members.map((m) => layout.nodes.get(m)).filter((r): r is Rect => !!r)) : []
+    if (!groupById.has(id)) return []
+    const out: Rect[] = []
+    const walk = (gid: string) => {
+      for (const m of groupById.get(gid)?.members ?? []) {
+        const nr = layout.nodes.get(m)
+        if (nr) out.push(nr)
+        else if (groupById.has(m)) walk(m)
+      }
+    }
+    walk(id)
+    return out
   }
 
   const out: RoutedEdge[] = []
