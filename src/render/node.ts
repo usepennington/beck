@@ -22,9 +22,17 @@ export function createNode(node: NodeModel): RenderedNode {
   wrap.className = 'beck-node-wrap'
   wrap.dataset.node = node.id
 
-  const card = document.createElement('div')
+  const card = document.createElement(node.href ? 'a' : 'div')
   card.className = 'beck-node'
+  if (node.href) {
+    const a = card as HTMLAnchorElement
+    a.href = node.href
+    if (node.target) a.target = node.target
+    if (node.target === '_blank') a.rel = 'noopener noreferrer'
+  }
   card.style.setProperty('--beck-accent', node.accent)
+  if (node.surface) card.style.setProperty('--beck-node-bg', node.surface)
+  if (node.textColor) card.style.setProperty('--beck-text', node.textColor)
   if (node.width) card.style.width = `${node.width}px`
 
   const isGhost = node.variant === 'ghost' || node.kind === 'ghost'

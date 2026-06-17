@@ -42,7 +42,8 @@ edges. Validation errors are reported with friendly messages (and a line number 
 - **`nodes[]`** — `id` (required), `title`, `subtitle`, `icon` (named key or raw `<svg>`),
   `kind` (`service` `db` `queue` `cache` `gateway` `external` `user` `ghost`), `variant`
   (`solid` `subtle` `ghost`), `status`, `accent` (token `primary|success|warn|danger|info|neutral`
-  or a raw color), `width`, `rank`, `order`, `group`.
+  or a raw color), `href`/`target` (renders the card as a link), `surface`/`textColor` (per-node
+  color overrides), `width`, `rank`, `order`, `group`.
 - **`groups[]`** — `id` (required), `label`, `members: [nodeId…]`, `accent`.
 - **`edges[]`** — `from`, `to` (node or group id), `label`, `style` (`solid`/`dashed`),
   `curve` (`step-round`/`straight`/`s`), `kind` (`data`/`control`/`async`/`dependency`),

@@ -99,11 +99,3 @@ export function packetWithTrail(
 
   return pos + duration
 }
-
-/** Hide all trail overlays (for the next loop iteration). */
-export function resetTrails(state: TrailState): void {
-  for (const o of state.overlays) {
-    const len = o.getTotalLength()
-    o.style.strokeDashoffset = String(len)
-  }
-}

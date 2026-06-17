@@ -14,6 +14,10 @@ public sealed class NodeBuilder
     private string? _status;
     private string? _accent;
     private string? _group;
+    private string? _href;
+    private string? _target;
+    private string? _surface;
+    private string? _textColor;
     private NodeKind? _kind;
     private NodeVariant? _variant;
     private int? _width;
@@ -58,6 +62,15 @@ public sealed class NodeBuilder
     /// <summary>Assign the node to a group inline (alternative to group members).</summary>
     public NodeBuilder Group(string groupId) { _group = groupId; return this; }
 
+    /// <summary>Make the card a link. Pass <c>target: "_blank"</c> to open in a new tab.</summary>
+    public NodeBuilder Link(string href, string? target = null) { _href = href; _target = target; return this; }
+
+    /// <summary>Override the card background (a CSS color).</summary>
+    public NodeBuilder Surface(string color) { _surface = color; return this; }
+
+    /// <summary>Override the card text color (a CSS color).</summary>
+    public NodeBuilder TextColor(string color) { _textColor = color; return this; }
+
     internal string ToFlow()
     {
         var pairs = new List<(string, string)> { ("id", YamlWriter.Scalar(_id)) };
@@ -68,6 +81,10 @@ public sealed class NodeBuilder
         if (_icon != null) pairs.Add(("icon", YamlWriter.Scalar(_icon)));
         if (_status != null) pairs.Add(("status", YamlWriter.Scalar(_status)));
         if (_accent != null) pairs.Add(("accent", YamlWriter.Scalar(_accent)));
+        if (_href != null) pairs.Add(("href", YamlWriter.Scalar(_href)));
+        if (_target != null) pairs.Add(("target", YamlWriter.Scalar(_target)));
+        if (_surface != null) pairs.Add(("surface", YamlWriter.Scalar(_surface)));
+        if (_textColor != null) pairs.Add(("textColor", YamlWriter.Scalar(_textColor)));
         if (_width is { } w) pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
         if (_rank is { } r) pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
         if (_order is { } o) pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));

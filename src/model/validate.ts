@@ -122,6 +122,10 @@ function buildNode(n: Record<string, unknown>): NodeModel {
     variant: oneOf(n.variant, ['solid', 'subtle', 'ghost'] as const, `node "${id}" variant`, kd.variant),
     status: optString(n.status),
     accent: accentToCss(optString(n.accent), kd.accent),
+    href: optString(n.href),
+    target: optString(n.target),
+    surface: optString(n.surface),
+    textColor: optString(n.textColor),
     width: optNumber(n.width, `node "${id}" width`),
     rank: optNumber(n.rank, `node "${id}" rank`),
     order: optNumber(n.order, `node "${id}" order`),
@@ -205,19 +209,26 @@ function buildEdges(rawEdges: unknown[], validTargets: Set<string>): EdgeModel[]
   })
 }
 
-function parseStep(s: Record<string, unknown>, nodeIds: Set<string>): FlowStep {
+function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: Set<string>): FlowStep {
   const node = (id: string, ctx: string): string => {
     if (!nodeIds.has(id)) throw new BeckError(`Flow ${ctx} references unknown node "${id}"`)
+    return id
+  }
+  // Edge endpoints (packet/activate/stream) may also be a group id, since an
+  // edge can target a group — keep this in lockstep with edge from/to validation.
+  const endpoint = (id: string, ctx: string): string => {
+    if (!nodeIds.has(id) && !groupIds.has(id))
+      throw new BeckError(`Flow ${ctx} references unknown node or group "${id}"`)
     return id
   }
 
   if ('packet' in s) {
     const p = asObject(s.packet, 'flow packet')
-    const via = asArray(p.via, 'packet.via').map((v) => node(asString(v, 'packet.via'), 'packet via'))
+    const via = asArray(p.via, 'packet.via').map((v) => endpoint(asString(v, 'packet.via'), 'packet via'))
     return {
       type: 'packet',
-      from: node(asString(p.from, 'packet.from'), 'packet'),
-      to: node(asString(p.to, 'packet.to'), 'packet'),
+      from: endpoint(asString(p.from, 'packet.from'), 'packet'),
+      to: endpoint(asString(p.to, 'packet.to'), 'packet'),
       via: via.length ? via : undefined,
       color: optColor(p.color),
       label: optString(p.label),
@@ -244,8 +255,8 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>): FlowStep {
     const p = asObject(s.activate, 'flow activate')
     return {
       type: 'activate',
-      from: node(asString(p.from, 'activate.from'), 'activate'),
-      to: node(asString(p.to, 'activate.to'), 'activate'),
+      from: endpoint(asString(p.from, 'activate.from'), 'activate'),
+      to: endpoint(asString(p.to, 'activate.to'), 'activate'),
       color: optColor(p.color),
     }
   }
@@ -253,8 +264,8 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>): FlowStep {
     const p = asObject(s.stream, 'flow stream')
     return {
       type: 'stream',
-      from: node(asString(p.from, 'stream.from'), 'stream'),
-      to: node(asString(p.to, 'stream.to'), 'stream'),
+      from: endpoint(asString(p.from, 'stream.from'), 'stream'),
+      to: endpoint(asString(p.to, 'stream.to'), 'stream'),
       color: optColor(p.color),
     }
   }
@@ -285,7 +296,7 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>): FlowStep {
     return { type: 'reset' }
   }
   if ('parallel' in s) {
-    const steps = asArray(s.parallel, 'flow parallel').map((p) => parseStep(asObject(p, 'parallel step'), nodeIds))
+    const steps = asArray(s.parallel, 'flow parallel').map((p) => parseStep(asObject(p, 'parallel step'), nodeIds, groupIds))
     return { type: 'parallel', steps }
   }
   throw new BeckError(
@@ -293,8 +304,8 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>): FlowStep {
   )
 }
 
-function buildFlow(f: Record<string, unknown>, nodeIds: Set<string>): FlowModel {
-  const steps = asArray(f.steps, 'flow.steps').map((s) => parseStep(asObject(s, 'flow step'), nodeIds))
+function buildFlow(f: Record<string, unknown>, nodeIds: Set<string>, groupIds: Set<string>): FlowModel {
+  const steps = asArray(f.steps, 'flow.steps').map((s) => parseStep(asObject(s, 'flow step'), nodeIds, groupIds))
   return {
     repeat: optNumber(f.repeat, 'flow.repeat') ?? -1,
     repeatDelay: optNumber(f.repeatDelay, 'flow.repeatDelay') ?? 1.5,
@@ -326,7 +337,8 @@ export function buildModel(raw: unknown): DiagramModel {
   const validTargets = new Set<string>([...nodeIds, ...groups.map((g) => g.id)])
   const edges = buildEdges(asArray(root.edges, 'edges'), validTargets)
 
-  const flow = root.flow != null ? buildFlow(asObject(root.flow, 'flow'), nodeIds) : deriveFlow(nodes, edges)
+  const groupIdSet = new Set(groups.map((g) => g.id))
+  const flow = root.flow != null ? buildFlow(asObject(root.flow, 'flow'), nodeIds, groupIdSet) : deriveFlow(nodes, edges)
 
   // `meta.loop: false` disables looping regardless of how the flow was authored
   // (an explicit flow.repeat otherwise wins; the default is infinite).

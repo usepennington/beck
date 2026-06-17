@@ -122,6 +122,14 @@
   color: var(--beck-text);
   transition: box-shadow 0.3s, border-color 0.3s, background-color 0.4s, transform 0.2s;
 }
+a.beck-node {
+  text-decoration: none;
+  color: var(--beck-text);
+  cursor: pointer;
+}
+a.beck-node:hover {
+  border-color: var(--beck-accent);
+}
 .beck-node--external {
   border-style: dashed;
 }

@@ -148,7 +148,6 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
     ;(down.get(a) ?? down.set(a, []).get(a)!).push(b)
     ;(up.get(b) ?? up.set(b, []).get(b)!).push(a)
   }
-  const waypoints = new Map<string, Point[]>() // reserved for the router; empty in v1
 
   // Build adjacency + virtual chains from every forward (node->node, group-expanded)
   // pair so ordering and alignment account for long and group-to-group edges.
@@ -386,7 +385,6 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
   return {
     nodes: nodeRects,
     groups: groupRects,
-    waypoints,
     width: Math.ceil(maxXEnd + CANVAS_PAD),
     height: Math.ceil(maxYEnd + CANVAS_PAD),
   }

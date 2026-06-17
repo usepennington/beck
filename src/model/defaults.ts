@@ -78,7 +78,17 @@ export function deriveFlow(nodes: NodeModel[], edges: EdgeModel[]): FlowModel {
   const sorted = [...edges].sort(
     (a, b) => (pos.get(a.from) ?? 0) - (pos.get(b.from) ?? 0) || (pos.get(a.to) ?? 0) - (pos.get(b.to) ?? 0),
   )
-  const steps: FlowStep[] = sorted.map((e) => ({ type: 'packet', from: e.from, to: e.to }))
+  // Emit a `phase` label the first time each source node sends, so `seek(id)`
+  // works even on an auto-derived flow (no authored phases otherwise exist).
+  const steps: FlowStep[] = []
+  const labeled = new Set<string>()
+  for (const e of sorted) {
+    if (!labeled.has(e.from)) {
+      steps.push({ type: 'phase', label: e.from })
+      labeled.add(e.from)
+    }
+    steps.push({ type: 'packet', from: e.from, to: e.to })
+  }
   if (steps.length) {
     steps.push({ type: 'wait', seconds: 1 })
     steps.push({ type: 'reset' })

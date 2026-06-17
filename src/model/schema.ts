@@ -47,6 +47,14 @@ export interface NodeModel {
   status?: string
   /** CSS color value, e.g. `var(--beck-primary)` or a raw hex. */
   accent: string
+  /** Optional link target; renders the card as an `<a href>`. */
+  href?: string
+  /** Anchor target (e.g. `_blank`); only meaningful with `href`. */
+  target?: string
+  /** Override the card background (CSS color); defaults to the theme surface. */
+  surface?: string
+  /** Override the card text color (CSS color); defaults to the theme text. */
+  textColor?: string
   width?: number
   rank?: number
   order?: number

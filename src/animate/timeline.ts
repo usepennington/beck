@@ -36,6 +36,7 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   const resolve = (c?: string) => resolveColor(ctx.root, c ?? 'var(--beck-packet)')
   const nodeEl = (id: string) => ctx.nodes.get(id) ?? null
   const accentOf = (id: string) => ctx.model.nodes.find((n) => n.id === id)?.accent
+  const groupMembers = (id: string) => ctx.model.groups.find((g) => g.id === id)?.members ?? []
 
   const pathOf = (from: string, to: string): { path: SVGPathElement; reversed: boolean } | null => {
     const direct = ctx.edges.find((e) => e.edge.from === from && e.edge.to === to)
@@ -55,12 +56,18 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
     const chain = [from, ...(via ?? []), to]
     let at = position
     for (let i = 0; i < chain.length - 1; i++) {
-      const found = pathOf(chain[i], chain[i + 1])
+      const nextId = chain[i + 1]
+      const found = pathOf(chain[i], nextId)
       if (!found) continue
-      const target = nodeEl(chain[i + 1]) ?? undefined
+      const target = nodeEl(nextId) ?? undefined
       // The label rides the final hop so it reads as the payload arriving.
       const hopLabel = i === chain.length - 2 ? label : undefined
       at = packetWithTrail(tl, found.path, trail, { color, reverse: found.reversed, label: hopLabel }, target, at)
+      // Group endpoint: nodeEl is null, so pulse the members on arrival instead.
+      if (!target) for (const m of groupMembers(nextId)) {
+        const mel = nodeEl(m)
+        if (mel) pulse(tl, mel, { color }, at)
+      }
     }
   }
 

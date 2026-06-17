@@ -18,13 +18,7 @@ export interface LayoutResult {
   nodes: Map<string, Rect>
   /** Group id → bounding rect (members + padding, room for the label). */
   groups: Map<string, Rect>
-  /** Interior waypoints for long edges (edge id → points), for the router. */
-  waypoints: Map<string, Point[]>
   /** Total canvas size. */
   width: number
   height: number
-}
-
-export function rectCenter(r: Rect): Point {
-  return { x: r.x + r.w / 2, y: r.y + r.h / 2 }
 }

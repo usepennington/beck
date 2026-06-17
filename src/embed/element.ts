@@ -15,7 +15,7 @@ const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;6
  * Attributes: `mode` (light|dark|auto), `src`, `animate` (false to disable).
  */
 export class BeckDiagramElement extends HTMLElement {
-  static observedAttributes = ['mode', 'src']
+  static observedAttributes = ['mode', 'src', 'animate']
 
   /** The live diagram handle (read by `<beck-playback>`). */
   diagram: DiagramHandle | null = null
@@ -32,7 +32,7 @@ export class BeckDiagramElement extends HTMLElement {
   attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
     if (oldValue === value) return
     if (name === 'mode' && this.diagram) this.diagram.setTheme(((value as ThemeMode) || 'auto'))
-    else if (name === 'src' && this.isConnected) void this.render()
+    else if ((name === 'src' || name === 'animate') && this.isConnected) void this.render()
   }
 
   private async render(): Promise<void> {
@@ -51,10 +51,9 @@ export class BeckDiagramElement extends HTMLElement {
     const root = document.createElement('div')
     shadow.appendChild(root)
 
-    const yaml = await this.readSource()
-    if (yaml == null) return
-
     try {
+      const yaml = await this.readSource()
+      if (yaml == null) return // no source present — nothing to render (not an error)
       const model = loadDiagram(yaml)
       const opts: RenderOptions = {}
       const mode = this.getAttribute('mode') as ThemeMode | null
@@ -63,20 +62,18 @@ export class BeckDiagramElement extends HTMLElement {
       this.diagram?.destroy()
       this.diagram = mountModel(root, model, opts)
     } catch (err) {
+      root.className = 'beck-error'
       root.textContent = err instanceof Error ? err.message : String(err)
-      root.style.cssText = 'color:#e11d48;font-family:ui-monospace,monospace;font-size:0.8rem;white-space:pre-wrap;padding:12px;'
     }
   }
 
+  /** Returns the YAML source, or null when none is present. Throws if a `src` fails to load. */
   private async readSource(): Promise<string | null> {
     const src = this.getAttribute('src')
     if (src) {
-      try {
-        const res = await fetch(src)
-        return await res.text()
-      } catch {
-        return null
-      }
+      const res = await fetch(src)
+      if (!res.ok) throw new Error(`Beck: failed to load src "${src}" (HTTP ${res.status})`)
+      return await res.text()
     }
     const script = this.querySelector('script[type="application/yaml"], script[type="text/yaml"]')
     if (script?.textContent) return script.textContent

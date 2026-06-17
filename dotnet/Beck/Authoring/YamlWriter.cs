@@ -51,5 +51,6 @@ internal static partial class YamlWriter
     }
 
     private static string Quote(string v) =>
-        "\"" + v.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\t", "\\t") + "\"";
+        "\"" + v.Replace("\\", "\\\\").Replace("\"", "\\\"")
+                .Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t") + "\"";
 }
