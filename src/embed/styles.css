@@ -93,6 +93,11 @@
 .beck-canvas {
   position: relative;
   transform-origin: top left;
+  /* Centre the diagram body under the (already centred) title. The canvas box is
+     the diagram's intrinsic width, so a narrow/vertical diagram centres in the
+     full-width viewport; a wide diagram (width >= viewport) keeps auto margins at
+     0 and scales from the top-left via fit(), so this is a no-op there. */
+  margin-inline: auto;
 }
 
 /* ---- node card ---- */
