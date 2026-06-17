@@ -1,0 +1,132 @@
+@page "/{*Path}"
+@inject IPageResolver Resolver
+@inject NavigationManager Nav
+@inject IEnumerable<IContentService> ContentServices
+
+@if (_html is not null)
+{
+    <PageTitle>@_title — Beck</PageTitle>
+    <div class="docs-shell">
+        <Sidebar />
+        <article class="docs-article">
+            <div class="breadcrumb">
+                <a href="@_areaHref" style="color:var(--text-faint);">@_areaLabel</a>
+                <span class="sep">/</span>@_title
+            </div>
+            <div class="prose">
+                <h1>@_title</h1>
+                @((MarkupString)_html)
+            </div>
+
+            @if (_prev is not null || _next is not null)
+            {
+                <div class="next-cards">
+                    @if (_prev is not null)
+                    {
+                        <a class="next-card" href="@_prev.Url">
+                            <div class="knd">← PREVIOUS</div>
+                            <div class="ttl">@_prev.Title</div>
+                            <div class="dsc">@_prev.Description</div>
+                        </a>
+                    }
+                    else { <span></span> }
+                    @if (_next is not null)
+                    {
+                        <a class="next-card" href="@_next.Url" style="@(_prev is null ? "grid-column:2;" : "")">
+                            <div class="knd">NEXT →</div>
+                            <div class="ttl">@_next.Title</div>
+                            <div class="dsc">@_next.Description</div>
+                        </a>
+                    }
+                </div>
+            }
+        </article>
+    </div>
+}
+else
+{
+    <PageTitle>Not found — Beck</PageTitle>
+    <section class="container" style="padding:80px 32px;text-align:center;">
+        <div class="eyebrow">404</div>
+        <h1 style="font-size:38px;font-weight:600;margin:0 0 12px;">Page not found</h1>
+        <p style="color:var(--text-soft);">No content matches <span class="mono">@Path</span>. <a class="mono" style="color:var(--accent-text);" href="/">Back home →</a></p>
+    </section>
+}
+
+@code {
+    [Parameter] public string? Path { get; set; }
+
+    private sealed record Neighbor(string Title, string Url, string? Description);
+
+    private string? _title;
+    private string? _html;
+    private string _areaLabel = "Docs";
+    private string _areaHref = "/docs/";
+    private Neighbor? _prev;
+    private Neighbor? _next;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var requested = new UrlPath(Path ?? string.Empty).EnsureLeadingSlash();
+
+        if (await Resolver.ResolveAsync(requested) is not { } page)
+        {
+            return;
+        }
+
+        _title = page.Metadata.Title;
+        _html = page.Content.Html;
+
+        var path = requested.Value;
+        var area = AreaOf(path);
+        _areaHref = area + "/";
+        _areaLabel = AreaLabels.TryGetValue(area, out var lbl) ? lbl : Title(area.Trim('/'));
+
+        // Build prev/next from the ordered area page list.
+        var all = new List<ContentTocItem>();
+        foreach (var svc in ContentServices)
+        {
+            all.AddRange(await svc.GetContentTocEntriesAsync());
+        }
+        var ordered = all
+            .Where(i => !i.SearchOnly && InArea(i.Route.CanonicalPath.Value, area))
+            .OrderBy(i => i.Order).ThenBy(i => i.Title)
+            .ToList();
+
+        var idx = ordered.FindIndex(i => new UrlPath(i.Route.CanonicalPath.Value).Matches(requested));
+        if (idx > 0)
+        {
+            var p = ordered[idx - 1];
+            _prev = new Neighbor(p.Title, p.Route.CanonicalPath.Value, p.Description);
+        }
+        if (idx >= 0 && idx < ordered.Count - 1)
+        {
+            var n = ordered[idx + 1];
+            _next = new Neighbor(n.Title, n.Route.CanonicalPath.Value, n.Description);
+        }
+    }
+
+    private static readonly Dictionary<string, string> AreaLabels = new()
+    {
+        ["/docs"] = "Docs",
+        ["/get-started"] = "Get started",
+        ["/examples"] = "Examples",
+    };
+
+    private static string AreaOf(string path)
+    {
+        var parts = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? "/" + parts[0] : "/";
+    }
+
+    private static bool InArea(string route, string area)
+    {
+        var r = route.TrimEnd('/');
+        if (r.Length == 0) r = "/";
+        return string.Equals(r, area, StringComparison.OrdinalIgnoreCase)
+            || r.StartsWith(area + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string Title(string s) =>
+        string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..].Replace('-', ' ');
+}

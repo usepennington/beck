@@ -1,0 +1,18 @@
+meta:
+  title: Edge to Cluster
+  direction: TB
+nodes:
+  - { id: browser, title: Browser, kind: user, icon: browser }
+  - { id: cdn, title: CDN, icon: cdn, subtitle: edge cache }
+  - { id: lb, title: Load Balancer, icon: loadbalancer }
+  - { id: ingress, title: Ingress, icon: ingress }
+  - { id: pod1, title: web pod, icon: container }
+  - { id: pod2, title: web pod, icon: container }
+  - { id: s3, title: Object Storage, icon: bucket }
+edges:
+  - { from: browser, to: cdn }
+  - { from: cdn, to: lb }
+  - { from: lb, to: ingress }
+  - { from: ingress, to: pod1 }
+  - { from: ingress, to: pod2 }
+  - { from: cdn, to: s3, label: origin, style: dashed }

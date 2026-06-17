@@ -1,0 +1,45 @@
+@inject NavigationManager Nav
+
+<header class="site-header">
+    <div class="header-inner">
+        <a class="brand" href="/">
+            <span class="glyph">@Glyph</span>
+            <span class="name">Beck</span>
+        </a>
+        <nav class="nav">
+            <a href="/docs/" class="@Active("docs")">Docs</a>
+            <a href="/syntax" class="@Active("syntax")">Syntax</a>
+            <a href="/examples/" class="@Active("examples")">Examples</a>
+            <a href="/playground" class="@Active("playground")">Playground</a>
+            <a href="/api" class="@Active("api")">API</a>
+        </nav>
+        <div class="header-actions">
+            <button class="theme-toggle" type="button" title="Toggle theme">☾</button>
+            <a class="btn btn-primary btn-sm" href="/get-started/">Get started</a>
+        </div>
+    </div>
+</header>
+
+@code {
+    private string _path = "/";
+
+    protected override void OnInitialized() => _path = RelativePath();
+    protected override void OnParametersSet() => _path = RelativePath();
+
+    private string RelativePath()
+    {
+        var rel = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        var q = rel.IndexOf('?');
+        if (q >= 0) rel = rel[..q];
+        return rel.ToLowerInvariant();
+    }
+
+    private string Active(string section) =>
+        _path.StartsWith("/" + section, StringComparison.Ordinal) ? "active" : "";
+
+    public static readonly MarkupString Glyph = new(
+        "<svg width=\"22\" height=\"22\" viewBox=\"0 0 22 22\" fill=\"none\">" +
+        "<circle cx=\"6\" cy=\"6\" r=\"3\" stroke=\"currentColor\" stroke-width=\"2\"></circle>" +
+        "<circle cx=\"16\" cy=\"16\" r=\"3\" stroke=\"currentColor\" stroke-width=\"2\"></circle>" +
+        "<path d=\"M8.2 8.2 L13.8 13.8\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg>");
+}

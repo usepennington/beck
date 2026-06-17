@@ -1,0 +1,21 @@
+meta:
+  title: Order Processing
+  subtitle: Synchronous intake, asynchronous fulfilment
+  direction: TB
+nodes:
+  - { id: web, title: Storefront, kind: user }
+  - { id: orders, title: Orders API, kind: gateway }
+  - { id: bus, title: Kafka, kind: queue, subtitle: orders.created }
+  - { id: pay, title: Payments }
+  - { id: ship, title: Shipping }
+  - { id: notify, title: Notifications }
+  - { id: ledger, title: Ledger DB, kind: db }
+groups:
+  - { id: consumers, label: Consumers, members: [pay, ship, notify], accent: primary }
+edges:
+  - { from: web, to: orders }
+  - { from: orders, to: bus, label: publish, kind: async }
+  - { from: bus, to: pay, kind: async }
+  - { from: bus, to: ship, kind: async }
+  - { from: bus, to: notify, kind: async }
+  - { from: pay, to: ledger }

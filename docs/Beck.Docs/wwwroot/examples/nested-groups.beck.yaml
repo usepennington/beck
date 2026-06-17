@@ -1,0 +1,22 @@
+meta:
+  title: Cloud Topology
+  subtitle: Nested boundaries via recursive compound layout
+  direction: TB
+nodes:
+  - { id: cf, title: CloudFront, icon: cdn, kind: external }
+  - { id: alb, title: ALB, icon: loadbalancer }
+  - { id: web1, title: web-1, icon: container }
+  - { id: api, title: api, icon: container }
+  - { id: pg, title: Postgres, kind: db }
+  - { id: redis, title: Redis, icon: redis }
+groups:
+  - { id: account, label: AWS Account, members: [vpc], accent: warn }
+  - { id: vpc, label: VPC 10.0.0.0/16, members: [web, data], accent: info }
+  - { id: web, label: Web Tier, members: [alb, web1, api], accent: primary }
+  - { id: data, label: Data Subnet, members: [pg, redis], accent: success }
+edges:
+  - { from: cf, to: alb }
+  - { from: alb, to: web1 }
+  - { from: web1, to: api }
+  - { from: api, to: pg, label: query }
+  - { from: api, to: redis, label: cache }

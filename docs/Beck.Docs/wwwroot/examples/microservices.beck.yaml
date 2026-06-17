@@ -1,0 +1,19 @@
+meta:
+  title: Microservices platform
+  subtitle: An API gateway fronting independent services
+  direction: TB
+nodes:
+  - { id: web, title: Web App, kind: user }
+  - { id: gw, title: API Gateway, kind: gateway }
+  - { id: auth, title: Auth Service }
+  - { id: orders, title: Orders Service }
+  - { id: authdb, title: Auth DB, kind: db }
+  - { id: events, title: Events, kind: queue, subtitle: Message bus }
+groups:
+  - { id: services, label: Services, members: [auth, orders], accent: primary }
+edges:
+  - { from: web, to: gw }
+  - { from: gw, to: auth }
+  - { from: gw, to: orders }
+  - { from: auth, to: authdb }
+  - { from: orders, to: events, kind: async }

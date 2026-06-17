@@ -1,0 +1,94 @@
+@page "/"
+
+<PageTitle>Beck — architecture diagrams from YAML</PageTitle>
+
+<section class="hero">
+    <div>
+        <div class="eyebrow">Diagrams as code · for .NET</div>
+        <h1>Your architecture,<br />drawn from YAML.</h1>
+        <p class="lead">
+            Describe your system once in a few lines of YAML. Beck handles layout, routing, and
+            styling — and renders clean, animated architecture diagrams you can drop straight into
+            docs and pull requests.
+        </p>
+        <div class="hero-cta">
+            <a class="btn btn-primary" href="/get-started/">Get started <span class="mono">→</span></a>
+            <a class="btn btn-ghost" href="/playground">Open playground</a>
+        </div>
+        <div class="install-chip">
+            <span class="dollar">$</span>
+            <span class="cmd">dotnet add package Beck</span>
+            <span class="copy" data-copy="dotnet add package Beck">copy</span>
+        </div>
+    </div>
+
+    <div class="editor-card">
+        <div class="editor-titlebar">
+            <span class="tl-dot r"></span><span class="tl-dot y"></span><span class="tl-dot g"></span>
+            <span class="fname">system.beck.yaml</span>
+            <span class="live-badge"><span class="pulse"></span>live</span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,0.92fr) minmax(0,1.08fr);">
+            <div class="code-body" style="border-right:1px solid var(--border);background:var(--code-bg);font-size:12px;line-height:1.85;"><span class="k">meta</span><span class="c">:</span>
+  <span class="k">direction</span><span class="c">:</span> <span class="s">TB</span>
+<span class="k">nodes</span><span class="c">:</span>
+  <span class="c">-</span> { id: client, title: <span class="s">Client</span> }
+  <span class="c">-</span> { id: api, title: <span class="s">API Gateway</span> }
+  <span class="c">-</span> { id: orders, title: <span class="s">Orders</span> }
+  <span class="c">-</span> { id: users, title: <span class="s">Users</span> }
+<span class="k">edges</span><span class="c">:</span>
+  <span class="c">-</span> { from: client, to: api }
+  <span class="c">-</span> { from: api, to: orders }
+  <span class="c">-</span> { from: api, to: users }</div>
+            <div class="diagram-surface" style="border:none;border-radius:0;margin:0;min-height:300px;padding:16px;overflow:hidden;">
+                <beck-diagram mode="auto" style="width:100%;">
+                    <script type="application/yaml">
+meta:
+  title: Web Platform
+  direction: TB
+nodes:
+  - { id: client, title: Client, kind: user }
+  - { id: api, title: API Gateway, kind: gateway }
+  - { id: orders, title: Orders }
+  - { id: users, title: Users, kind: db }
+edges:
+  - { from: client, to: api }
+  - { from: api, to: orders }
+  - { from: api, to: users }
+                    </script>
+                </beck-diagram>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="feature-row">
+    <div class="feature-card">
+        <div class="feature-icon">yaml</div>
+        <h3>Plain YAML, real diagrams</h3>
+        <p>List your nodes and edges. Beck takes care of layout, edge routing, grouping, and theming automatically.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon">git</div>
+        <h3>Lives in your repo</h3>
+        <p>Diagrams are text. Review them in pull requests, diff every change, and never let architecture docs drift again.</p>
+    </div>
+    <div class="feature-card">
+        <div class="feature-icon">C#</div>
+        <h3>.NET native</h3>
+        <p>Author diagrams from C# with <span class="mono" style="font-size:13px;">Beck.Authoring</span>, or render them live in any ASP.NET site.</p>
+    </div>
+</section>
+
+<section class="cta-band">
+    <div class="inner">
+        <h2>Start diagramming in five minutes.</h2>
+        <p>Add the package, write a few lines of YAML, and render your first diagram. No accounts, no canvas wrangling.</p>
+        <div class="cta-actions">
+            <a class="btn btn-primary" href="/get-started/">Read the guide</a>
+            <a class="btn btn-ghost" href="/examples/">Browse examples</a>
+        </div>
+    </div>
+</section>
+
+<Footer />

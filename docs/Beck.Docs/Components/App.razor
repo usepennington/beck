@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="/" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    @* Set the theme before first paint to avoid a flash of the wrong palette. *@
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('beck-theme');
+                if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', t);
+            } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="/css/site.css" />
+
+    @* The Beck engine: auto-registers <beck-diagram> and hydrates ```beck fences. *@
+    <script src="/_content/Beck/beck.global.js" defer></script>
+    <script src="/js/site.js" defer></script>
+
+    <HeadOutlet />
+</head>
+<body>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        </Found>
+        <NotFound>
+            <MainLayout>
+                <section class="container" style="padding:80px 32px;text-align:center;">
+                    <div class="eyebrow">404</div>
+                    <h1 style="font-size:38px;font-weight:600;margin:0 0 12px;">Page not found</h1>
+                    <p style="color:var(--text-soft);">The page you're looking for doesn't exist. <a class="mono" style="color:var(--accent-text);" href="/">Back home →</a></p>
+                </section>
+            </MainLayout>
+        </NotFound>
+    </Router>
+</body>
+</html>

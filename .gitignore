@@ -17,3 +17,7 @@ dotnet/**/obj/
 /sample-flow.yaml
 /*.png
 .playwright-mcp/
+
+# IDE
+.idea/
+.vs/

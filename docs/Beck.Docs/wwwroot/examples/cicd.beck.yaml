@@ -1,0 +1,25 @@
+meta:
+  title: Deploy Pipeline
+  direction: LR
+nodes:
+  - { id: push, title: git push, kind: external, icon: code }
+  - { id: build, title: Build, subtitle: docker build }
+  - { id: test, title: Test, subtitle: unit + e2e }
+  - { id: scan, title: Security Scan, accent: warn }
+  - { id: deploy, title: Deploy, kind: gateway, subtitle: prod }
+edges:
+  - { from: push, to: build }
+  - { from: build, to: test }
+  - { from: test, to: scan }
+  - { from: scan, to: deploy }
+flow:
+  repeat: -1
+  repeatDelay: 2
+  steps:
+    - status: { node: build, text: building, color: primary }
+    - packet: { from: push, to: build }
+    - status: { node: build, text: ✓ passed, color: success }
+    - packet: { from: build, to: test }
+    - packet: { from: test, to: scan }
+    - fail: { node: scan, text: ✗ CVE found, color: danger }
+    - wait: 1.4

@@ -1,0 +1,56 @@
+@page "/playground"
+
+<PageTitle>Playground — Beck</PageTitle>
+
+<div class="pg">
+    <div class="pg-toolbar">
+        <select id="pg-examples" class="pg-tool" style="appearance:auto;">
+            <option value="">Examples ▾</option>
+            <option data-src="/examples/microservices.beck.yaml">Microservices platform</option>
+            <option data-src="/examples/event-driven.beck.yaml">Event-driven orders</option>
+            <option data-src="/examples/rag-pipeline.beck.yaml">RAG answer pipeline</option>
+            <option data-src="/examples/cloud-infra.beck.yaml">Edge to cluster</option>
+            <option data-src="/examples/cicd.beck.yaml">Deploy pipeline</option>
+            <option data-src="/examples/nested-groups.beck.yaml">Nested groups</option>
+        </select>
+        <span class="pg-tool">Format</span>
+        <span class="pg-tool" style="margin-left:auto;">⤓ Export SVG</span>
+        <span class="pg-tool" style="background:var(--accent);color:#fff;border-color:var(--accent);">Share</span>
+    </div>
+
+    <div class="pg-split">
+        <div class="pg-pane editor">
+            <div class="pg-pane-head">system.beck.yaml</div>
+            <div id="pg-editor-host"></div>
+            <textarea id="pg-initial" hidden>meta:
+  title: Checkout flow
+  direction: TB
+nodes:
+  - { id: web, title: Storefront, kind: user }
+  - { id: api, title: Checkout API, kind: gateway }
+  - { id: pay, title: Payments }
+  - { id: ledger, title: Ledger, kind: db }
+edges:
+  - { from: web, to: api }
+  - { from: api, to: pay }
+  - { from: pay, to: ledger, label: record }
+</textarea>
+        </div>
+        <div class="pg-pane preview">
+            <div class="pg-pane-head">
+                preview
+                <span class="live-badge" style="margin-left:auto;"><span class="pulse"></span>live</span>
+            </div>
+            <div class="pg-preview-canvas">
+                <div id="pg-host" style="width:100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pg-statusbar">
+        <span id="pg-status" class="ok">✓ valid</span>
+        <span id="pg-nodes">0 nodes</span>
+        <span id="pg-edges">0 edges</span>
+        <span style="margin-left:auto;">Rendered live by Beck · SVG · PNG</span>
+    </div>
+</div>

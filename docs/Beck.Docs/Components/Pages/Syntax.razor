@@ -1,0 +1,99 @@
+@page "/syntax"
+
+<PageTitle>Syntax cheatsheet — Beck</PageTitle>
+
+<div class="container-narrow" style="padding-top:44px;padding-bottom:90px;">
+    <div class="breadcrumb">Docs <span class="sep">/</span> Syntax</div>
+    <h1 style="font-size:40px;font-weight:600;letter-spacing:-.02em;margin:0 0 14px;">Syntax cheatsheet</h1>
+    <p style="font-size:17px;line-height:1.65;color:var(--text-soft);margin:0 0 26px;max-width:600px;">
+        Every construct in the Beck language, with the YAML on the left and what it renders — live — on
+        the right. Copy any snippet straight into your file.
+    </p>
+
+    <div class="filter-chips">
+        <span class="chip active">All</span>
+        <span class="chip">Nodes</span>
+        <span class="chip">Edges</span>
+        <span class="chip">Groups</span>
+        <span class="chip">Shapes</span>
+        <span class="chip">Layout</span>
+    </div>
+
+    <div class="cheat-grid">
+        @foreach (var c in Cheats)
+        {
+            <div class="cheat-card">
+                <div class="cheat-head">
+                    <span class="ttl">@c.Title</span>
+                    <span class="tag">@c.Tag</span>
+                </div>
+                <div class="cheat-desc">@c.Desc</div>
+                <div class="cheat-code">@c.Code</div>
+                <div class="cheat-preview">@Diagram(c.Render)</div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private sealed record Cheat(string Title, string Tag, string Desc, string Code, string Render);
+
+    // Emit the live diagram as raw markup so the YAML reaches the DOM verbatim. Razor
+    // JS-encodes @expressions placed inside a <script> element (newlines -> literal \n),
+    // which would corrupt the whitespace-significant YAML — MarkupString avoids that.
+    private static MarkupString Diagram(string yaml) =>
+        new($"<beck-diagram mode=\"auto\"><script type=\"application/yaml\">{yaml}</script></beck-diagram>");
+
+    private static readonly Cheat[] Cheats =
+    [
+        new("Node", "nodes",
+            "A node is one entry under nodes:. The id is required; title defaults to the id.",
+            "nodes:\n  - { id: api, title: API }",
+            "meta: { animate: false }\nnodes:\n  - { id: api, title: API }"),
+
+        new("Edge", "edges",
+            "Connect two nodes by their ids. Beck routes the line and places the arrowhead for you.",
+            "nodes:\n  - { id: a, title: Web }\n  - { id: b, title: API }\nedges:\n  - { from: a, to: b }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Web }, { id: b, title: API } ]\nedges:\n  - { from: a, to: b }"),
+
+        new("Labelled edge", "edges",
+            "Add a label to name the relationship — a protocol, a verb, or the data that flows.",
+            "edges:\n  - { from: a, to: b, label: calls }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Web }, { id: b, title: API } ]\nedges:\n  - { from: a, to: b, label: calls }"),
+
+        new("Bidirectional", "edges",
+            "Set arrow: both for a two-way connection (also start, end, or none).",
+            "edges:\n  - { from: a, to: b, arrow: both }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Web }, { id: b, title: API } ]\nedges:\n  - { from: a, to: b, arrow: both }"),
+
+        new("Group", "groups",
+            "Wrap related nodes in a labelled boundary. Members can be node ids or other group ids.",
+            "groups:\n  - { id: core, label: Core,\n      members: [a, b] }",
+            "meta: { animate: false }\nnodes: [ { id: a, title: Auth }, { id: b, title: Orders } ]\ngroups:\n  - { id: core, label: Core, members: [a, b] }"),
+
+        new("Async edge", "edges",
+            "kind: async renders a dashed edge — handy for message buses and events.",
+            "edges:\n  - { from: api, to: bus,\n      kind: async }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: api, title: API }, { id: bus, title: Bus, kind: queue } ]\nedges:\n  - { from: api, to: bus, kind: async }"),
+
+        new("Database", "nodes",
+            "kind: db draws a database cylinder and picks a fitting default accent and icon.",
+            "nodes:\n  - { id: db, title: Postgres,\n      kind: db }",
+            "meta: { animate: false }\nnodes:\n  - { id: db, title: Postgres, kind: db }"),
+
+        new("Queue", "nodes",
+            "kind: queue marks a message bus or stream. Other kinds: cache, gateway, user, external.",
+            "nodes:\n  - { id: q, title: Kafka,\n      kind: queue }",
+            "meta: { animate: false }\nnodes:\n  - { id: q, title: Kafka, kind: queue }"),
+
+        new("Accent", "style",
+            "Highlight a node with an accent token: primary, success, warn, danger, info, or neutral.",
+            "nodes:\n  - { id: api, title: API,\n      accent: primary }",
+            "meta: { animate: false }\nnodes:\n  - { id: api, title: API, accent: primary }"),
+
+        new("Direction", "layout",
+            "meta.direction sets the flow axis: TB (default), BT, LR, or RL.",
+            "meta:\n  direction: LR\nnodes:\n  - { id: a, title: Ingest }\n  - { id: b, title: Store, kind: db }\nedges:\n  - { from: a, to: b }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Ingest }, { id: b, title: Store, kind: db } ]\nedges: [ { from: a, to: b } ]"),
+    ];
+}

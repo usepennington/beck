@@ -1,0 +1,70 @@
+@inject IEnumerable<IContentService> ContentServices
+@inject NavigationManager Nav
+
+<aside class="sidebar">
+    @foreach (var group in _groups)
+    {
+        <div class="sidebar-label">@group.Label</div>
+        <div class="sidebar-group">
+            @foreach (var item in group.Items)
+            {
+                <a class="sidebar-link @(IsActive(item.Url) ? "active" : "")" href="@item.Url">@item.Title</a>
+            }
+        </div>
+    }
+</aside>
+
+@code {
+    private sealed record NavGroup(string Label, List<NavLink> Items);
+    private sealed record NavLink(string Title, string Url, int Order);
+
+    private List<NavGroup> _groups = new();
+    private string _current = "/";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _current = ("/" + Nav.ToBaseRelativePath(Nav.Uri)).Split('?')[0];
+        var area = AreaOf(_current);
+
+        var all = new List<ContentTocItem>();
+        foreach (var svc in ContentServices)
+        {
+            all.AddRange(await svc.GetContentTocEntriesAsync());
+        }
+
+        var inArea = all
+            .Where(i => !i.SearchOnly)
+            .Where(i => InArea(i.Route.CanonicalPath.Value, area))
+            .ToList();
+
+        _groups = inArea
+            .GroupBy(i => i.SectionLabel ?? "Pages")
+            .Select(g => new
+            {
+                Label = g.Key,
+                MinOrder = g.Min(i => i.Order),
+                Items = g.OrderBy(i => i.Order).ThenBy(i => i.Title)
+                         .Select(i => new NavLink(i.Title, i.Route.CanonicalPath.Value, i.Order))
+                         .ToList()
+            })
+            .OrderBy(g => g.MinOrder)
+            .Select(g => new NavGroup(g.Label, g.Items))
+            .ToList();
+    }
+
+    private static string AreaOf(string path)
+    {
+        var parts = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? "/" + parts[0] : "/";
+    }
+
+    private static bool InArea(string route, string area)
+    {
+        var r = route.TrimEnd('/');
+        if (r.Length == 0) r = "/";
+        return string.Equals(r, area, StringComparison.OrdinalIgnoreCase)
+            || r.StartsWith(area + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsActive(string url) => new UrlPath(url).Matches(new UrlPath(_current));
+}

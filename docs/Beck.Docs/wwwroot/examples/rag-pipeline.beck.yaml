@@ -1,0 +1,28 @@
+meta:
+  title: RAG Answer Pipeline
+  subtitle: A question is embedded, retrieved against, and answered
+  direction: LR
+nodes:
+  - { id: user, title: User, kind: user, subtitle: Asks a question }
+  - { id: api, title: Query API, kind: gateway }
+  - { id: embed, title: Embedding Model, icon: embeddings, accent: info }
+  - { id: vstore, title: Vector Store, icon: vector, kind: db, accent: info, subtitle: pgvector }
+  - { id: llm, title: LLM, icon: model, accent: primary, subtitle: Claude }
+edges:
+  - { from: user, to: api }
+  - { from: api, to: embed, label: embed }
+  - { from: embed, to: vstore, label: ANN search }
+  - { from: vstore, to: llm, label: context }
+  - { from: llm, to: user, label: answer, kind: control }
+flow:
+  repeat: -1
+  repeatDelay: 1.6
+  steps:
+    - packet: { from: user, to: api }
+    - packet: { from: api, to: embed }
+    - pulse: { node: embed, color: info }
+    - packet: { from: embed, to: vstore }
+    - packet: { from: vstore, to: llm }
+    - status: { node: llm, text: generating…, color: primary }
+    - packet: { from: llm, to: user, color: success }
+    - wait: 1.2
