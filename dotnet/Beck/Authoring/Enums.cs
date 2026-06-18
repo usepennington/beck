@@ -60,6 +60,38 @@ public enum EdgeKind
     Dependency,
 }
 
+/// <summary>Easing for a travelling packet (maps to a GSAP ease in the engine).</summary>
+public enum PacketEase
+{
+    /// <summary>Constant speed (default).</summary>
+    Linear,
+    /// <summary>Ease in and out.</summary>
+    Smooth,
+    /// <summary>Start slow, then speed up.</summary>
+    Accelerate,
+    /// <summary>Start fast, then slow down.</summary>
+    Decelerate,
+    /// <summary>Exponential ease in and out.</summary>
+    Expo,
+    /// <summary>Gentle sine ease in and out.</summary>
+    Sine,
+    /// <summary>Discrete stepping — a digital tick.</summary>
+    Steps,
+    /// <summary>Decelerating bounce on arrival.</summary>
+    Bounce,
+}
+
+/// <summary>Visual form of a travelling packet.</summary>
+public enum PacketShape
+{
+    /// <summary>A small glowing dot (default).</summary>
+    Dot,
+    /// <summary>A larger filled disc.</summary>
+    Circle,
+    /// <summary>A hollow stroked circle.</summary>
+    Ring,
+}
+
 /// <summary>Theme mode for a diagram.</summary>
 public enum ThemeMode
 {
@@ -103,6 +135,8 @@ internal static class Tokens
     public static string Of(ThemeMode t) => t.ToString().ToLowerInvariant();
     public static string Of(NodeKind k) => k.ToString().ToLowerInvariant();
     public static string Of(NodeVariant v) => v.ToString().ToLowerInvariant();
+    public static string Of(PacketEase e) => e.ToString().ToLowerInvariant();
+    public static string Of(PacketShape s) => s.ToString().ToLowerInvariant();
     public static string Of(EdgeStyle s) => s.ToString().ToLowerInvariant();
     public static string Of(EdgeKind k) => k.ToString().ToLowerInvariant();
     public static string Of(AccentToken a) => a.ToString().ToLowerInvariant();

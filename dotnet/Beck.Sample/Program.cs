@@ -27,14 +27,14 @@ var yaml = new DiagramBuilder("Web Platform")
         .Repeat(-1)
         .RepeatDelay(1.5)
         .Status("web", "GET /orders", color: "neutral")
-        .Packet("web", "gw", label: "request")
+        .Packet("web", "gw", label: "request", shape: PacketShape.Circle, impact: true)
         .Parallel(p => p
             .Packet("gw", "auth", color: "info")
             .Working("orders"))
         .Packet("gw", "orders")
         .Packet("orders", "catalogdb", color: "warn")
         .Idle("orders")
-        .Packet("orders", "events", color: "success")
+        .Packet("orders", "events", color: "success", shape: PacketShape.Ring, impact: true)
         .Wait(1))
     .ToYaml();
 

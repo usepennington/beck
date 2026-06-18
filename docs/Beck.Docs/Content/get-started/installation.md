@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Add the Beck package and render your first diagram in about three minutes.
+description: Add the Beck package and render your first diagram in a Pennington or Markdig site.
 order: 2
 sectionLabel: Get started
 uid: start.installation
@@ -11,8 +11,9 @@ as a static web asset **and** contains `Beck.Authoring`, a C# API for emitting B
 code. There's no npm package and no CDN to wire up.
 
 > [!NOTE]
-> Beck targets .NET 8 and later, and works in any ASP.NET Core host — including a
-> Pennington docs site like this one. Check your SDK with `dotnet --version`.
+> Beck targets .NET 8 and later and works in any ASP.NET Core host. The fenced-block
+> integration works with **Pennington** and **any Markdig-based site** — anywhere your Markdown
+> is rendered to HTML in the browser. Check your SDK with `dotnet --version`.
 
 ## 1. Add the package
 
@@ -22,22 +23,39 @@ dotnet add package Beck
 
 ## 2. Include the engine once
 
-Reference the static web asset in your host's `<head>`. It auto-registers the
-`<beck-diagram>` element and hydrates every ` ```beck ` code block on the page.
+Add the engine script to your site's `<head>`. Once it loads, it hydrates every fenced
+` ```beck ` block on the page into a live diagram — the Mermaid-style integration, and the only
+thing a Markdown-driven site needs:
 
 ```html
 <script src="/_content/Beck/beck.global.js" defer></script>
 ```
 
-In a Pennington site, that one line goes in your `App.razor` head — exactly how this site
-does it.
+That path is a static web asset the package serves; there's nothing to copy into your project.
+Rather than hand-write the tag, inject `Beck.BeckAssets.ScriptTag` — it emits exactly the line
+above, with a **root-relative** path that resolves from any route depth and survives a sub-path
+deploy (GitHub Pages, a `/docs` prefix) where a bare relative path would break.
+
+**Pennington.** On a `DocSite` host, add it to your head content:
+
+```csharp
+options.AdditionalHtmlHeadContent = Beck.BeckAssets.ScriptTag;
+```
+
+On a bare Pennington host with your own `App.razor` (like this site), drop the tag straight into
+the `<head>`.
+
+**Any other Markdig-based site.** Markdig renders a ` ```beck ` fence as
+`<code class="language-beck">`, which is exactly what the engine looks for. Put the same script
+tag in your layout's `<head>` and every fence on every page becomes a diagram — no Markdig
+extension, no server-side rendering step.
 
 ## 3. Write a diagram
 
-Drop a fenced ` ```beck ` block into any Markdown page, or use the `<beck-diagram>` element
-directly:
+Put a fenced ` ```beck ` block in any Markdown page:
 
-```yaml
+````markdown
+```beck
 meta:
   title: Hello
   direction: LR
@@ -49,8 +67,9 @@ edges:
   - { from: web, to: api }
   - { from: api, to: db, label: queries }
 ```
+````
 
-Beck lays it out, routes the edges, and animates the flow:
+The engine lays it out, routes the edges, and animates the flow:
 
 ```beck
 meta:
@@ -68,3 +87,8 @@ edges:
 That's it — no build step, no canvas wrangling. Next, learn the language in
 [Nodes & edges](/docs/), or generate diagrams from C# in
 [Authoring from C#](/docs/authoring-from-csharp).
+
+> [!NOTE]
+> Need a diagram outside a Markdown fence — straight from a `.yaml` file, or driven by your own
+> JavaScript? There's a `<beck-diagram>` element and a small imperative API for those cases. See
+> [Embedding diagrams](/docs/exporting).

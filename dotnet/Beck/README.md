@@ -22,8 +22,9 @@ lets a sub-path deploy's base-URL rewriter prefix it:
 <script src="/_content/Beck/beck.global.js" defer></script>
 ```
 
-Then any ` ```beck ` fenced block in your Markdown renders as a diagram, following your site's
-`--color-*` palette and dark mode automatically.
+That's the whole client setup. In **Pennington** or **any Markdig-based site**, a ` ```beck `
+fenced block in your Markdown is then hydrated into a diagram, following your site's `--color-*`
+palette and dark mode automatically — no Markdig extension or server-side step required.
 
 ````markdown
 ```beck

@@ -1,0 +1,14 @@
+<Project>
+  <ItemGroup>
+    <!-- Tag-driven versioning + source link for the shipping package. -->
+    <PackageVersion Include="MinVer" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Pennington content engine, consumed from NuGet so the docs site builds on CI
+         (no local b:\penn checkout). Kept on one stable line across the three packages. -->
+    <PackageVersion Include="Pennington" Version="0.1.4" />
+    <PackageVersion Include="Pennington.TreeSitter" Version="0.1.4" />
+    <PackageVersion Include="Pennington.MonorailCss" Version="0.1.4" />
+  </ItemGroup>
+</Project>

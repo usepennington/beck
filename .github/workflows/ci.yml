@@ -1,0 +1,44 @@
+# PR / push validation: typecheck + build the TypeScript engine, then build the whole .NET
+# solution (the package, the authoring sample, and the docs site against Pennington from NuGet).
+# This is the guardrail that catches a docs/Pennington version mismatch or an engine break before
+# the deploy and publish workflows run.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # MinVer reads git history when projects build in Release
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install JS deps
+        run: npm ci
+      - name: Typecheck the engine
+        run: npm run typecheck
+      - name: Build the engine bundle
+        run: npm run build:lib
+
+      # NOTE: keep these as bare versions — inline comments inside the block scalar are parsed as
+      # part of the version string and break setup-dotnet.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Build solution
+        run: dotnet build Beck.slnx -c Release

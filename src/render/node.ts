@@ -70,9 +70,16 @@ export function createNode(node: NodeModel, baseUrl = ''): RenderedNode {
     if (node.target === '_blank') a.rel = 'noopener noreferrer'
   }
   card.style.setProperty('--beck-accent', node.accent)
-  if (node.surface) card.style.setProperty('--beck-node-bg', node.surface)
-  if (node.textColor) card.style.setProperty('--beck-text', node.textColor)
   if (node.width) card.style.width = `${node.width}px`
+  if (isGhost) {
+    // A ghost paints onto a transparent pill with a muted label, so the --beck-node-bg /
+    // --beck-text vars the solid card reads never reach it. Apply the overrides directly:
+    // surface as the pill background, textColor onto the label (set where it's created below).
+    if (node.surface) card.style.background = node.surface
+  } else {
+    if (node.surface) card.style.setProperty('--beck-node-bg', node.surface)
+    if (node.textColor) card.style.setProperty('--beck-text', node.textColor)
+  }
 
   let pill: HTMLElement
 
@@ -92,6 +99,7 @@ export function createNode(node: NodeModel, baseUrl = ''): RenderedNode {
     const label = document.createElement('span')
     label.className = `beck-ghost-label ${CLS.ghostLabel}`
     label.textContent = node.title
+    if (node.textColor) label.style.color = node.textColor
     row.appendChild(label)
     card.appendChild(row)
 

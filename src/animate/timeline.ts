@@ -1,4 +1,5 @@
-import type { DiagramModel, FlowStep } from '../model/schema'
+import type { DiagramModel, EdgeKind, FlowStep, PacketEase, PacketKnobs } from '../model/schema'
+import { PACKET_KIND_STYLE, PACKET_SHAPE_SIZE } from '../model/defaults'
 import type { RoutedEdge } from '../route/svg'
 import { gsap } from './runtime'
 import type { Timeline } from './runtime'
@@ -25,6 +26,20 @@ export interface CompiledFlow {
   snapshot: Snapshot
 }
 
+/** Packet ease token → concrete GSAP ease. Kept to monotonic eases (overshoot
+ *  eases like back/elastic would clamp against the path ends mid-travel). Stays
+ *  in lockstep with `PACKET_EASES` in `src/model/defaults.ts`. */
+const PACKET_EASE: Record<PacketEase, string> = {
+  linear: 'none',
+  smooth: 'power2.inOut',
+  accelerate: 'power2.in',
+  decelerate: 'power2.out',
+  expo: 'expo.inOut',
+  sine: 'sine.inOut',
+  steps: 'steps(12)',
+  bounce: 'bounce.out',
+}
+
 /** Compile a FlowModel into a paused GSAP timeline (+ a reset snapshot). */
 export function buildTimeline(ctx: FlowContext): CompiledFlow {
   const g = gsap()
@@ -38,43 +53,92 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   const accentOf = (id: string) => ctx.model.nodes.find((n) => n.id === id)?.accent
   const groupMembers = (id: string) => ctx.model.groups.find((g) => g.id === id)?.members ?? []
 
-  const pathOf = (from: string, to: string): { path: SVGPathElement; reversed: boolean } | null => {
-    const direct = ctx.edges.find((e) => e.edge.from === from && e.edge.to === to)
-    if (direct) return { path: direct.path, reversed: false }
-    const rev = ctx.edges.find((e) => e.edge.from === to && e.edge.to === from)
-    return rev ? { path: rev.path, reversed: true } : null
-  }
-
-  const execPacket = (
+  const pathOf = (
     from: string,
     to: string,
-    via: string[] | undefined,
+  ): { path: SVGPathElement; reversed: boolean; kind: EdgeKind } | null => {
+    const direct = ctx.edges.find((e) => e.edge.from === from && e.edge.to === to)
+    if (direct) return { path: direct.path, reversed: false, kind: direct.edge.kind }
+    const rev = ctx.edges.find((e) => e.edge.from === to && e.edge.to === from)
+    return rev ? { path: rev.path, reversed: true, kind: rev.edge.kind } : null
+  }
+
+  // Merge a step's explicit knobs over the traversed edge's kind defaults, then
+  // map the ease token to its GSAP string. This is where data/control/async/
+  // dependency edges get their distinct packet motion for free.
+  const hopOptions = (kind: EdgeKind, k: PacketKnobs, color: string) => {
+    const ks = PACKET_KIND_STYLE[kind]
+    const shape = k.shape ?? 'dot'
+    return {
+      color,
+      shape,
+      impact: k.impact ?? false,
+      // `circle`/`ring` carry a larger baseline radius; `dot` keeps the edge-kind size.
+      size: k.size ?? PACKET_SHAPE_SIZE[shape] ?? ks.size,
+      speed: k.speed ?? ks.speed,
+      glow: k.glow ?? ks.glow,
+      ease: PACKET_EASE[k.ease ?? ks.ease],
+    }
+  }
+
+  // Emit one dot across a (possibly multi-hop) chain, returning the time it
+  // arrives. `label` rides the final hop so it reads as the payload landing.
+  const emitDot = (
+    chain: string[],
+    knobs: PacketKnobs,
     color: string,
     label: string | undefined,
-    position?: number,
-  ) => {
-    const chain = [from, ...(via ?? []), to]
-    let at = position
+    startAt: number | undefined,
+  ): number | undefined => {
+    let at = startAt
     for (let i = 0; i < chain.length - 1; i++) {
       const nextId = chain[i + 1]
       const found = pathOf(chain[i], nextId)
       if (!found) continue
       const target = nodeEl(nextId) ?? undefined
-      // The label rides the final hop so it reads as the payload arriving.
       const hopLabel = i === chain.length - 2 ? label : undefined
-      at = packetWithTrail(tl, found.path, trail, { color, reverse: found.reversed, label: hopLabel }, target, at)
+      const opts = hopOptions(found.kind, knobs, color)
+      at = packetWithTrail(tl, found.path, trail, { ...opts, reverse: found.reversed, label: hopLabel }, target, at)
       // Group endpoint: nodeEl is null, so pulse the members on arrival instead.
       if (!target) for (const m of groupMembers(nextId)) {
         const mel = nodeEl(m)
         if (mel) pulse(tl, mel, { color }, at)
       }
     }
+    return at
+  }
+
+  const execPacket = (step: Extract<FlowStep, { type: 'packet' }>, position?: number) => {
+    emitDot([step.from, ...(step.via ?? []), step.to], step, resolve(step.color), step.label, position)
+  }
+
+  // A burst fans `count` dots down each target edge, staggered. Every dot is
+  // added at an explicit position, so the timeline duration extends to cover
+  // them and the following step still falls after the last dot.
+  const execBurst = (step: Extract<FlowStep, { type: 'burst' }>, position?: number) => {
+    const color = resolve(step.color)
+    const targets = Array.isArray(step.to) ? step.to : [step.to]
+    const base = position ?? tl.duration()
+    // Fire in `count` waves; each wave launches a dot to EVERY target at once, so
+    // a fan-out reads as a simultaneous broadcast rather than one drained target
+    // after another. A single target just yields `count` staggered dots.
+    for (let c = 0; c < step.count; c++) {
+      const at = base + c * step.stagger
+      targets.forEach((tgt, t) => {
+        const chain = [step.from, ...(step.via ?? []), tgt]
+        // Only the very first dot carries the label, so a burst isn't a wall of text.
+        emitDot(chain, step, color, c === 0 && t === 0 ? step.label : undefined, at)
+      })
+    }
   }
 
   const execStep = (step: FlowStep, position?: number): void => {
     switch (step.type) {
       case 'packet':
-        execPacket(step.from, step.to, step.via, resolve(step.color), step.label, position)
+        execPacket(step, position)
+        break
+      case 'burst':
+        execBurst(step, position)
         break
       case 'status': {
         const el = nodeEl(step.node)

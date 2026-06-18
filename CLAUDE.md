@@ -53,8 +53,9 @@ YAML → model/ (parse → validate+defaults) → DiagramModel
 
 `mountModel(root, model, opts)` in `src/core.ts` runs all of this and returns a `DiagramHandle`
 (`play/pause/reset/seek/setTheme/relayout/destroy/ready`). `renderDiagram(host, yaml, opts)` is the
-light-DOM convenience; `<beck-diagram>` (`src/embed/element.ts`) is the Shadow-DOM custom element;
-`src/embed/hydrate.ts` scans `code.language-beck` blocks and is the Pennington integration.
+light-DOM convenience; `<beck-diagram>` (`src/embed/element.ts`) is the custom element, which also
+renders in light DOM (via `renderDiagram`) so host CSS reaches it; `src/embed/hydrate.ts` scans
+`code.language-beck` blocks and is the Pennington/Markdig integration.
 
 ## Load-bearing invariants (violating these breaks things subtly)
 

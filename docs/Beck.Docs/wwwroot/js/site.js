@@ -32,16 +32,20 @@
   window.beckToggleTheme = toggleTheme;
 
   // ---- palette bridge -----------------------------------------------------
-  // MonorailCSS emits the brand palette as --color-* CSS variables (flipped under
-  // `.dark`). Monaco needs literal hex, so we resolve the *computed* colour of each
-  // token through a hidden probe. The catch: MonorailCSS emits `oklch()`, and
-  // getComputedStyle returns that verbatim (modern engines no longer down-convert
-  // to rgb) — so the rgb() regex alone silently fails and every colour falls back
-  // to its literal, drifting the editor off the live palette. We paint the resolved
-  // colour onto a 1x1 canvas and read sRGB bytes back, which normalises any format
-  // (hex/rgb/oklch/lab/color()). Because the vars resolve to whichever theme is
-  // active, callers must re-resolve after a theme flip (we redefine the single
-  // 'beck' Monaco theme on every change).
+  // MonorailCSS emits the brand palette as --color-* CSS variables. The ramp does
+  // NOT flip under `.dark`: --color-base-50 is always the lightest and -900/-950 the
+  // darkest, in both themes. Dark mode is achieved by *selecting a different shade per
+  // mode* (e.g. bg = dark ? base-900 : base-50; fg = dark ? base-100 : base-800), not
+  // by the var values changing — so every shade picked below must be chosen for the
+  // active mode (picking the same var for both modes, as fg once did, paints dark-on-
+  // dark in the suggest widget). Monaco needs literal hex, so we resolve the *computed*
+  // colour of each token through a hidden probe. The catch: MonorailCSS emits `oklch()`,
+  // and getComputedStyle returns that verbatim (modern engines no longer down-convert
+  // to rgb) — so the rgb() regex alone silently fails and every colour falls back to
+  // its literal, drifting the editor off the live palette. We paint the resolved colour
+  // onto a 1x1 canvas and read sRGB bytes back, which normalises any format
+  // (hex/rgb/oklch/lab/color()). We redefine the single 'beck' Monaco theme on every
+  // theme change so the re-picked shades take effect.
   function rgbToHex(rgb) {
     var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(rgb || '');
     if (!m) return null;
@@ -274,9 +278,11 @@
 
   function applyBeckTheme(monaco) {
     var dark = currentTheme() === 'dark';
-    // Resolve against the *active* theme's vars (see cssVarHex). Fallbacks only
-    // bite if /styles.css hasn't loaded yet.
-    var fg = cssVarHex('--color-base-800', dark ? '#e7e7ec' : '#2a2a30');
+    // Pick the mode-appropriate shade for each role (the ramp doesn't flip — see the
+    // palette-bridge note). Fallbacks only bite if /styles.css hasn't loaded yet.
+    // fg MUST track the mode: base-800 is dark in both themes, so reusing it in dark
+    // mode paints dark text on the dark suggest-widget/editor background.
+    var fg = cssVarHex(dark ? '--color-base-100' : '--color-base-800', dark ? '#e7e7ec' : '#2a2a30');
     var bg = cssVarHex(dark ? '--color-base-900' : '--color-base-50', dark ? '#16181d' : '#ffffff');
     var line = cssVarHex(dark ? '--color-base-600' : '--color-base-400', dark ? '#56565f' : '#8c8c97');
     var key = cssVarHex(dark ? '--color-primary-400' : '--color-primary-700', dark ? '#34c77b' : '#19794d');
@@ -405,6 +411,7 @@
     width: 'Override the card width, in pixels.',
     color: 'Edge stroke colour — an accent token or a CSS colour.',
     // value docs
+    solid: 'Default card weight (full surface + border).', subtle: 'Dimmed card for lower emphasis.',
     service: 'A generic service box.', db: 'A database (cylinder).', queue: 'A message queue.',
     cache: 'A cache store.', gateway: 'An API gateway / entry point.', external: 'A third-party / external system.',
     user: 'A person or client.', ghost: 'A faded placeholder node.',

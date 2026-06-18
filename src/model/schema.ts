@@ -17,6 +17,19 @@ export type NodeVariant = 'solid' | 'subtle' | 'ghost'
 export type EdgeStyle = 'solid' | 'dashed'
 export type EdgeCurve = 'step-round' | 'straight' | 's'
 export type EdgeKind = 'data' | 'control' | 'async' | 'dependency'
+/** Easing token for a travelling packet (mapped to a concrete GSAP ease in the animator). */
+export type PacketEase =
+  | 'linear'
+  | 'smooth'
+  | 'accelerate'
+  | 'decelerate'
+  | 'expo'
+  | 'sine'
+  | 'steps'
+  | 'bounce'
+/** Visual form of a travelling packet. `dot` is the default small glowing dot;
+ *  `circle` is a larger filled disc; `ring` is a hollow stroked circle. */
+export type PacketShape = 'dot' | 'circle' | 'ring'
 export type Side = 'top' | 'bottom' | 'left' | 'right'
 /** Which ends of an edge carry an arrowhead. */
 export type ArrowEnds = 'none' | 'end' | 'start' | 'both'
@@ -86,8 +99,37 @@ export interface EdgeModel {
   toSide?: Side
 }
 
+/** Knobs shared by `packet` and `burst` that shape the travelling dot. All are
+ *  optional; unset ones fall back to the edge-kind defaults, then to engine
+ *  constants. */
+export interface PacketKnobs {
+  /** Visual form of the packet (`dot` | `circle` | `ring`); defaults to `dot`. */
+  shape?: PacketShape
+  /** Dot radius in px. */
+  size?: number
+  /** Travel speed in px/s. */
+  speed?: number
+  /** Soft glow on the dot. */
+  glow?: boolean
+  /** Emit an expanding ring (a "burst") at the destination on arrival. */
+  impact?: boolean
+  /** Easing of the dot's travel (and the trail draw, kept in lockstep). */
+  ease?: PacketEase
+}
+
 export type FlowStep =
-  | { type: 'packet'; from: string; to: string; via?: string[]; color?: string; label?: string }
+  | ({ type: 'packet'; from: string; to: string; via?: string[]; color?: string; label?: string } & PacketKnobs)
+  /** Several dots down an edge (or fanned to many targets), staggered. */
+  | ({
+      type: 'burst'
+      from: string
+      to: string | string[]
+      via?: string[]
+      count: number
+      stagger: number
+      color?: string
+      label?: string
+    } & PacketKnobs)
   | { type: 'status'; node: string; text: string; color?: string }
   | { type: 'highlight'; node: string; color?: string }
   | { type: 'pulse'; node: string; color?: string }

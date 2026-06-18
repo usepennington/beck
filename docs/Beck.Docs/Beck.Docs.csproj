@@ -5,19 +5,27 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Beck.Docs</RootNamespace>
+    <!-- The docs site is built and deployed, never packed. -->
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- The Beck engine RCL: ships _content/Beck/beck.global.js as a static web asset
          and the Beck.Authoring DiagramBuilder C# API used by the API docs. -->
     <ProjectReference Include="..\..\dotnet\Beck\Beck.csproj" />
-    <!-- Pennington content engine (bare host) + tree-sitter :symbol source embeds. -->
-    <ProjectReference Include="..\..\..\penn\src\Pennington\Pennington.csproj" />
-    <ProjectReference Include="..\..\..\penn\src\Pennington.TreeSitter\Pennington.TreeSitter.csproj" />
-    <!-- MonorailCSS: runtime utility-class discovery + the /styles.css endpoint. The
-         semantic primary/accent/base palette also feeds the embedded Beck engine via
-         the emitted color CSS variables. -->
-    <ProjectReference Include="..\..\..\penn\src\Pennington.MonorailCss\Pennington.MonorailCss.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pennington content engine, from NuGet so the site builds on CI without a local
+         b:\penn checkout. Versions are pinned centrally in Directory.Packages.props.
+         - Pennington            : bare content host (markdown pipeline, RunOrBuildAsync).
+         - Pennington.TreeSitter  : the `:symbol` source embeds (real source pulled from files).
+         - Pennington.MonorailCss : runtime utility-class discovery + the /styles.css endpoint;
+           the semantic primary/accent/base palette also feeds the embedded Beck engine via
+           the emitted color CSS variables. -->
+    <PackageReference Include="Pennington" />
+    <PackageReference Include="Pennington.TreeSitter" />
+    <PackageReference Include="Pennington.MonorailCss" />
   </ItemGroup>
 
   <ItemGroup>

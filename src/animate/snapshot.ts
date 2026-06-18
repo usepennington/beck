@@ -82,9 +82,17 @@ export class Snapshot {
       s.card.style.transform = s.transform
     }
     for (const svg of this.svgs) {
-      svg.querySelectorAll('circle[data-beck-packet]').forEach((c) => c.remove())
-      svg.querySelectorAll('text[data-beck-packet]').forEach((t) => t.remove())
-      svg.querySelectorAll('filter[id^="beck-glow-"]').forEach((f) => f.remove())
+      // One-shot burst/impact rings are created at play time — remove any the
+      // reset interrupts. The travel dots, their labels, and the glow filters are
+      // created ONCE at compile and REUSED on every loop iteration; removing them
+      // would leave later iterations animating detached elements that also dangle
+      // their `url(#beck-glow-…)` filter ref (an invisible "single-pixel" dot).
+      // Hide them to their start state instead — the packet sub-timeline re-shows
+      // and repositions them next iteration.
+      svg.querySelectorAll('[data-beck-burst]').forEach((b) => b.remove())
+      svg
+        .querySelectorAll('circle[data-beck-packet], text[data-beck-packet]')
+        .forEach((el) => el.setAttribute('opacity', '0'))
     }
     for (const state of this.trailStates) {
       for (const o of state.overlays) o.style.strokeDashoffset = o.style.strokeDasharray

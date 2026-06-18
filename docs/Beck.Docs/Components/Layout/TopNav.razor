@@ -27,9 +27,6 @@
                     <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                 </svg>
             </button>
-            @* CTA stays in the bar on roomy screens; it moves into the menu below md. *@
-            <a class="inline-flex items-center gap-2 rounded-[10px] bg-primary-600 px-[15px] py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 max-md:hidden"
-               href="/get-started/">Get started</a>
             @* Hamburger — only below md; site.js toggles #nav-menu. *@
             <button class="nav-toggle hidden h-[34px] w-[34px] items-center justify-center rounded-[9px] border border-base-200 bg-base-50 text-base-600 transition-colors hover:text-base-900 dark:border-base-800 dark:bg-base-900 dark:text-base-400 dark:hover:text-base-50 max-md:inline-flex"
                     type="button" aria-label="Open menu" aria-controls="nav-menu" aria-expanded="false">
@@ -52,7 +49,6 @@
             <a href="/examples/" class="@MobileNavLink("examples")">Examples</a>
             <a href="/playground" class="@MobileNavLink("playground")">Playground</a>
             <a href="/api" class="@MobileNavLink("api")">API</a>
-            <a href="/get-started/" class="mt-2 inline-flex items-center justify-center gap-2 rounded-[10px] bg-primary-600 px-[15px] py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400">Get started</a>
         </nav>
     </div>
 </header>

@@ -58,7 +58,7 @@
             "meta: { animate: false }\nnodes:\n  - { id: db, title: Postgres, subtitle: primary, kind: db }"),
 
         new("Node kinds", "nodes", "nodes",
-            "kind picks a fitting icon + accent: service, db, queue, cache, gateway, user, external.",
+            "kind picks a fitting icon + accent: service, db, queue, cache, gateway, user, external, ghost.",
             "nodes:\n  - { id: u, kind: user }\n  - { id: gw, kind: gateway }\n  - { id: db, kind: db }",
             "meta: { animate: false, direction: LR }\nnodes: [ { id: u, title: User, kind: user }, { id: gw, title: Gateway, kind: gateway }, { id: db, title: Store, kind: db } ]\nedges: [ { from: u, to: gw }, { from: gw, to: db } ]"),
 
@@ -182,6 +182,21 @@
             "flow:\n  steps:\n    - packet: { from: a, to: b,\n        label: GET }",
             "meta: { direction: LR }\nnodes: [ { id: a, title: Client, kind: user }, { id: b, title: API, kind: gateway } ]\nedges: [ { from: a, to: b } ]\nflow:\n  steps:\n    - packet: { from: a, to: b, label: GET }\n    - wait: 0.6\n    - reset: true"),
 
+        new("Packet style", "flow", "flow",
+            "Shape a packet's motion: ease (linear, smooth, accelerate, decelerate, expo, sine, steps, bounce), size, speed, glow. Edge kind sets sensible defaults; these override.",
+            "flow:\n  steps:\n    - packet: { from: a, to: b,\n        ease: steps, size: 9,\n        speed: 260 }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: Client, kind: user }, { id: b, title: API, kind: gateway } ]\nedges: [ { from: a, to: b } ]\nflow:\n  steps:\n    - packet: { from: a, to: b, ease: steps, size: 9, speed: 260 }\n    - wait: 0.7\n    - reset: true"),
+
+        new("Packet shape", "flow", "flow",
+            "shape draws the packet as a dot (default), a large circle, or a hollow ring. Add impact for an expanding burst where it lands.",
+            "flow:\n  steps:\n    - packet: { from: a, to: b,\n        shape: ring,\n        impact: true }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: Client, kind: user }, { id: b, title: API, kind: gateway } ]\nedges: [ { from: a, to: b } ]\nflow:\n  steps:\n    - packet: { from: a, to: b, shape: circle }\n    - packet: { from: a, to: b, shape: ring, impact: true, color: info }\n    - wait: 0.8\n    - reset: true"),
+
+        new("Burst", "flow", "flow",
+            "burst sends count dots down an edge, staggered — batch or load traffic. Give to a list to fan out to several targets at once.",
+            "flow:\n  steps:\n    - burst: { from: lb,\n        to: [a, b, c],\n        count: 3, stagger: 0.1 }",
+            "meta: { direction: LR }\nnodes: [ { id: lb, title: LB, kind: gateway }, { id: a, title: web-1 }, { id: b, title: web-2 }, { id: c, title: web-3 } ]\nedges: [ { from: lb, to: a }, { from: lb, to: b }, { from: lb, to: c } ]\nflow:\n  steps:\n    - burst: { from: lb, to: [a, b, c], count: 3, stagger: 0.1 }\n    - wait: 1\n    - reset: true"),
+
         new("Status change", "flow", "flow",
             "A status step sets a node's pill mid-flow — show state changing over time.",
             "flow:\n  steps:\n    - status: { node: db,\n        text: writing }",
@@ -196,5 +211,30 @@
             "pulse ripples a node on arrival; highlight briefly tints it. Both take an optional color.",
             "flow:\n  steps:\n    - pulse: { node: cache }",
             "meta: { direction: LR }\nnodes: [ { id: api, title: API }, { id: cache, title: Cache, kind: cache } ]\nedges: [ { from: api, to: cache } ]\nflow:\n  steps:\n    - packet: { from: api, to: cache }\n    - pulse: { node: cache }\n    - wait: 0.8\n    - reset: true"),
+
+        new("Activate edge", "flow", "flow",
+            "activate recolours an edge (and its arrowhead) and keeps it lit until the next reset.",
+            "flow:\n  steps:\n    - activate: { from: a,\n        to: b, color: success }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: API }, { id: b, title: DB, kind: db } ]\nedges: [ { from: a, to: b } ]\nflow:\n  steps:\n    - activate: { from: a, to: b, color: success }\n    - wait: 1.2\n    - reset: true"),
+
+        new("Stream edge", "flow", "flow",
+            "stream runs continuous flowing dashes along an edge — ongoing traffic — until reset.",
+            "flow:\n  steps:\n    - stream: { from: a,\n        to: b }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: Producer }, { id: b, title: Consumer } ]\nedges: [ { from: a, to: b, kind: async } ]\nflow:\n  steps:\n    - stream: { from: a, to: b, color: info }\n    - wait: 2\n    - reset: true"),
+
+        new("Fail", "flow", "flow",
+            "fail flashes a node red with a shake and an optional status text — a failure beat.",
+            "flow:\n  steps:\n    - fail: { node: db,\n        text: timeout }",
+            "meta: { direction: LR }\nnodes: [ { id: api, title: API }, { id: db, title: DB, kind: db } ]\nedges: [ { from: api, to: db } ]\nflow:\n  steps:\n    - packet: { from: api, to: db }\n    - fail: { node: db, text: timeout }\n    - wait: 1.2\n    - reset: true"),
+
+        new("Phase", "flow", "flow",
+            "phase names a checkpoint in the flow — a label you can seek() to and a beat in the story.",
+            "flow:\n  steps:\n    - phase: Request\n    - packet: { from: a, to: b }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: Client, kind: user }, { id: b, title: API, kind: gateway } ]\nedges: [ { from: a, to: b } ]\nflow:\n  steps:\n    - phase: Request\n    - packet: { from: a, to: b }\n    - wait: 0.8\n    - reset: true"),
+
+        new("Parallel", "flow", "flow",
+            "parallel runs its child steps at the same time — fan a request out to several targets at once.",
+            "flow:\n  steps:\n    - parallel:\n        - packet: { from: a, to: b }\n        - packet: { from: a, to: c }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: API, kind: gateway }, { id: b, title: DB, kind: db }, { id: c, title: Cache, kind: cache } ]\nedges: [ { from: a, to: b }, { from: a, to: c } ]\nflow:\n  steps:\n    - parallel:\n        - packet: { from: a, to: b }\n        - packet: { from: a, to: c }\n    - wait: 0.8\n    - reset: true"),
     ];
 }

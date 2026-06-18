@@ -9,9 +9,9 @@ namespace Beck;
 /// <summary>
 /// Fluent builder for a diagram's animation <c>flow:</c> — the scripted sequence
 /// of packets, status changes, and effects the engine plays. Mirrors the flow
-/// steps the TypeScript engine parses (packet/status/highlight/pulse/activate/
-/// stream/working/idle/fail/phase/wait/reset/parallel). Without an explicit
-/// flow the engine auto-derives one from the edges.
+/// steps the TypeScript engine parses (packet/burst/status/highlight/pulse/
+/// activate/stream/working/idle/fail/phase/wait/reset/parallel). Without an
+/// explicit flow the engine auto-derives one from the edges.
 /// </summary>
 /// <example>
 /// <code>
@@ -40,8 +40,25 @@ public sealed class FlowBuilder
     /// <summary>Delay between repeats, in seconds.</summary>
     public FlowBuilder RepeatDelay(double seconds) { _repeatDelay = seconds; return this; }
 
-    /// <summary>Send a packet from one node to another, optionally via waypoints, with a color and a label.</summary>
-    public FlowBuilder Packet(string from, string to, string? color = null, string? label = null, string[]? via = null)
+    /// <summary>
+    /// Send a packet from one node to another, optionally via waypoints. The
+    /// motion/look knobs (<paramref name="shape"/>, <paramref name="ease"/>,
+    /// <paramref name="size"/>, <paramref name="speed"/>, <paramref name="glow"/>,
+    /// <paramref name="impact"/>) are optional and, when left null, fall back to
+    /// the traversed edge's kind defaults.
+    /// </summary>
+    public FlowBuilder Packet(
+        string from,
+        string to,
+        string? color = null,
+        string? label = null,
+        string[]? via = null,
+        PacketEase? ease = null,
+        double? size = null,
+        double? speed = null,
+        bool? glow = null,
+        PacketShape? shape = null,
+        bool? impact = null)
     {
         var pairs = new List<(string, string)>
         {
@@ -51,7 +68,70 @@ public sealed class FlowBuilder
         if (via is { Length: > 0 }) pairs.Add(("via", YamlWriter.FlowSeq(via.Select(YamlWriter.Scalar))));
         if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
         if (label != null) pairs.Add(("label", YamlWriter.Scalar(label)));
+        AppendPacketKnobs(pairs, shape, ease, size, speed, glow, impact);
         return Step("packet", YamlWriter.FlowMap(pairs));
+    }
+
+    /// <summary>
+    /// Emit a burst of <paramref name="count"/> dots down an edge with a
+    /// <paramref name="stagger"/> delay between them — a batch or a load spike.
+    /// </summary>
+    public FlowBuilder Burst(
+        string from,
+        string to,
+        int count = 3,
+        double stagger = 0.12,
+        string? color = null,
+        string? label = null,
+        PacketEase? ease = null,
+        double? size = null,
+        double? speed = null,
+        bool? glow = null,
+        PacketShape? shape = null,
+        bool? impact = null) =>
+        BurstStep(from, YamlWriter.Scalar(to), count, stagger, color, label, ease, size, speed, glow, shape, impact);
+
+    /// <summary>Fan a burst out from one source to several targets at once, staggered.</summary>
+    public FlowBuilder Burst(
+        string from,
+        IEnumerable<string> to,
+        int count = 3,
+        double stagger = 0.12,
+        string? color = null,
+        string? label = null,
+        PacketEase? ease = null,
+        double? size = null,
+        double? speed = null,
+        bool? glow = null,
+        PacketShape? shape = null,
+        bool? impact = null) =>
+        BurstStep(from, YamlWriter.FlowSeq(to.Select(YamlWriter.Scalar)), count, stagger, color, label, ease, size, speed, glow, shape, impact);
+
+    private FlowBuilder BurstStep(
+        string from,
+        string toValue,
+        int count,
+        double stagger,
+        string? color,
+        string? label,
+        PacketEase? ease,
+        double? size,
+        double? speed,
+        bool? glow,
+        PacketShape? shape,
+        bool? impact)
+    {
+        var pairs = new List<(string, string)>
+        {
+            ("from", YamlWriter.Scalar(from)),
+            ("to", toValue),
+            ("count", count.ToString(CultureInfo.InvariantCulture)),
+            ("stagger", stagger.ToString(CultureInfo.InvariantCulture)),
+        };
+        if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
+        if (label != null) pairs.Add(("label", YamlWriter.Scalar(label)));
+        AppendPacketKnobs(pairs, shape, ease, size, speed, glow, impact);
+        return Step("burst", YamlWriter.FlowMap(pairs));
     }
 
     /// <summary>Set a node's status-pill text (persists until changed).</summary>
@@ -119,6 +199,23 @@ public sealed class FlowBuilder
 
     private static (string? Key, string Value) Color(string? color) =>
         color == null ? (null, "") : ("color", YamlWriter.Scalar(color));
+
+    private static void AppendPacketKnobs(
+        List<(string Key, string Value)> pairs,
+        PacketShape? shape,
+        PacketEase? ease,
+        double? size,
+        double? speed,
+        bool? glow,
+        bool? impact)
+    {
+        if (shape is { } sh) pairs.Add(("shape", Tokens.Of(sh)));
+        if (ease is { } e) pairs.Add(("ease", Tokens.Of(e)));
+        if (size is { } sz) pairs.Add(("size", sz.ToString(CultureInfo.InvariantCulture)));
+        if (speed is { } sp) pairs.Add(("speed", sp.ToString(CultureInfo.InvariantCulture)));
+        if (glow is { } g) pairs.Add(("glow", g ? "true" : "false"));
+        if (impact is { } im) pairs.Add(("impact", im ? "true" : "false"));
+    }
 
     private static string NodeMap(string node, params (string? Key, string Value)[] extra)
     {

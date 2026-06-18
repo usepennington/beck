@@ -51,7 +51,9 @@ edges. Validation errors are reported with friendly messages (and a line number 
   `curve` (`step-round`/`straight`/`s`), `kind` (`data`/`control`/`async`/`dependency`),
   `color`, `arrow` (`true`/`false`, or `end`/`start`/`both`/`none`), `fromSide`/`toSide`.
 - **`flow`** — `repeat`, `repeatDelay`, `steps[]`, where each step is one of: `packet`
-  (`{from, to, via?, color?, label?}`), `status` (`{node, text, color?}`), `highlight`/`pulse`
+  (`{from, to, via?, color?, label?}` plus look/motion knobs `shape` (`dot`/`circle`/`ring`),
+  `size`, `speed`, `glow`, `impact` (burst-on-arrival), `ease`), `burst` (`{from, to|[to…], count,
+  stagger}` + the same knobs), `status` (`{node, text, color?}`), `highlight`/`pulse`
   (`{node, color?}`), `activate`/`stream` (`{from, to, color?}` — persistently recolor an edge /
   flow continuous dashes along it), `working` (`{node, color?}` — leave a node breathing until
   `idle`/`reset`), `idle` (`{node}`), `fail` (`{node, text?, color?}` — red shake + flash),
@@ -60,11 +62,19 @@ edges. Validation errors are reported with friendly messages (and a line number 
 
 ## Usage
 
-**Custom element** (Shadow-DOM isolated; reads inline YAML, a child `<script type="application/yaml">`,
-or a `src` URL):
+The engine ships inside the **`Beck` NuGet package** (see *Distribution* below); include its one
+script and you get the integration paths below — no separate npm install or CDN.
+
+**Fenced ` ```beck ` blocks (the main path).** With the script on the page, every Markdown
+` ```beck ` fence — rendered by Markdig/Pennington as `<code class="language-beck">` — is hydrated
+into a live diagram. This is the Mermaid-style integration every diagram in the docs uses, and it
+needs nothing server-side.
+
+**`<beck-diagram>` element** — renders in **light DOM**, so the host page's CSS reaches it. Reads
+inline YAML, a child `<script type="application/yaml">`, or a `src` URL:
 
 ```html
-<script type="module" src="/path/to/beck.global.js"></script>
+<script src="/path/to/beck.global.js" defer></script>
 <beck-diagram mode="auto">
   <script type="application/yaml">
     meta: { title: Hello }
@@ -85,17 +95,17 @@ const handle = renderDiagram(document.querySelector('#chart'), yamlString, { the
 ## Theming
 
 Every themeable value is a `--beck-*` CSS custom property that **defaults to the host site's
-palette** (`--color-primary-600`, `--color-base-*`, …) with a literal fallback. Custom properties
-pierce the Shadow DOM boundary, so a diagram automatically matches the surrounding page, including
-light/dark — which is just a matter of `[data-theme="dark"]` redefining the variables. There is no
-per-theme JavaScript and no hardcoded colors in the renderer.
+palette** (`--color-primary-600`, `--color-base-*`, …) with a literal fallback. A diagram renders
+in light DOM, so it inherits those variables straight from the surrounding page and matches it
+automatically, including light/dark — which is just a matter of `[data-theme="dark"]` redefining
+the variables. There is no per-theme JavaScript and no hardcoded colors in the renderer.
 
 ## How it works
 
 ```
 YAML → parse → validate(+defaults) → model
      → measure (render cards off-flow, read sizes)
-     → layout (Sugiyama-lite: rank → order → coords; groups as constraints)
+     → layout (Sugiyama-lite: rank → order → coords; groups = recursive compound sub-layout)
      → route  (auto orthogonal step-round edges with obstacle avoidance)
      → render (position DOM, group boxes, SVG overlay)
      → animate (compile flow → GSAP timeline; play on scroll-into-view)

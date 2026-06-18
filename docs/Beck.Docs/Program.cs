@@ -23,10 +23,15 @@ builder.Services.AddPennington(penn =>
 });
 
 // MonorailCSS: scans compiled IL + watched source for utility-class literals and serves
-// them from /styles.css. The semantic palette maps the brand green to `primary`, a violet
-// secondary to `accent`, and slate to `base`. MonorailCSS emits these as --color-primary-*,
-// --color-accent-*, --color-base-* (flipped under .dark) — which is exactly what the embedded
-// Beck engine reads via its --beck-* bridge, so live diagrams adopt this palette for free.
+// them from /styles.css. The semantic palette maps the brand green to `primary`, slate to
+// `base`, and a violet secondary to `accent`. MonorailCSS only emits ramps that a utility
+// class actually references: --color-primary-* and --color-base-* (the configured slots) plus
+// the named ramps used on the site (emerald, green, amber, red, blue, sky, …). The ramps are
+// NOT flipped under .dark — dark mode picks a different shade per utility. The Beck engine
+// reads these via its --beck-* bridge, so primary/base-derived accents adopt this palette for
+// free; note the `accent` slot is surfaced as --color-accent-* by NO emitted ramp here (and
+// the configured violet is not emitted as --color-violet-* either), so --beck-info falls back
+// to its literal violet unless BrandStyling remaps it onto an emitted ramp.
 builder.Services.AddMonorailCss(_ => new MonorailCssOptions
 {
     ColorScheme = new NamedColorScheme

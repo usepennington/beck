@@ -1,6 +1,7 @@
 import { packet } from './packet'
 import { pulse } from './effects'
 import type { Timeline } from './runtime'
+import type { PacketShape } from '../model/schema'
 
 export interface TrailOptions {
   color?: string
@@ -10,6 +11,17 @@ export interface TrailOptions {
   reverse?: boolean
   /** Text payload that rides along with the packet. */
   label?: string
+  /** Visual form of the packet (`dot` | `circle` | `ring`); defaults to `dot`. */
+  shape?: PacketShape
+  /** Dot radius in px (default 6). */
+  size?: number
+  /** Soft glow on the dot (default true). */
+  glow?: boolean
+  /** Emit an expanding ring (a "burst") at the destination on arrival. */
+  impact?: boolean
+  /** GSAP ease applied to BOTH the dot's travel and the trail draw, so the dot
+   *  never detaches from the head of the line it reveals. */
+  ease?: string
 }
 
 export interface TrailState {
@@ -92,10 +104,37 @@ export function packetWithTrail(
   state.overlays.push(overlay)
 
   // fromTo pins the start each loop iteration (so reverse trails stay correct).
-  tl.fromTo(overlay, { strokeDashoffset: start }, { strokeDashoffset: 0, duration, ease: 'none' }, pos)
-  packet(tl, path, { color, duration, noEntry: true, noExit: true, reverse, label: opts.label }, pos)
+  // The trail draw shares the packet's ease so the line reveals exactly under the dot.
+  tl.fromTo(
+    overlay,
+    { strokeDashoffset: start },
+    { strokeDashoffset: 0, duration, ease: opts.ease || 'none' },
+    pos,
+  )
+  packet(
+    tl,
+    path,
+    {
+      color,
+      duration,
+      noEntry: true,
+      noExit: true,
+      reverse,
+      label: opts.label,
+      shape: opts.shape,
+      radius: opts.size,
+      glow: opts.glow,
+      impact: opts.impact,
+      ease: opts.ease,
+    },
+    pos,
+  )
 
-  if (targetNode) pulse(tl, targetNode, { color })
+  // Pulse on arrival at an EXPLICIT position. Without it, `pulse` would append
+  // at the timeline's current end, so parallel packets (whose trails share one
+  // start) would still flash their targets one-after-another as each prior pulse
+  // pushed the end out. Pin it to the dot's landing instead.
+  if (targetNode) pulse(tl, targetNode, { color }, pos + duration)
 
   return pos + duration
 }

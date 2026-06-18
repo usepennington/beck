@@ -5,6 +5,8 @@ import {
   DEFAULT_SPACING,
   EDGE_KIND_DEFAULTS,
   KIND_DEFAULTS,
+  PACKET_EASES,
+  PACKET_SHAPES,
   deriveFlow,
 } from './defaults'
 import type {
@@ -16,6 +18,7 @@ import type {
   GroupModel,
   NodeKind,
   NodeModel,
+  PacketKnobs,
   Side,
 } from './schema'
 
@@ -242,6 +245,19 @@ function buildEdges(rawEdges: unknown[], validTargets: Set<string>): EdgeModel[]
   })
 }
 
+/** Shared `packet`/`burst` motion knobs — each left undefined when unset so the
+ *  animator can fall back to the edge-kind defaults. */
+function packetKnobs(p: Record<string, unknown>): PacketKnobs {
+  return {
+    shape: p.shape == null ? undefined : oneOf(p.shape, PACKET_SHAPES, 'packet.shape', 'dot'),
+    size: optNumber(p.size, 'packet.size'),
+    speed: optNumber(p.speed, 'packet.speed'),
+    glow: p.glow == null ? undefined : optBool(p.glow, 'packet.glow', true),
+    impact: p.impact == null ? undefined : optBool(p.impact, 'packet.impact', false),
+    ease: p.ease == null ? undefined : oneOf(p.ease, PACKET_EASES, 'packet.ease', 'linear'),
+  }
+}
+
 function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: Set<string>): FlowStep {
   const node = (id: string, ctx: string): string => {
     if (!nodeIds.has(id)) throw new BeckError(`Flow ${ctx} references unknown node "${id}"`)
@@ -265,6 +281,28 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
       via: via.length ? via : undefined,
       color: optColor(p.color),
       label: optString(p.label),
+      ...packetKnobs(p),
+    }
+  }
+  if ('burst' in s) {
+    const p = asObject(s.burst, 'flow burst')
+    const to = Array.isArray(p.to)
+      ? p.to.map((v) => endpoint(asString(v, 'burst.to'), 'burst to'))
+      : endpoint(asString(p.to, 'burst.to'), 'burst')
+    const via = asArray(p.via, 'burst.via').map((v) => endpoint(asString(v, 'burst.via'), 'burst via'))
+    // Clamp count to a sane range so one step can't spawn an unbounded fleet.
+    const count = Math.max(1, Math.min(24, Math.round(optNumber(p.count, 'burst.count') ?? 3)))
+    const stagger = Math.max(0, optNumber(p.stagger, 'burst.stagger') ?? 0.12)
+    return {
+      type: 'burst',
+      from: endpoint(asString(p.from, 'burst.from'), 'burst'),
+      to,
+      via: via.length ? via : undefined,
+      count,
+      stagger,
+      color: optColor(p.color),
+      label: optString(p.label),
+      ...packetKnobs(p),
     }
   }
   if ('status' in s) {
@@ -333,7 +371,7 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
     return { type: 'parallel', steps }
   }
   throw new BeckError(
-    'A flow step must have one of: packet, status, highlight, pulse, activate, stream, working, idle, fail, phase, wait, reset, parallel',
+    'A flow step must have one of: packet, burst, status, highlight, pulse, activate, stream, working, idle, fail, phase, wait, reset, parallel',
   )
 }
 

@@ -11,8 +11,8 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <PackageId>Beck</PackageId>
-    <Version>0.1.0</Version>
-    <Description>Declarative, animated architecture diagrams from YAML. Ships the prebuilt Beck client as a static web asset (served at _content/Beck/beck.global.js) that hydrates fenced ```beck code blocks, plus a dependency-free .NET authoring API (DiagramBuilder) for emitting Beck YAML from code.</Description>
+    <!-- Version comes from the latest `v*` git tag via MinVer (see dotnet/Directory.Build.props). -->
+    <Description>Declarative, animated architecture diagrams from YAML. Ships the prebuilt Beck client as a static web asset (served at _content/Beck/beck.global.js) that hydrates fenced ```beck code blocks in Pennington or any Markdig-based site, plus a dependency-free .NET authoring API (DiagramBuilder) for emitting Beck YAML from code.</Description>
     <PackageTags>diagram;architecture;yaml;pennington;static-web-assets;svg;animation</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

@@ -85,6 +85,20 @@ internal static class BrandStyling
           border: 0; background: none; padding: 0; margin: 0; min-height: 0;
         }
 
+        /* ---- Beck accent remap: differentiate from the emerald brand ---- */
+        /* The engine maps `success`->emerald and `info`->violet. On this emerald-branded
+           site `success` would collide with `primary` (both emerald), and the violet ramp is
+           never emitted (MonorailCSS only emits ramps a utility class references), so `info`
+           can't adopt the live palette. Re-point both at ramps this site DOES emit: `success`
+           -> green (a distinct green from the emerald primary) and `info` -> sky (also recolours
+           the `db` kind, whose default accent is info). The `body` prefix lifts specificity
+           above the engine's own `.beck-root` defaults, which it injects into <head> AFTER this
+           stylesheet (equal-specificity rules would otherwise let the engine default win). */
+        body .beck-root {
+          --beck-success: var(--color-green-500, #22c55e);
+          --beck-info: var(--color-sky-500, #0ea5e9);
+        }
+
         /* ---- playground: elements created / class-toggled by site.js ---- */
         /* IL discovery can't see classes that exist only inside a JS string, so these
            stay declarative CSS rather than utilities. */

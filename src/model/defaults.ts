@@ -8,6 +8,8 @@ import type {
   NodeKind,
   NodeModel,
   NodeVariant,
+  PacketEase,
+  PacketShape,
   Spacing,
 } from './schema'
 
@@ -34,6 +36,50 @@ export const EDGE_KIND_DEFAULTS: Record<EdgeKind, { style: EdgeStyle; color: str
   control: { style: 'solid', color: 'var(--beck-edge)' },
   async: { style: 'dashed', color: 'var(--beck-edge)' },
   dependency: { style: 'dashed', color: 'var(--beck-neutral)' },
+}
+
+/** Allowed packet ease tokens — kept in lockstep with the C# `PacketEase` enum
+ *  and the `PACKET_EASE` token→GSAP map in `src/animate/timeline.ts`. */
+export const PACKET_EASES = [
+  'linear',
+  'smooth',
+  'accelerate',
+  'decelerate',
+  'expo',
+  'sine',
+  'steps',
+  'bounce',
+] as const
+
+/** Allowed packet shape tokens — kept in lockstep with the C# `PacketShape` enum
+ *  and the renderer in `src/animate/packet.ts`. */
+export const PACKET_SHAPES = ['dot', 'circle', 'ring'] as const
+
+/**
+ * Default radius per shape. `dot` returns null so it keeps the edge-kind size
+ * (small, semantic); the bolder `circle`/`ring` shapes read as deliberate, so
+ * they get a larger baseline. An explicit `size` knob always wins over both.
+ */
+export const PACKET_SHAPE_SIZE: Record<PacketShape, number | null> = {
+  dot: null,
+  circle: 12,
+  ring: 12,
+}
+
+/**
+ * Per-edge-kind packet motion: radius (px), speed (px/s), glow, and ease token.
+ * This is what makes data / control / async / dependency packets read
+ * differently with zero authoring — `execPacket` reads the traversed edge's kind
+ * and applies these. Explicit packet knobs always win over them.
+ */
+export const PACKET_KIND_STYLE: Record<
+  EdgeKind,
+  { size: number; speed: number; glow: boolean; ease: PacketEase }
+> = {
+  data: { size: 6, speed: 420, glow: true, ease: 'linear' },
+  control: { size: 5, speed: 640, glow: true, ease: 'accelerate' },
+  async: { size: 7.5, speed: 300, glow: true, ease: 'smooth' },
+  dependency: { size: 4, speed: 380, glow: false, ease: 'linear' },
 }
 
 /** Kahn topological sort of node ids; falls back to declared order on a cycle. */

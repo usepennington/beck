@@ -68,6 +68,10 @@ function drawEdge(svg: SVGSVGElement, d: string, edge: EdgeModel): SVGPathElemen
   path.dataset.from = edge.from
   path.dataset.to = edge.to
   path.dataset.edge = edge.id
+  // Expose the semantic kind so hosts can target it (e.g. `.beck-edge--control`) and so kinds
+  // that share a default style — control vs data — are still distinguishable in the DOM.
+  path.dataset.kind = edge.kind
+  path.classList.add('beck-edge', `beck-edge--${edge.kind}`)
   svg.appendChild(path)
   return path
 }

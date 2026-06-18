@@ -1,0 +1,96 @@
+# Deploys the Beck.Docs Pennington site to GitHub Pages on every push to main.
+#
+# The site serves under the repository sub-path https://<user>.github.io/<repo>/, so the Pennington
+# build needs a matching base URL (derived from the repo name) to rewrite internal anchors, CSS, JS,
+# and data URLs under /<repo>/. The Beck engine reads that same base from <body data-base-url> to
+# prefix the links it renders client-side.
+#
+# Build notes:
+#   - The site embeds the Beck engine (the committed wwwroot/beck.global.js, served by the RCL at
+#     _content/Beck/beck.global.js). We rebuild it from the TypeScript source first (npm run
+#     build:lib) so a deploy always ships the latest engine, even if the committed copy lagged.
+#   - global.json pins the .NET 10 SDK; the Beck package targets net8.0, so install both.
+#   - Pennington is restored from NuGet (no local b:\penn checkout needed).
+#   - Pennington emits underscore folders (_content/, _framework/); the .nojekyll marker stops
+#     GitHub Pages' Jekyll step from silently stripping them.
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deploy at a time; let an in-flight deploy finish rather than cancelling it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # MinVer reads git history when the Beck RCL builds in Release
+
+      # Rebuild the engine bundle from TypeScript so the deployed site embeds the latest src/.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install JS deps
+        run: npm ci
+      - name: Build the engine bundle
+        run: npm run build:lib   # writes dotnet/Beck/wwwroot/beck.global.js
+
+      # 10.0.x SDK (pinned by global.json) builds the docs; 8.0.x covers the net8.0 Beck package
+      # the docs reference. NOTE: keep these as bare versions — inline comments inside the block
+      # scalar are parsed as part of the version string and break setup-dotnet.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore docs/Beck.Docs/Beck.Docs.csproj
+
+      # Pennington's "build" mode writes the static site to <content-root>/output (the docs project
+      # directory). --no-launch-profile skips launchSettings.json (which would force
+      # ASPNETCORE_ENVIRONMENT=Development), so the published HTML is built as Production.
+      - name: Build static site
+        env:
+          BASE_URL: /${{ github.event.repository.name }}
+        run: >
+          dotnet run
+          --project docs/Beck.Docs/Beck.Docs.csproj
+          --configuration Release
+          --no-launch-profile
+          -- build "$BASE_URL"
+
+      - name: Disable Jekyll processing
+        run: touch docs/Beck.Docs/output/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/Beck.Docs/output
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
