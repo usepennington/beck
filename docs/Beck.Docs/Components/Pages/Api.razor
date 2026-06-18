@@ -3,86 +3,250 @@
 <PageTitle>API reference — Beck</PageTitle>
 
 <div class="mx-auto max-w-[1180px] px-8 grid grid-cols-[250px_1fr] gap-12 items-start max-lg:grid-cols-1">
-    <aside class="sticky top-[62px] self-start max-h-[calc(100vh-62px)] overflow-y-auto py-[34px]">
-        <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck.Authoring</div>
-        <div class="flex flex-col gap-px mb-[22px]">
-            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-950/40" href="#diagrambuilder">DiagramBuilder</a>
-            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#nodebuilder">NodeBuilder</a>
-            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#edgebuilder">EdgeBuilder</a>
-            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#groupbuilder">GroupBuilder</a>
-            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#flowbuilder">FlowBuilder</a>
-        </div>
-        <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck (client)</div>
-        <div class="flex flex-col gap-px mb-[22px]">
-            <a class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50" href="#beckassets">BeckAssets</a>
-            <span class="block w-full text-left font-mono text-[13px] py-1.5 px-2.5 rounded-md text-base-600 dark:text-base-400">&lt;beck-diagram&gt;</span>
-        </div>
+    <aside class="sticky top-[62px] self-start max-h-[calc(100vh-62px)] overflow-y-auto py-[34px] max-lg:hidden">
+        <nav id="api-nav">
+            <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck.Authoring</div>
+            <div class="flex flex-col gap-px mb-[22px]">
+                <a class="api-nav-link" href="/api/#diagrambuilder">DiagramBuilder</a>
+                <a class="api-nav-link" href="/api/#nodebuilder">NodeBuilder</a>
+                <a class="api-nav-link" href="/api/#edgebuilder">EdgeBuilder</a>
+                <a class="api-nav-link" href="/api/#groupbuilder">GroupBuilder</a>
+                <a class="api-nav-link" href="/api/#flowbuilder">FlowBuilder</a>
+            </div>
+            <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck (client)</div>
+            <div class="flex flex-col gap-px mb-[22px]">
+                <a class="api-nav-link" href="/api/#beckassets">BeckAssets</a>
+                <a class="api-nav-link" href="/api/#beck-diagram">&lt;beck-diagram&gt;</a>
+            </div>
+        </nav>
     </aside>
 
     <article class="max-w-[760px] min-w-0 py-[34px] pb-[90px]">
-        <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">API <span class="mx-1.5">/</span> Beck.Authoring <span class="mx-1.5">/</span> DiagramBuilder</div>
-        <div id="diagrambuilder" class="flex items-center gap-[11px] mb-3">
-            <span class="font-mono text-[11px] uppercase tracking-[0.08em] text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-[9px] py-0.5">class</span>
-            <h1 class="font-mono text-3xl font-semibold tracking-[-0.01em] text-base-900 dark:text-base-50">DiagramBuilder</h1>
-        </div>
-        <p class="text-base leading-[1.65] text-base-600 dark:text-base-400 m-0 mb-3.5">
-            A dependency-free fluent builder that turns code into Beck YAML — or a fenced
-            <span class="font-mono text-[13.5px] text-base-900 dark:text-base-50">```beck</span> Markdown block.
-            Walk any model (an Aspire app graph, an EF model, a service registry) into one and
-            emit a diagram.
-        </p>
-        <div class="font-mono text-[12.5px] text-base-400 dark:text-base-500 mb-[34px]">namespace Beck <span class="mx-2">·</span> assembly Beck.dll</div>
-
-        <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 pb-[9px] border-b border-base-200 dark:border-base-800">Methods</h2>
-        <div class="mb-10">
-            @foreach (var m in Methods)
-            {
-                <div class="border border-base-200 dark:border-base-800 rounded-[11px] overflow-hidden bg-white dark:bg-base-900 mb-3.5">
-                    <div class="px-[15px] py-3 font-mono text-[13.5px] bg-base-50 dark:bg-base-900 border-b border-base-200 dark:border-base-800">@((MarkupString)m.Sig)</div>
-                    <p class="m-0 px-[15px] py-3 text-sm leading-snug text-base-600 dark:text-base-400">@((MarkupString)m.Doc)</p>
+        @foreach (var c in Classes)
+        {
+            <section id="@c.Id" class="mb-[72px]">
+                <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">API <span class="mx-1.5">/</span> @((MarkupString)c.Breadcrumb)</div>
+                <div class="flex items-center gap-[11px] mb-3">
+                    <span class="font-mono text-[11px] uppercase tracking-[0.08em] text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-[9px] py-0.5">@c.Kind</span>
+                    <h1 class="font-mono text-3xl font-semibold tracking-[-0.01em] text-base-900 dark:text-base-50">@c.Name</h1>
                 </div>
-            }
-        </div>
+                <p class="text-base leading-[1.65] text-base-600 dark:text-base-400 m-0 mb-3.5">@((MarkupString)c.Summary)</p>
+                <div class="font-mono text-[12.5px] text-base-400 dark:text-base-500 mb-[30px]">@((MarkupString)c.Meta)</div>
 
-        <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 pb-[9px] border-b border-base-200 dark:border-base-800">Example</h2>
-        <div class="border border-base-200 dark:border-base-800 rounded-[10px] overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
-            <div class="flex items-center px-[13px] py-2 border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500">Program.cs<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
-            <div class="px-[15px] py-[13px] font-mono text-[13.5px] leading-[1.75] whitespace-pre overflow-auto text-base-900 dark:text-base-50"><span class="tok-key">var</span> fence = <span class="tok-key">new</span> DiagramBuilder(<span class="tok-str">"Web Platform"</span>)
-    .Direction(Direction.TB)
-    .Node(<span class="tok-str">"web"</span>, n => n.Title(<span class="tok-str">"Web App"</span>).Kind(NodeKind.User))
-    .Node(<span class="tok-str">"api"</span>, <span class="tok-str">"API Server"</span>)
-    .Edge(<span class="tok-str">"web"</span>, <span class="tok-str">"api"</span>)
-    .ToFence();   <span class="tok-punct">// drop straight into a .md file</span></div>
-        </div>
+                <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 pb-[9px] border-b border-base-200 dark:border-base-800">@c.MemberHeading</h2>
+                <div class="mb-2">
+                    @foreach (var m in c.Members)
+                    {
+                        <div class="border border-base-200 dark:border-base-800 rounded-[11px] overflow-hidden bg-white dark:bg-base-900 mb-3.5">
+                            <div class="px-[15px] py-3 font-mono text-[13.5px] bg-base-50 dark:bg-base-900 border-b border-base-200 dark:border-base-800 overflow-x-auto whitespace-pre">@((MarkupString)m.Sig)</div>
+                            <p class="m-0 px-[15px] py-3 text-sm leading-snug text-base-600 dark:text-base-400">@((MarkupString)m.Doc)</p>
+                        </div>
+                    }
+                </div>
 
-        <p class="text-[15px] text-base-600 dark:text-base-400">
-            Authoring more than a snippet? The <a href="/docs/authoring-from-csharp" class="text-primary-700 dark:text-primary-400">Authoring from C#</a>
-            guide shows the full builder driving a live diagram, with the source pulled straight
-            from the compiled sample.
-        </p>
+                @if (c.Example is not null)
+                {
+                    <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 mt-9 pb-[9px] border-b border-base-200 dark:border-base-800">Example</h2>
+                    <div class="border border-base-200 dark:border-base-800 rounded-[10px] overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
+                        <div class="flex items-center px-[13px] py-2 border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500">@c.ExampleFile<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
+                        <div class="px-[15px] py-[13px] font-mono text-[13.5px] leading-[1.75] whitespace-pre overflow-auto text-base-900 dark:text-base-50">@((MarkupString)c.Example)</div>
+                    </div>
+                }
+            </section>
+        }
+
+        <section id="beck-diagram" class="mb-10">
+            <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">API <span class="mx-1.5">/</span> Beck (client) <span class="mx-1.5">/</span> &lt;beck-diagram&gt;</div>
+            <div class="flex items-center gap-[11px] mb-3">
+                <span class="font-mono text-[11px] uppercase tracking-[0.08em] text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-[9px] py-0.5">element</span>
+                <h1 class="font-mono text-3xl font-semibold tracking-[-0.01em] text-base-900 dark:text-base-50">&lt;beck-diagram&gt;</h1>
+            </div>
+            <p class="text-base leading-[1.65] text-base-600 dark:text-base-400 m-0 mb-3.5">
+                A custom element that renders a Beck diagram in light DOM, so it adopts the host
+                page's styles and palette. Put the YAML in a
+                <span class="font-mono text-[13.5px] text-base-900 dark:text-base-50">&lt;script type="application/yaml"&gt;</span>
+                child, or point <span class="font-mono">src</span> at a YAML file. The engine also hydrates any fenced
+                <span class="font-mono text-[13.5px] text-base-900 dark:text-base-50">```beck</span> code block automatically — which
+                is what <span class="font-mono">ToFence()</span> emits — so most pages never touch the element directly.
+            </p>
+            <div class="font-mono text-[12.5px] text-base-400 dark:text-base-500 mb-[30px]">registered by <span class="mx-1">·</span> _content/Beck/beck.global.js</div>
+            <div class="border border-base-200 dark:border-base-800 rounded-[10px] overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
+                <div class="flex items-center px-[13px] py-2 border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500">page.html<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
+                <div class="px-[15px] py-[13px] font-mono text-[13.5px] leading-[1.75] whitespace-pre overflow-auto text-base-900 dark:text-base-50"><span class="tok-punct">&lt;</span><span class="tok-key">beck-diagram</span> mode=<span class="tok-str">"auto"</span><span class="tok-punct">&gt;</span>
+  <span class="tok-punct">&lt;</span><span class="tok-key">script</span> type=<span class="tok-str">"application/yaml"</span><span class="tok-punct">&gt;</span>
+    nodes:
+      - { id: api, title: API }
+  <span class="tok-punct">&lt;/</span><span class="tok-key">script</span><span class="tok-punct">&gt;</span>
+<span class="tok-punct">&lt;/</span><span class="tok-key">beck-diagram</span><span class="tok-punct">&gt;</span></div>
+            </div>
+            <p class="text-[15px] text-base-600 dark:text-base-400">
+                Authoring more than a snippet? The <a href="/docs/authoring-from-csharp" class="text-primary-700 dark:text-primary-400">Authoring from C#</a>
+                guide drives a live diagram from the full builder, with the source pulled straight from the compiled sample.
+            </p>
+        </section>
     </article>
 </div>
 
 @code {
     private sealed record Member(string Sig, string Doc);
 
-    private static readonly Member[] Methods =
+    private sealed record ApiClass(
+        string Id, string Kind, string Name, string Breadcrumb, string Meta,
+        string Summary, string MemberHeading, Member[] Members,
+        string? ExampleFile = null, string? Example = null);
+
+    // ---- signature formatting helpers (types in tok-str, member name emphasised) ----
+    private const string NameCls = "text-base-900 dark:text-base-50 font-medium";
+    private static string T(string type) => $"<span class=\"tok-str\">{type}</span>";
+    private static string Ctor(string name, string args) =>
+        $"<span class=\"tok-key\">new</span> <span class=\"{NameCls}\">{name}</span>({args})";
+    private static string Sig(string ret, string name, string args) =>
+        $"{T(ret)} <span class=\"{NameCls}\">{name}</span>({args})";
+
+    private static readonly ApiClass[] Classes =
     [
-        new("<span class=\"tok-key\">DiagramBuilder</span>(<span class=\"tok-str\">string</span> title)",
-            "Create a builder, optionally with a diagram title."),
-        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Direction</span>(<span class=\"tok-str\">Direction</span> direction)",
-            "Set the layout direction — <span class=\"font-mono\">TB</span> (default), <span class=\"font-mono\">BT</span>, <span class=\"font-mono\">LR</span>, or <span class=\"font-mono\">RL</span>."),
-        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Node</span>(<span class=\"tok-str\">string</span> id, <span class=\"tok-str\">Action&lt;NodeBuilder&gt;</span> configure)",
-            "Add a node and configure it — title, <span class=\"font-mono\">Kind</span>, <span class=\"font-mono\">Icon</span>, <span class=\"font-mono\">Accent</span>, <span class=\"font-mono\">Link</span>, and more."),
-        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Group</span>(<span class=\"tok-str\">string</span> id, <span class=\"tok-str\">Action&lt;GroupBuilder&gt;</span> configure)",
-            "Add a labelled, boxed cluster. Members may be node ids <em>or</em> other group ids — groups nest to any depth."),
-        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Edge</span>(<span class=\"tok-str\">string</span> from, <span class=\"tok-str\">string</span> to, <span class=\"tok-str\">Action&lt;EdgeBuilder&gt;</span> configure)",
-            "Connect two nodes (or groups). Configure label, style, curve, <span class=\"font-mono\">Kind</span>, color, and arrowheads."),
-        new("<span class=\"tok-str\">DiagramBuilder</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">Flow</span>(<span class=\"tok-str\">Action&lt;FlowBuilder&gt;</span> configure)",
-            "Script the animation: packets, status pills, pulses, working/idle, fail beats, and parallel steps. Omit it and Beck auto-derives a flow from the edges."),
-        new("<span class=\"tok-str\">string</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">ToYaml</span>()",
-            "Render the diagram as Beck YAML."),
-        new("<span class=\"tok-str\">string</span> <span class=\"text-base-900 dark:text-base-50 font-medium\">ToFence</span>()",
-            "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
+        new("diagrambuilder", "class", "DiagramBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> DiagramBuilder",
+            "namespace Beck <span class=\"mx-2\">·</span> assembly Beck.dll",
+            "A dependency-free fluent builder that turns code into Beck YAML — or a fenced " +
+            "<span class=\"font-mono text-[13.5px] text-base-900 dark:text-base-50\">```beck</span> Markdown block. " +
+            "Walk any model (an Aspire app graph, an EF model, a service registry) into one and emit a diagram.",
+            "Methods",
+            [
+                new(Ctor("DiagramBuilder", $"{T("string")} title"),
+                    "Create a builder, optionally with a diagram title."),
+                new(Sig("DiagramBuilder", "Title", $"{T("string")} title"),
+                    "Set the diagram title."),
+                new(Sig("DiagramBuilder", "Subtitle", $"{T("string")} subtitle"),
+                    "Set the muted second heading line."),
+                new(Sig("DiagramBuilder", "Direction", $"{T("Direction")} direction"),
+                    "Set the layout direction — <span class=\"font-mono\">TB</span> (default), <span class=\"font-mono\">BT</span>, <span class=\"font-mono\">LR</span>, or <span class=\"font-mono\">RL</span>."),
+                new(Sig("DiagramBuilder", "Theme", $"{T("ThemeMode")} theme"),
+                    "Set the theme: <span class=\"font-mono\">Auto</span> (default), <span class=\"font-mono\">Light</span>, or <span class=\"font-mono\">Dark</span>."),
+                new(Sig("DiagramBuilder", "Animate", $"{T("bool")} animate"),
+                    "Enable or disable the flow animation."),
+                new(Sig("DiagramBuilder", "Loop", $"{T("bool")} loop"),
+                    "Loop the flow (default) or play it through once."),
+                new(Sig("DiagramBuilder", "Spacing", $"{T("int?")} rank, {T("int?")} node, {T("int?")} cornerRadius"),
+                    "Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius in px."),
+                new(Sig("DiagramBuilder", "Node", $"{T("string")} id, {T("Action&lt;NodeBuilder&gt;")} configure"),
+                    "Add a node and configure it via <span class=\"font-mono\">NodeBuilder</span> — title, kind, icon, accent, link, and more."),
+                new(Sig("DiagramBuilder", "Node", $"{T("string")} id, {T("string")} title, {T("NodeKind?")} kind"),
+                    "The terse overload: add a node with a title and an optional kind."),
+                new(Sig("DiagramBuilder", "Group", $"{T("string")} id, {T("Action&lt;GroupBuilder&gt;")} configure"),
+                    "Add a labelled, boxed cluster. Members may be node ids <em>or</em> other group ids — groups nest to any depth."),
+                new(Sig("DiagramBuilder", "Edge", $"{T("string")} from, {T("string")} to, {T("Action&lt;EdgeBuilder&gt;")} configure"),
+                    "Connect two nodes (or groups). Configure label, style, curve, kind, color, and arrowheads."),
+                new(Sig("DiagramBuilder", "Flow", $"{T("Action&lt;FlowBuilder&gt;")} configure"),
+                    "Script the animation. Omit it and Beck auto-derives a flow from the edges."),
+                new(Sig("string", "ToYaml", ""),
+                    "Render the diagram as Beck YAML. Throws if an edge endpoint isn't a declared node or group id."),
+                new(Sig("string", "ToFence", ""),
+                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
+            ],
+            "Program.cs",
+            "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> DiagramBuilder(<span class=\"tok-str\">\"Web Platform\"</span>)\n" +
+            "    .Direction(Direction.TB)\n" +
+            "    .Node(<span class=\"tok-str\">\"web\"</span>, n =&gt; n.Title(<span class=\"tok-str\">\"Web App\"</span>).Kind(NodeKind.User))\n" +
+            "    .Node(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"API Server\"</span>)\n" +
+            "    .Edge(<span class=\"tok-str\">\"web\"</span>, <span class=\"tok-str\">\"api\"</span>)\n" +
+            "    .ToFence();   <span class=\"tok-punct\">// drop straight into a .md file</span>"),
+
+        new("nodebuilder", "class", "NodeBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> NodeBuilder",
+            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Node</span>",
+            "Configures a single node inside a <span class=\"font-mono\">Node(id, n =&gt; …)</span> callback. Every method returns " +
+            "the same builder, so calls chain. Unset fields fall back to the node kind's defaults.",
+            "Methods",
+            [
+                new(Sig("NodeBuilder", "Title", $"{T("string")} title"), "Set the display title (defaults to the id)."),
+                new(Sig("NodeBuilder", "Subtitle", $"{T("string")} subtitle"), "Set the muted subtitle line."),
+                new(Sig("NodeBuilder", "Icon", $"{T("string")} icon"), "Set a named icon key or raw inline <span class=\"font-mono\">&lt;svg&gt;</span> markup."),
+                new(Sig("NodeBuilder", "Kind", $"{T("NodeKind")} kind"), "Set the archetype (default <span class=\"font-mono\">Service</span>) — picks an icon, accent, and shape."),
+                new(Sig("NodeBuilder", "Variant", $"{T("NodeVariant")} variant"), "Set the visual weight: <span class=\"font-mono\">Solid</span>, <span class=\"font-mono\">Subtle</span>, or <span class=\"font-mono\">Ghost</span>."),
+                new(Sig("NodeBuilder", "Status", $"{T("string")} status"), "Set the initial status-pill text."),
+                new(Sig("NodeBuilder", "Accent", $"{T("AccentToken")} token"), "Set the accent to a semantic token (follows the theme)."),
+                new(Sig("NodeBuilder", "Accent", $"{T("string")} color"), "Set the accent to a raw CSS colour (a hex string, say)."),
+                new(Sig("NodeBuilder", "Width", $"{T("int")} px"), "Fix the card width in px (prevents reflow on a status change)."),
+                new(Sig("NodeBuilder", "Rank", $"{T("int")} rank"), "Force the node into a specific layout rank."),
+                new(Sig("NodeBuilder", "Order", $"{T("int")} order"), "Tie-break the node's order within its rank."),
+                new(Sig("NodeBuilder", "Group", $"{T("string")} groupId"), "Assign the node to a group inline (alternative to group members)."),
+                new(Sig("NodeBuilder", "Link", $"{T("string")} href, {T("string?")} target"), "Make the card a link. Pass <span class=\"font-mono\">\"_blank\"</span> to open in a new tab."),
+                new(Sig("NodeBuilder", "Surface", $"{T("string")} color"), "Override the card background (a raw CSS colour)."),
+                new(Sig("NodeBuilder", "TextColor", $"{T("string")} color"), "Override the card text colour (a raw CSS colour)."),
+            ]),
+
+        new("edgebuilder", "class", "EdgeBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> EdgeBuilder",
+            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Edge</span>",
+            "Configures one edge inside an <span class=\"font-mono\">Edge(from, to, e =&gt; …)</span> callback. Endpoints may be node ids " +
+            "or group ids.",
+            "Methods",
+            [
+                new(Sig("EdgeBuilder", "Label", $"{T("string")} label"), "Set the edge label."),
+                new(Sig("EdgeBuilder", "Style", $"{T("EdgeStyle")} style"), "Set the line style: <span class=\"font-mono\">Solid</span> or <span class=\"font-mono\">Dashed</span>."),
+                new(Sig("EdgeBuilder", "Curve", $"{T("EdgeCurve")} curve"), "Set the routing curve: <span class=\"font-mono\">StepRound</span> (default), <span class=\"font-mono\">Straight</span>, or <span class=\"font-mono\">S</span>."),
+                new(Sig("EdgeBuilder", "Kind", $"{T("EdgeKind")} kind"), "Set the semantic kind (defaults colour + style): <span class=\"font-mono\">Data</span>, <span class=\"font-mono\">Control</span>, <span class=\"font-mono\">Async</span>, <span class=\"font-mono\">Dependency</span>."),
+                new(Sig("EdgeBuilder", "Color", $"{T("AccentToken")} token"), "Set the stroke to a semantic token."),
+                new(Sig("EdgeBuilder", "Color", $"{T("string")} color"), "Set the stroke to a raw CSS colour."),
+                new(Sig("EdgeBuilder", "Arrow", $"{T("bool")} arrow"), "Toggle the arrowhead (default on). <span class=\"font-mono\">false</span> draws none."),
+                new(Sig("EdgeBuilder", "Arrows", $"{T("ArrowEnds")} ends"), "Choose which ends carry an arrowhead — e.g. <span class=\"font-mono\">ArrowEnds.Both</span>."),
+                new(Sig("EdgeBuilder", "FromSide", $"{T("Side")} side"), "Pin the edge's exit side on the source node."),
+                new(Sig("EdgeBuilder", "ToSide", $"{T("Side")} side"), "Pin the edge's entry side on the target node."),
+            ]),
+
+        new("groupbuilder", "class", "GroupBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> GroupBuilder",
+            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Group</span>",
+            "Configures a labelled, boxed cluster inside a <span class=\"font-mono\">Group(id, g =&gt; …)</span> callback. " +
+            "Members may be node ids or other group ids, so groups nest.",
+            "Methods",
+            [
+                new(Sig("GroupBuilder", "Label", $"{T("string")} label"), "Set the group label (defaults to the id)."),
+                new(Sig("GroupBuilder", "Members", $"<span class=\"tok-key\">params</span> {T("string[]")} ids"), "Add member node (or group) ids."),
+                new(Sig("GroupBuilder", "Member", $"{T("string")} id"), "Add a single member id."),
+                new(Sig("GroupBuilder", "Accent", $"{T("AccentToken")} token"), "Tint the box + label with a semantic token."),
+                new(Sig("GroupBuilder", "Accent", $"{T("string")} color"), "Tint the box + label with a raw CSS colour."),
+            ]),
+
+        new("flowbuilder", "class", "FlowBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> FlowBuilder",
+            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Flow</span>",
+            "Scripts the animation timeline inside a <span class=\"font-mono\">Flow(f =&gt; …)</span> callback — packets, status changes, " +
+            "and effects, played in order. Without an explicit flow the engine auto-derives one from the edges.",
+            "Methods",
+            [
+                new(Sig("FlowBuilder", "Repeat", $"{T("int")} repeat"), "Repeat count: <span class=\"font-mono\">-1</span> loops forever (default), <span class=\"font-mono\">0</span> plays once."),
+                new(Sig("FlowBuilder", "RepeatDelay", $"{T("double")} seconds"), "Delay between repeats, in seconds."),
+                new(Sig("FlowBuilder", "Packet", $"{T("string")} from, {T("string")} to, {T("string?")} color, {T("string?")} label, {T("string[]?")} via"), "Send a packet along an edge, optionally via waypoints, with a colour and label."),
+                new(Sig("FlowBuilder", "Status", $"{T("string")} node, {T("string")} text, {T("string?")} color"), "Set a node's status-pill text (persists until changed)."),
+                new(Sig("FlowBuilder", "Highlight", $"{T("string")} node, {T("string?")} color"), "Briefly highlight a node."),
+                new(Sig("FlowBuilder", "Pulse", $"{T("string")} node, {T("string?")} color"), "Pulse a node — a ripple on arrival."),
+                new(Sig("FlowBuilder", "Activate", $"{T("string")} from, {T("string")} to, {T("string?")} color"), "Persistently recolour an edge (and its arrowhead) until the next reset."),
+                new(Sig("FlowBuilder", "Stream", $"{T("string")} from, {T("string")} to, {T("string?")} color"), "Continuous flowing dashes along an edge (ongoing traffic), until reset."),
+                new(Sig("FlowBuilder", "Working", $"{T("string")} node, {T("string?")} color"), "Leave a node visibly busy (a breathing glow) until <span class=\"font-mono\">Idle</span> or reset."),
+                new(Sig("FlowBuilder", "Idle", $"{T("string")} node"), "Clear a node's <span class=\"font-mono\">Working</span> state."),
+                new(Sig("FlowBuilder", "Fail", $"{T("string")} node, {T("string?")} text, {T("string?")} color"), "A failure beat: red shake + flash, with optional status text."),
+                new(Sig("FlowBuilder", "Phase", $"{T("string")} label"), "A named seek label, so the handle's <span class=\"font-mono\">seek(label)</span> can jump here."),
+                new(Sig("FlowBuilder", "Wait", $"{T("double")} seconds"), "Pause for a number of seconds."),
+                new(Sig("FlowBuilder", "Reset", ""), "Reset the diagram to its initial state."),
+                new(Sig("FlowBuilder", "Parallel", $"{T("Action&lt;FlowBuilder&gt;")} build"), "Run a group of steps simultaneously."),
+            ],
+            "Program.cs",
+            "<span class=\"tok-key\">new</span> DiagramBuilder(<span class=\"tok-str\">\"Read path\"</span>)\n" +
+            "    .Node(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"API\"</span>).Node(<span class=\"tok-str\">\"db\"</span>, n =&gt; n.Kind(NodeKind.Db))\n" +
+            "    .Edge(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"db\"</span>)\n" +
+            "    .Flow(f =&gt; f\n" +
+            "        .Packet(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"db\"</span>, label: <span class=\"tok-str\">\"SELECT\"</span>)\n" +
+            "        .Working(<span class=\"tok-str\">\"db\"</span>).Wait(<span class=\"tok-accent\">1</span>).Idle(<span class=\"tok-str\">\"db\"</span>)\n" +
+            "        .Packet(<span class=\"tok-str\">\"db\"</span>, <span class=\"tok-str\">\"api\"</span>, color: <span class=\"tok-str\">\"success\"</span>))\n" +
+            "    .ToFence();"),
+
+        new("beckassets", "class", "BeckAssets", "Beck (client) <span class=\"mx-1.5\">/</span> BeckAssets",
+            "namespace Beck <span class=\"mx-2\">·</span> static",
+            "Locations and snippets for wiring the Beck client into an ASP.NET Core host. The package serves the " +
+            "prebuilt engine as a static web asset, so a consumer only includes one script in the page head.",
+            "Members",
+            [
+                new($"<span class=\"tok-key\">const string</span> <span class=\"{NameCls}\">ScriptPath</span>",
+                    "The static web asset path the client is served at — <span class=\"font-mono\">/_content/Beck/beck.global.js</span>. Root-relative, so it resolves from any page depth and survives sub-path deploys."),
+                new($"<span class=\"tok-key\">static string</span> <span class=\"{NameCls}\">ScriptTag</span>",
+                    "A ready-to-inject <span class=\"font-mono\">&lt;script defer&gt;</span> tag for the page head — e.g. via a Pennington <span class=\"font-mono\">AdditionalHtmlHeadContent</span>."),
+            ]),
     ];
 }

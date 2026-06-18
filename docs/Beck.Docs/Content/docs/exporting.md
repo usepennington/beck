@@ -17,8 +17,8 @@ uses.
 
 ## 2. The `<beck-diagram>` element
 
-Shadow-DOM isolated, and able to read inline YAML, a child
-`<script type="application/yaml">`, or a `src` URL:
+A custom element that reads inline YAML, a child `<script type="application/yaml">`, or a
+`src` URL. It renders in light DOM, so it adopts the host page's styles and palette:
 
 ```html
 <beck-diagram src="/examples/microservices.beck.yaml" mode="auto"></beck-diagram>

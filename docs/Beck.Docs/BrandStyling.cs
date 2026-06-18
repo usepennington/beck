@@ -108,6 +108,55 @@ internal static class BrandStyling
         .dark #hero-code .typed-cursor { color: var(--color-primary-400); }
         #hero-host .beck-root { max-width: 100%; }
 
+        /* ---- syntax cheatsheet: filter chips (class-toggled by site.js) ---- */
+        /* site.js swaps `.is-active` between chips; declarative so the toggle never
+           depends on IL-discovered utility classes that live only in a JS string. */
+        .syntax-chip {
+          font: inherit; font-weight: 500; font-size: 13px;
+          padding: 6px 14px; border-radius: 9999px; cursor: pointer;
+          background: #fff; color: var(--color-base-600);
+          border: 1px solid var(--color-base-300);
+          transition: background-color .15s, color .15s, border-color .15s;
+        }
+        .dark .syntax-chip {
+          background: var(--color-base-900); color: var(--color-base-400);
+          border-color: var(--color-base-700);
+        }
+        .syntax-chip:hover { border-color: var(--color-base-400); color: var(--color-base-900); }
+        .dark .syntax-chip:hover { border-color: var(--color-base-600); color: var(--color-base-50); }
+        .syntax-chip.is-active {
+          background: var(--color-primary-600); border-color: var(--color-primary-600); color: #fff;
+        }
+        .dark .syntax-chip.is-active {
+          background: var(--color-primary-500); border-color: var(--color-primary-500); color: #fff;
+        }
+
+        /* ---- syntax cheatsheet: live-diagram canvas ---- */
+        /* Each card emits a ```beck fence the client hydrates into a light-DOM .beck-embed.
+           Hide the raw YAML until then, and strip the fence's framed-preview chrome so the
+           diagram sits directly on the card's own dot-grid cell (no nested frame). */
+        .syntax-canvas > pre { display: none; }
+        .syntax-canvas .beck-embed {
+          border: 0; background: none; padding: 0; margin: 0; min-height: 0; width: 100%;
+        }
+
+        /* ---- API reference sidebar links (scroll-spy class-toggled by site.js) ---- */
+        .api-nav-link {
+          display: block; width: 100%; text-align: left;
+          font-family: var(--font-mono); font-size: 13px;
+          padding: 6px 10px; border-radius: 6px; text-decoration: none;
+          color: var(--color-base-600);
+          transition: background-color .15s, color .15s;
+        }
+        .dark .api-nav-link { color: var(--color-base-400); }
+        .api-nav-link:hover { background: var(--color-base-50); color: var(--color-base-900); }
+        .dark .api-nav-link:hover { background: var(--color-base-900); color: var(--color-base-50); }
+        .api-nav-link.is-active { background: var(--color-primary-50); color: var(--color-primary-700); }
+        .dark .api-nav-link.is-active {
+          background: color-mix(in srgb, var(--color-primary-950) 40%, transparent);
+          color: var(--color-primary-400);
+        }
+
         /* ---- global scrollbar polish ---- */
         ::-webkit-scrollbar { width: 11px; height: 11px; }
         ::-webkit-scrollbar-thumb { background: var(--color-base-300); border-radius: 7px; }

@@ -34,9 +34,14 @@
   // ---- palette bridge -----------------------------------------------------
   // MonorailCSS emits the brand palette as --color-* CSS variables (flipped under
   // `.dark`). Monaco needs literal hex, so we resolve the *computed* colour of each
-  // token through a hidden probe — format-proof (hex/oklch/rgb all normalise to rgb()).
-  // Because the vars resolve to whichever theme is active, callers must re-resolve
-  // after a theme flip (we redefine the single 'beck' Monaco theme on every change).
+  // token through a hidden probe. The catch: MonorailCSS emits `oklch()`, and
+  // getComputedStyle returns that verbatim (modern engines no longer down-convert
+  // to rgb) — so the rgb() regex alone silently fails and every colour falls back
+  // to its literal, drifting the editor off the live palette. We paint the resolved
+  // colour onto a 1x1 canvas and read sRGB bytes back, which normalises any format
+  // (hex/rgb/oklch/lab/color()). Because the vars resolve to whichever theme is
+  // active, callers must re-resolve after a theme flip (we redefine the single
+  // 'beck' Monaco theme on every change).
   function rgbToHex(rgb) {
     var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(rgb || '');
     if (!m) return null;
@@ -44,13 +49,32 @@
       return ('0' + Math.round(parseFloat(m[i])).toString(16)).slice(-2);
     }).join('');
   }
+  var _hexCanvas = null;
+  function colorToHex(str) {
+    if (!str) return null;
+    var fast = rgbToHex(str);
+    if (fast) return fast;
+    // Non-rgb (oklch/lab/color()/named): round-trip through a canvas. A sentinel
+    // fill detects an engine that can't parse the colour (assignment is ignored,
+    // leaving the sentinel) so we degrade to the caller's literal fallback.
+    try {
+      if (!_hexCanvas) { _hexCanvas = document.createElement('canvas'); _hexCanvas.width = _hexCanvas.height = 1; }
+      var ctx = _hexCanvas.getContext('2d');
+      ctx.fillStyle = 'rgb(1,2,3)';
+      ctx.fillStyle = str;
+      ctx.fillRect(0, 0, 1, 1);
+      var d = ctx.getImageData(0, 0, 1, 1).data;
+      if (d[0] === 1 && d[1] === 2 && d[2] === 3) return null;
+      return '#' + [d[0], d[1], d[2]].map(function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    } catch (e) { return null; }
+  }
   var _probe = null;
   function cssVarHex(name, fallback) {
     fallback = fallback || '#000000';
     try {
       if (!_probe) { _probe = document.createElement('span'); _probe.style.display = 'none'; document.body.appendChild(_probe); }
       _probe.style.color = 'var(' + name + ', ' + fallback + ')';
-      return rgbToHex(getComputedStyle(_probe).color) || fallback;
+      return colorToHex(getComputedStyle(_probe).color) || fallback;
     } catch (e) { return fallback; }
   }
 
@@ -586,6 +610,58 @@
     });
   }
 
+  // ---- syntax cheatsheet: category filter ---------------------------------
+  // The chips and cards are static SSR markup (Razor); wire the filtering here.
+  // A chip's data-filter is matched against each card's data-cat ('all' shows
+  // everything). Active state is a single class so it themes via BrandStyling.
+  function initSyntaxFilter() {
+    var bar = document.getElementById('syntax-filter');
+    var grid = document.getElementById('syntax-grid');
+    if (!bar || !grid) return;
+    var chips = [].slice.call(bar.querySelectorAll('[data-filter]'));
+    var cards = [].slice.call(grid.querySelectorAll('[data-cat]'));
+
+    function apply(filter) {
+      chips.forEach(function (c) { c.classList.toggle('is-active', c.getAttribute('data-filter') === filter); });
+      cards.forEach(function (card) {
+        var cats = (card.getAttribute('data-cat') || '').split(/\s+/);
+        card.style.display = (filter === 'all' || cats.indexOf(filter) !== -1) ? '' : 'none';
+      });
+    }
+
+    chips.forEach(function (c) {
+      c.addEventListener('click', function () { apply(c.getAttribute('data-filter') || 'all'); });
+    });
+    apply('all');
+  }
+
+  // ---- API reference: scroll-spy the sidebar -------------------------------
+  // Highlight the sidebar link for whichever class section is currently at the
+  // top of the viewport. Anchors still jump on click (scroll-mt keeps the
+  // heading clear of the sticky nav); this just tracks the active one.
+  function initApiNav() {
+    var nav = document.getElementById('api-nav');
+    if (!nav) return;
+    // Links are page-absolute (/api/#id, not #id) so <base href="/"> can't hijack
+    // them to the homepage; a.hash gives just the fragment either way.
+    var map = [].slice.call(nav.querySelectorAll('a[href*="#"]')).map(function (a) {
+      return { a: a, el: a.hash ? document.getElementById(a.hash.slice(1)) : null };
+    }).filter(function (m) { return m.el; });
+    if (!map.length) return;
+
+    function spy() {
+      var active = map[0];
+      // Active = the last section whose top has passed just below the sticky nav
+      // (matches where an anchor click lands a section, ~scroll-padding-top).
+      for (var i = 0; i < map.length; i++) {
+        if (map[i].el.getBoundingClientRect().top - 100 <= 1) active = map[i];
+      }
+      map.forEach(function (m) { m.a.classList.toggle('is-active', m === active); });
+    }
+    window.addEventListener('scroll', spy, { passive: true });
+    spy();
+  }
+
   // ---- mobile nav (hamburger → dropdown) ----------------------------------
   function initNavToggle() {
     var btn = document.querySelector('.nav-toggle');
@@ -631,6 +707,8 @@
     whenBeck(function () { syncDiagramModes(currentTheme()); });
     initHero();
     initPlayground();
+    initSyntaxFilter();
+    initApiNav();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

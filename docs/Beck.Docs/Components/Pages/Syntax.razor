@@ -7,93 +7,194 @@
     <h1 class="text-[40px] font-semibold tracking-[-0.02em] mb-3.5 text-base-900 dark:text-base-50">Syntax cheatsheet</h1>
     <p class="text-[17px] leading-[1.65] text-base-600 dark:text-base-400 mb-[26px] max-w-[600px]">
         Every construct in the Beck language, with the YAML on the left and what it renders — live — on
-        the right. Copy any snippet straight into your file.
+        the right. Copy any snippet straight into your file, or filter by what you're after.
     </p>
 
-    <div class="flex gap-2 flex-wrap mb-[30px]">
-        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-primary-600 text-white border border-primary-600 dark:bg-primary-500 dark:border-primary-500 cursor-pointer">All</span>
-        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Nodes</span>
-        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Edges</span>
-        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Groups</span>
-        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Shapes</span>
-        <span class="font-medium text-[13px] px-3.5 py-1.5 rounded-full bg-white dark:bg-base-900 text-base-600 dark:text-base-400 border border-base-300 dark:border-base-700 cursor-pointer">Layout</span>
+    <div id="syntax-filter" class="flex gap-2 flex-wrap mb-[30px]">
+        <button type="button" class="syntax-chip is-active" data-filter="all">All</button>
+        <button type="button" class="syntax-chip" data-filter="nodes">Nodes</button>
+        <button type="button" class="syntax-chip" data-filter="edges">Edges</button>
+        <button type="button" class="syntax-chip" data-filter="groups">Groups</button>
+        <button type="button" class="syntax-chip" data-filter="style">Style</button>
+        <button type="button" class="syntax-chip" data-filter="layout">Layout</button>
+        <button type="button" class="syntax-chip" data-filter="flow">Flow</button>
     </div>
 
-    <div class="grid grid-cols-[repeat(auto-fill,minmax(460px,1fr))] gap-5">
+    <div id="syntax-grid" class="grid grid-cols-[repeat(auto-fill,minmax(460px,1fr))] gap-5">
         @foreach (var c in Cheats)
         {
-            <div class="border border-base-200 dark:border-base-800 rounded-xl overflow-hidden bg-white dark:bg-base-900 flex flex-col">
+            <div data-cat="@c.Cat" class="border border-base-200 dark:border-base-800 rounded-xl overflow-hidden bg-white dark:bg-base-900 flex flex-col">
                 <div class="flex items-center gap-2.5 px-4 pt-[14px]">
                     <span class="text-[15.5px] font-semibold text-base-900 dark:text-base-50">@c.Title</span>
                     <span class="ml-auto font-mono text-[10.5px] text-base-400 dark:text-base-500 border border-base-300 dark:border-base-700 rounded px-[7px] py-px">@c.Tag</span>
                 </div>
                 <div class="px-4 pt-[5px] pb-[13px] text-[13.5px] leading-snug text-base-600 dark:text-base-400">@c.Desc</div>
                 <div class="px-4 py-[14px] font-mono text-[13px] leading-[1.75] whitespace-pre bg-base-50 dark:bg-base-900 border-t border-base-200 dark:border-base-800 overflow-x-auto text-base-900 dark:text-base-50">@c.Code</div>
-                <div class="dot-grid flex items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto">@Diagram(c.Render)</div>
+                <div class="syntax-canvas dot-grid flex items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto"><pre><code class="language-beck">@c.Render</code></pre></div>
             </div>
         }
     </div>
 </div>
 
 @code {
-    private sealed record Cheat(string Title, string Tag, string Desc, string Code, string Render);
+    private sealed record Cheat(string Title, string Tag, string Cat, string Desc, string Code, string Render);
 
-    // Emit the live diagram as raw markup so the YAML reaches the DOM verbatim. Razor
-    // JS-encodes @expressions placed inside a <script> element (newlines -> literal \n),
-    // which would corrupt the whitespace-significant YAML — MarkupString avoids that.
-    private static MarkupString Diagram(string yaml) =>
-        new($"<beck-diagram mode=\"auto\"><script type=\"application/yaml\">{yaml}</script></beck-diagram>");
+    // Each Render YAML is emitted as a ```beck fence (`<code class="language-beck">`); the Beck
+    // client auto-hydrates it into a light-DOM diagram, so the host's MonorailCSS utilities style
+    // it. Razor HTML-encodes @c.Render inside the <code> (newlines preserved in <pre>), so the
+    // whitespace-significant YAML reaches the DOM intact without a MarkupString.
 
     private static readonly Cheat[] Cheats =
     [
-        new("Node", "nodes",
+        // ---- Nodes ----
+        new("Node", "nodes", "nodes",
             "A node is one entry under nodes:. The id is required; title defaults to the id.",
             "nodes:\n  - { id: api, title: API }",
             "meta: { animate: false }\nnodes:\n  - { id: api, title: API }"),
 
-        new("Edge", "edges",
+        new("Title & subtitle", "nodes", "nodes",
+            "Add a subtitle for a muted second line — a version, a technology, a note.",
+            "nodes:\n  - { id: db, title: Postgres,\n      subtitle: primary }",
+            "meta: { animate: false }\nnodes:\n  - { id: db, title: Postgres, subtitle: primary, kind: db }"),
+
+        new("Node kinds", "nodes", "nodes",
+            "kind picks a fitting icon + accent: service, db, queue, cache, gateway, user, external.",
+            "nodes:\n  - { id: u, kind: user }\n  - { id: gw, kind: gateway }\n  - { id: db, kind: db }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: u, title: User, kind: user }, { id: gw, title: Gateway, kind: gateway }, { id: db, title: Store, kind: db } ]\nedges: [ { from: u, to: gw }, { from: gw, to: db } ]"),
+
+        new("Status pill", "nodes", "nodes",
+            "status renders a small pill on the card, tinted with the node's accent.",
+            "nodes:\n  - { id: api, title: API,\n      status: healthy }",
+            "meta: { animate: false }\nnodes:\n  - { id: api, title: API, status: healthy, accent: success }"),
+
+        new("Fixed width", "nodes", "nodes",
+            "width pins the card width in px so a later status change can't make it reflow.",
+            "nodes:\n  - { id: api, title: API,\n      width: 240 }",
+            "meta: { animate: false }\nnodes:\n  - { id: api, title: API, width: 240 }"),
+
+        new("Link", "nodes", "nodes",
+            "href turns the card into a link; add target: _blank to open it in a new tab.",
+            "nodes:\n  - { id: docs, title: Docs,\n      href: /docs }",
+            "meta: { animate: false }\nnodes:\n  - { id: docs, title: Docs, href: /docs, icon: file }"),
+
+        // ---- Edges ----
+        new("Edge", "edges", "edges",
             "Connect two nodes by their ids. Beck routes the line and places the arrowhead for you.",
             "nodes:\n  - { id: a, title: Web }\n  - { id: b, title: API }\nedges:\n  - { from: a, to: b }",
             "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Web }, { id: b, title: API } ]\nedges:\n  - { from: a, to: b }"),
 
-        new("Labelled edge", "edges",
+        new("Labelled edge", "edges", "edges",
             "Add a label to name the relationship — a protocol, a verb, or the data that flows.",
             "edges:\n  - { from: a, to: b, label: calls }",
             "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Web }, { id: b, title: API } ]\nedges:\n  - { from: a, to: b, label: calls }"),
 
-        new("Bidirectional", "edges",
-            "Set arrow: both for a two-way connection (also start, end, or none).",
+        new("Bidirectional", "edges", "edges",
+            "Set arrow: both for a two-way connection. Other values: start, end (default), none.",
             "edges:\n  - { from: a, to: b, arrow: both }",
             "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Web }, { id: b, title: API } ]\nedges:\n  - { from: a, to: b, arrow: both }"),
 
-        new("Group", "groups",
-            "Wrap related nodes in a labelled boundary. Members can be node ids or other group ids.",
-            "groups:\n  - { id: core, label: Core,\n      members: [a, b] }",
-            "meta: { animate: false }\nnodes: [ { id: a, title: Auth }, { id: b, title: Orders } ]\ngroups:\n  - { id: core, label: Core, members: [a, b] }"),
+        new("No arrowhead", "edges", "edges",
+            "arrow: none drops the arrowhead — for peer links or undirected relationships.",
+            "edges:\n  - { from: a, to: b, arrow: none }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: A }, { id: b, title: B } ]\nedges:\n  - { from: a, to: b, arrow: none }"),
 
-        new("Async edge", "edges",
+        new("Async edge", "edges", "edges",
             "kind: async renders a dashed edge — handy for message buses and events.",
             "edges:\n  - { from: api, to: bus,\n      kind: async }",
             "meta: { animate: false, direction: LR }\nnodes: [ { id: api, title: API }, { id: bus, title: Bus, kind: queue } ]\nedges:\n  - { from: api, to: bus, kind: async }"),
 
-        new("Database", "nodes",
-            "kind: db draws a database cylinder and picks a fitting default accent and icon.",
-            "nodes:\n  - { id: db, title: Postgres,\n      kind: db }",
-            "meta: { animate: false }\nnodes:\n  - { id: db, title: Postgres, kind: db }"),
+        new("Edge curve", "edges", "edges",
+            "curve sets the line shape: step-round (default), straight, or s.",
+            "edges:\n  - { from: a, to: b,\n      curve: straight }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: A }, { id: b, title: B } ]\nedges:\n  - { from: a, to: b, curve: straight }"),
 
-        new("Queue", "nodes",
-            "kind: queue marks a message bus or stream. Other kinds: cache, gateway, user, external.",
-            "nodes:\n  - { id: q, title: Kafka,\n      kind: queue }",
-            "meta: { animate: false }\nnodes:\n  - { id: q, title: Kafka, kind: queue }"),
+        new("Edge colour", "edges", "edges",
+            "color recolours an edge and its arrowhead — an accent token or any CSS colour.",
+            "edges:\n  - { from: a, to: b,\n      color: danger }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: A }, { id: b, title: B } ]\nedges:\n  - { from: a, to: b, color: danger, label: drop }"),
 
-        new("Accent", "style",
-            "Highlight a node with an accent token: primary, success, warn, danger, info, or neutral.",
-            "nodes:\n  - { id: api, title: API,\n      accent: primary }",
-            "meta: { animate: false }\nnodes:\n  - { id: api, title: API, accent: primary }"),
+        new("Pin edge sides", "edges", "edges",
+            "fromSide / toSide pin where an edge leaves and enters: top, bottom, left, right.",
+            "edges:\n  - { from: a, to: b,\n      fromSide: right, toSide: right }",
+            "meta: { animate: false }\nnodes: [ { id: a, title: A }, { id: b, title: B } ]\nedges:\n  - { from: a, to: b, fromSide: right, toSide: right }"),
 
-        new("Direction", "layout",
+        // ---- Groups ----
+        new("Group", "groups", "groups",
+            "Wrap related nodes in a labelled boundary. Members can be node ids or other group ids.",
+            "groups:\n  - { id: core, label: Core,\n      members: [a, b] }",
+            "meta: { animate: false }\nnodes: [ { id: a, title: Auth }, { id: b, title: Orders } ]\ngroups:\n  - { id: core, label: Core, members: [a, b] }"),
+
+        new("Nested groups", "groups", "groups",
+            "A group can contain other groups — members may be node or group ids, nested to any depth.",
+            "groups:\n  - { id: vpc, label: VPC,\n      members: [web] }\n  - { id: web, label: Web,\n      members: [a, b] }",
+            "meta: { animate: false }\nnodes: [ { id: a, title: ALB }, { id: b, title: API } ]\ngroups:\n  - { id: vpc, label: VPC, members: [web], accent: info }\n  - { id: web, label: Web Tier, members: [a, b], accent: primary }"),
+
+        new("Group accent", "groups", "groups",
+            "accent tints a group's border and label with a token or a raw CSS colour.",
+            "groups:\n  - { id: core, label: Core,\n      members: [a, b], accent: success }",
+            "meta: { animate: false }\nnodes: [ { id: a, title: Auth }, { id: b, title: Orders } ]\ngroups:\n  - { id: core, label: Core, members: [a, b], accent: success }"),
+
+        // ---- Style ----
+        new("Accent", "style", "style",
+            "accent colours the whole card — border and icon — with a token: primary, success, warn, danger, info, neutral.",
+            "nodes:\n  - { id: api, title: API,\n      accent: danger }",
+            "meta: { animate: false, direction: LR }\nnodes:\n  - { id: a, title: Info, accent: info }\n  - { id: b, title: Warn, accent: warn }\n  - { id: c, title: Danger, accent: danger }"),
+
+        new("Variants", "style", "style",
+            "variant sets a node's visual weight: solid (default), subtle, or ghost.",
+            "nodes:\n  - { id: a, variant: solid }\n  - { id: b, variant: subtle }\n  - { id: c, variant: ghost }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Solid, variant: solid }, { id: b, title: Subtle, variant: subtle }, { id: c, title: Ghost, variant: ghost } ]\nedges: [ { from: a, to: b }, { from: b, to: c } ]"),
+
+        new("Icons", "style", "style",
+            "icon sets a named glyph (cdn, bucket, vector, model, redis, …) or raw inline <svg>.",
+            "nodes:\n  - { id: m, title: Model, icon: model }\n  - { id: v, title: Vectors, icon: vector }",
+            "meta: { animate: false, direction: LR }\nnodes: [ { id: m, title: Model, icon: model }, { id: v, title: Vectors, icon: vector }, { id: c, title: CDN, icon: cdn } ]"),
+
+        new("Raw colour", "style", "style",
+            "A token follows the theme; a raw CSS colour (hex or named) on accent / surface / textColor doesn't.",
+            "nodes:\n  - { id: a, title: Brand,\n      accent: teal }",
+            "meta: { animate: false, direction: LR }\nnodes:\n  - { id: a, title: Teal, accent: teal }\n  - { id: b, title: Crimson, accent: crimson }"),
+
+        // ---- Layout ----
+        new("Direction", "layout", "layout",
             "meta.direction sets the flow axis: TB (default), BT, LR, or RL.",
             "meta:\n  direction: LR\nnodes:\n  - { id: a, title: Ingest }\n  - { id: b, title: Store, kind: db }\nedges:\n  - { from: a, to: b }",
             "meta: { animate: false, direction: LR }\nnodes: [ { id: a, title: Ingest }, { id: b, title: Store, kind: db } ]\nedges: [ { from: a, to: b } ]"),
+
+        new("Rank & order", "layout", "layout",
+            "Pin a node's rank (distance along the flow) and order (position across it) to override the layout.",
+            "nodes:\n  - { id: a, rank: 0 }\n  - { id: b, rank: 0, order: 1 }\n  - { id: c, rank: 1 }",
+            "meta: { animate: false }\nnodes: [ { id: a, title: A, rank: 0 }, { id: b, title: B, rank: 0, order: 1 }, { id: c, title: C, rank: 1 } ]\nedges: [ { from: a, to: c }, { from: b, to: c } ]"),
+
+        new("Spacing", "layout", "layout",
+            "meta.spacing tunes the gaps: rank (along the flow), node (across), and cornerRadius.",
+            "meta:\n  spacing:\n    rank: 64\n    node: 48",
+            "meta: { animate: false, direction: LR, spacing: { rank: 64, node: 48 } }\nnodes: [ { id: a, title: A }, { id: b, title: B }, { id: c, title: C } ]\nedges: [ { from: a, to: b }, { from: a, to: c } ]"),
+
+        // ---- Flow (animation) ----
+        new("Auto animation", "flow", "flow",
+            "With no flow:, Beck auto-animates — a packet traverses each edge, then loops. Set meta.animate: false for a static frame.",
+            "nodes:\n  - { id: a, title: Client }\n  - { id: b, title: API }\nedges:\n  - { from: a, to: b }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: Client, kind: user }, { id: b, title: API, kind: gateway } ]\nedges: [ { from: a, to: b } ]"),
+
+        new("Packet", "flow", "flow",
+            "flow.steps scripts the animation. packet sends a dot along an edge, with an optional label.",
+            "flow:\n  steps:\n    - packet: { from: a, to: b,\n        label: GET }",
+            "meta: { direction: LR }\nnodes: [ { id: a, title: Client, kind: user }, { id: b, title: API, kind: gateway } ]\nedges: [ { from: a, to: b } ]\nflow:\n  steps:\n    - packet: { from: a, to: b, label: GET }\n    - wait: 0.6\n    - reset: true"),
+
+        new("Status change", "flow", "flow",
+            "A status step sets a node's pill mid-flow — show state changing over time.",
+            "flow:\n  steps:\n    - status: { node: db,\n        text: writing }",
+            "meta: { direction: LR }\nnodes: [ { id: api, title: API }, { id: db, title: DB, kind: db } ]\nedges: [ { from: api, to: db } ]\nflow:\n  steps:\n    - packet: { from: api, to: db }\n    - status: { node: db, text: writing, color: warn }\n    - wait: 0.8\n    - status: { node: db, text: done, color: success }\n    - wait: 0.8\n    - reset: true"),
+
+        new("Working state", "flow", "flow",
+            "working leaves a node visibly busy (a breathing glow) until idle or reset.",
+            "flow:\n  steps:\n    - working: { node: api }\n    - idle: { node: api }",
+            "meta: { direction: LR }\nnodes: [ { id: api, title: API }, { id: db, title: DB, kind: db } ]\nedges: [ { from: api, to: db } ]\nflow:\n  steps:\n    - working: { node: api }\n    - packet: { from: api, to: db }\n    - wait: 1\n    - idle: { node: api }\n    - reset: true"),
+
+        new("Pulse & highlight", "flow", "flow",
+            "pulse ripples a node on arrival; highlight briefly tints it. Both take an optional color.",
+            "flow:\n  steps:\n    - pulse: { node: cache }",
+            "meta: { direction: LR }\nnodes: [ { id: api, title: API }, { id: cache, title: Cache, kind: cache } ]\nedges: [ { from: api, to: cache } ]\nflow:\n  steps:\n    - packet: { from: api, to: cache }\n    - pulse: { node: cache }\n    - wait: 0.8\n    - reset: true"),
     ];
 }
