@@ -17,6 +17,7 @@ dotnet/**/obj/
 /sample-flow.yaml
 /*.png
 .playwright-mcp/
+/local-feed/
 
 # Pennington static build output
 docs/Beck.Docs/output/

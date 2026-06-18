@@ -21,7 +21,8 @@ export function createGroup(group: GroupModel): RenderedGroup {
   let label: HTMLElement | null = null
   if (group.label) {
     label = document.createElement('div')
-    label.className = 'beck-group-label'
+    // Structure via host utilities; surface colour stays in styles.css, accent inline.
+    label.className = 'beck-group-label absolute z-[4] px-[0.35rem] text-[0.7rem] font-semibold tracking-[0.04em] uppercase whitespace-nowrap'
     label.textContent = group.label
     label.style.color = group.accent
   }

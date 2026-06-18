@@ -10,7 +10,8 @@ animation-related is bundled.
 ```bash
 npm install
 npm run dev          # open the playground (samples, live editor, light/dark toggle)
-npm run build:lib    # build dist-lib/beck.global.js (IIFE) — set BECK_FORMAT=esm for the ESM build
+npm run build:lib    # build the IIFE engine bundle into dotnet/Beck/wwwroot/beck.global.js
+BECK_FORMAT=esm npm run build:lib   # optional ESM build to dist-lib/beck.js
 ```
 
 ## A diagram in YAML
@@ -73,10 +74,10 @@ or a `src` URL):
 </beck-diagram>
 ```
 
-**Imperatively:**
+**Imperatively** (after the IIFE bundle is loaded via `<script>`, the API lives on `window.Beck`):
 
 ```ts
-import { renderDiagram } from 'beck'
+const { renderDiagram } = window.Beck
 const handle = renderDiagram(document.querySelector('#chart'), yamlString, { theme: 'auto' })
 // handle: play(), pause(), reset(), seek(label), setTheme(mode), relayout(), destroy(), ready
 ```

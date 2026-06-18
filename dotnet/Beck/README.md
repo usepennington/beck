@@ -13,15 +13,17 @@ This single package ships two things:
 
 ## Client setup
 
-Reference the package and add the script to your page head once:
+Reference the package and add the script to your page head once. Inject `Beck.BeckAssets.ScriptTag`
+(handy for a Pennington `DocSiteOptions.AdditionalHtmlHeadContent`) rather than hand-copying the tag —
+it returns the snippet below with the **root-relative** path, which resolves from any route depth and
+lets a sub-path deploy's base-URL rewriter prefix it:
 
 ```html
-<script src="_content/Beck/beck.global.js" defer></script>
+<script src="/_content/Beck/beck.global.js" defer></script>
 ```
 
-`Beck.BeckAssets.ScriptTag` returns exactly that snippet (handy for a Pennington
-`DocSiteOptions.AdditionalHtmlHeadContent`). Then any ` ```beck ` fenced block in your Markdown
-renders as a diagram, following your site's `--color-*` palette and dark mode automatically.
+Then any ` ```beck ` fenced block in your Markdown renders as a diagram, following your site's
+`--color-*` palette and dark mode automatically.
 
 ````markdown
 ```beck

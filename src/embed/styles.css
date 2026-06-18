@@ -70,18 +70,11 @@
   line-height: 1.4;
 }
 
+/* .beck-title / -subtitle: structure via host utilities (see core.ts); colour here. */
 .beck-title {
-  margin: 0 0 4px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  text-align: center;
   color: var(--beck-text);
 }
 .beck-subtitle {
-  margin: 0 0 8px;
-  font-size: 0.9rem;
-  text-align: center;
   color: var(--beck-text-muted);
 }
 
@@ -101,6 +94,9 @@
 }
 
 /* ---- node card ---- */
+/* Structure (layout, spacing, type scale, radius) is host utility classes emitted by
+   render/node.ts; only colour, accent, and dynamic state live here. The `beck-*`
+   classes stay as behavioural hooks the animation layer + router query. */
 
 .beck-node-wrap {
   position: absolute;
@@ -114,15 +110,11 @@
 }
 
 .beck-node {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-width: 180px;
-  padding: 14px 16px;
-  border-radius: 14px;
+  /* The accent tints the border (and the icon chip), so a node's accent — explicit or
+     inherited from its kind — colours the card, not just the glyph. Hover lifts it to
+     the full accent (see a.beck-node). */
   background: var(--beck-node-bg);
-  border: 1.5px solid var(--beck-node-border);
+  border: 1.5px solid color-mix(in srgb, var(--beck-accent) 32%, var(--beck-node-border));
   box-shadow: var(--beck-node-shadow);
   color: var(--beck-text);
   transition: box-shadow 0.3s, border-color 0.3s, background-color 0.4s, transform 0.2s;
@@ -142,27 +134,14 @@ a.beck-node:hover {
   opacity: 0.72;
 }
 .beck-node--ghost {
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 8px 14px;
-  border-radius: 16px;
   border-style: dashed;
   background: transparent;
   box-shadow: none;
 }
 
 .beck-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  margin-top: 1px;
-  border-radius: 9px;
-  background: var(--beck-icon-bg);
+  /* Accent-tinted chip behind the glyph — the most visible carrier of the node's accent. */
+  background: color-mix(in srgb, var(--beck-accent) 15%, var(--beck-icon-bg));
   color: var(--beck-accent);
 }
 .beck-icon svg {
@@ -170,37 +149,16 @@ a.beck-node:hover {
   height: 20px;
 }
 
-.beck-node-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-  flex: 1;
-}
 .beck-node-title {
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.3;
   color: var(--beck-text);
 }
 .beck-node-subtitle {
-  font-size: 0.75rem;
-  line-height: 1.35;
   color: var(--beck-text-muted);
 }
 
 /* ---- ghost node internals ---- */
 
-.beck-ghost-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 .beck-node--ghost .beck-icon {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  border-radius: 6px;
   background: transparent;
 }
 .beck-node--ghost .beck-icon svg {
@@ -208,30 +166,16 @@ a.beck-node:hover {
   height: 14px;
 }
 .beck-ghost-label {
-  font-size: 0.72rem;
-  font-weight: 500;
   color: var(--beck-text-muted);
-  white-space: nowrap;
 }
 .beck-status-inline {
-  font-size: 0.62rem;
-  font-weight: 500;
   color: var(--beck-accent);
-  white-space: nowrap;
   transition: color 0.15s;
 }
 
 /* ---- status pill ---- */
 
 .beck-status {
-  align-self: flex-start;
-  margin-top: 2px;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  font-size: 0.65rem;
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
   background: color-mix(in srgb, var(--beck-accent) 14%, transparent);
   color: var(--beck-accent);
   transition: color 0.15s, background-color 0.15s;
@@ -246,17 +190,11 @@ a.beck-node:hover {
   border-radius: 18px;
   pointer-events: none;
 }
+/* .beck-group-label: structure via host utilities (see group.ts); colours here
+   (surface background + the group-accent fallback colour, overridden inline per group). */
 .beck-group-label {
-  position: absolute;
-  z-index: 4;
-  padding: 0 0.35rem;
   background: var(--beck-surface);
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--beck-group-label);
-  white-space: nowrap;
 }
 
 /* ---- edges ---- */

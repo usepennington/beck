@@ -1,16 +1,13 @@
-import { STYLES } from '../styles'
-import { mountModel, type DiagramHandle, type RenderOptions } from '../core'
-import { loadDiagram } from '../model'
+import { renderDiagram, type DiagramHandle, type RenderOptions } from '../core'
 import type { ThemeMode } from '../model/schema'
 import { BeckPlaybackElement } from './playback'
 
-const FONT_HREF = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-
 /**
- * `<beck-diagram>` renders a YAML diagram inside Shadow DOM. The YAML may be the
- * element's text, a child `<script type="application/yaml">`, or fetched from a
- * `src` attribute. CSS custom properties pierce the shadow boundary, so the
- * diagram still adopts the host page's `--color-*` palette.
+ * `<beck-diagram>` renders a YAML diagram in **light DOM** (via `renderDiagram`), so the
+ * host page's Tailwind/MonorailCSS utility classes reach it — the same path the fenced
+ * ```beck integration uses. The YAML may be the element's text, a child
+ * `<script type="application/yaml">`, or fetched from a `src` attribute. Colour/theme
+ * ride the `--beck-*`/`--color-*` custom properties.
  *
  * Attributes: `mode` (light|dark|auto), `src`, `animate` (false to disable).
  */
@@ -20,7 +17,18 @@ export class BeckDiagramElement extends HTMLElement {
   /** The live diagram handle (read by `<beck-playback>`). */
   diagram: DiagramHandle | null = null
 
+  /**
+   * Inline YAML captured once, before the first render replaces the element's children.
+   * Re-renders (mode/animate/src changes) must not read back the rendered diagram's own
+   * text; `src` sources are re-fetched live instead.
+   */
+  private inlineSource: string | null = null
+
   connectedCallback(): void {
+    if (this.inlineSource == null && !this.getAttribute('src')) {
+      const script = this.querySelector('script[type="application/yaml"], script[type="text/yaml"]')
+      this.inlineSource = (script?.textContent ?? this.textContent ?? '').trim()
+    }
     void this.render()
   }
 
@@ -36,35 +44,36 @@ export class BeckDiagramElement extends HTMLElement {
   }
 
   private async render(): Promise<void> {
-    const shadow = this.shadowRoot ?? this.attachShadow({ mode: 'open' })
-    shadow.replaceChildren()
-
-    const style = document.createElement('style')
-    style.textContent = STYLES
-    shadow.appendChild(style)
-
-    const font = document.createElement('link')
-    font.rel = 'stylesheet'
-    font.href = FONT_HREF
-    shadow.appendChild(font)
-
-    const root = document.createElement('div')
-    shadow.appendChild(root)
+    let yaml: string | null
+    try {
+      yaml = await this.readSource()
+    } catch (err) {
+      this.showError(err)
+      return
+    }
+    if (yaml == null) return // no source present — nothing to render (not an error)
 
     try {
-      const yaml = await this.readSource()
-      if (yaml == null) return // no source present — nothing to render (not an error)
-      const model = loadDiagram(yaml)
       const opts: RenderOptions = {}
       const mode = this.getAttribute('mode') as ThemeMode | null
       if (mode) opts.theme = mode
       if (this.getAttribute('animate') === 'false') opts.animate = false
       this.diagram?.destroy()
-      this.diagram = mountModel(root, model, opts)
+      // renderDiagram clears this element's children and mounts into it (light DOM),
+      // injecting the stylesheet into the document once (id-guarded).
+      this.diagram = renderDiagram(this, yaml, opts)
     } catch (err) {
-      root.className = 'beck-error'
-      root.textContent = err instanceof Error ? err.message : String(err)
+      this.showError(err)
     }
+  }
+
+  private showError(err: unknown): void {
+    this.diagram?.destroy()
+    this.diagram = null
+    const box = document.createElement('div')
+    box.className = 'beck-error'
+    box.textContent = err instanceof Error ? err.message : String(err)
+    this.replaceChildren(box)
   }
 
   /** Returns the YAML source, or null when none is present. Throws if a `src` fails to load. */
@@ -75,10 +84,7 @@ export class BeckDiagramElement extends HTMLElement {
       if (!res.ok) throw new Error(`Beck: failed to load src "${src}" (HTTP ${res.status})`)
       return await res.text()
     }
-    const script = this.querySelector('script[type="application/yaml"], script[type="text/yaml"]')
-    if (script?.textContent) return script.textContent
-    const text = this.textContent?.trim()
-    return text ? text : null
+    return this.inlineSource && this.inlineSource.length > 0 ? this.inlineSource : null
   }
 }
 

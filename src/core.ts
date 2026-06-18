@@ -16,6 +16,13 @@ export interface RenderOptions {
   animate?: boolean
   /** Override the GSAP CDN URL. */
   gsapUrl?: string
+  /**
+   * Prefix for root-relative node `href`s (links beginning with `/`). Defaults to the
+   * host's `<body data-base-url>` when present — the prefix a static-site engine stamps
+   * for sub-path deploys (e.g. Pennington), which its server-side rewriter cannot apply
+   * to the links Beck renders in the browser. Empty string disables prefixing.
+   */
+  baseUrl?: string
 }
 
 export interface DiagramHandle {
@@ -44,6 +51,13 @@ interface BuiltState {
 export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderOptions = {}): DiagramHandle {
   root.classList.add('beck-root')
   if (opts.gsapUrl) setGsapUrl(opts.gsapUrl)
+
+  // Resolve the deploy base path once: explicit option wins, else the host's
+  // `<body data-base-url>` (stamped by sub-path-deploy engines), else none.
+  const baseUrl =
+    opts.baseUrl ??
+    (typeof document !== 'undefined' ? document.body?.dataset.baseUrl : undefined) ??
+    ''
 
   let themeMode: ThemeMode = opts.theme ?? model.meta.theme
   let mql: MediaQueryList | null = null
@@ -74,13 +88,14 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
 
     if (model.meta.title) {
       const h = document.createElement('h1')
-      h.className = 'beck-title'
+      // Structure via host utilities (see render/node.ts CLS rationale); colour in styles.css.
+      h.className = 'beck-title mb-1 text-2xl font-bold tracking-[-0.02em] text-center'
       h.textContent = model.meta.title
       root.appendChild(h)
     }
     if (model.meta.subtitle) {
       const p = document.createElement('p')
-      p.className = 'beck-subtitle'
+      p.className = 'beck-subtitle mb-2 text-[0.9rem] text-center'
       p.textContent = model.meta.subtitle
       root.appendChild(p)
     }
@@ -94,7 +109,7 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
 
     const rendered = new Map<string, RenderedNode>()
     for (const n of model.nodes) {
-      const rn = createNode(n)
+      const rn = createNode(n, baseUrl)
       rn.wrap.style.visibility = 'hidden'
       canvas.appendChild(rn.wrap)
       rendered.set(n.id, rn)
@@ -263,8 +278,8 @@ function ensureStyles(doc: Document): void {
 
 /**
  * Render a YAML diagram into a host element (light DOM). Ensures the stylesheet
- * is present in the document, then mounts. For shadow-DOM isolation use the
- * `<beck-diagram>` element instead.
+ * is present in the document, then mounts. Both the `<beck-diagram>` element and
+ * the fenced ```beck hydration path funnel through here.
  */
 export function renderDiagram(host: HTMLElement, yaml: string, opts: RenderOptions = {}): DiagramHandle {
   ensureStyles(host.ownerDocument)
