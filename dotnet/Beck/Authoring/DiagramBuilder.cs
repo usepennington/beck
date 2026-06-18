@@ -117,8 +117,15 @@ public sealed class DiagramBuilder
     }
 
     /// <summary>Render the diagram as Beck YAML.</summary>
+    /// <exception cref="InvalidOperationException">
+    /// An edge references a <c>from</c>/<c>to</c> id that is not a declared node or group.
+    /// Surfacing this here gives a clear C# error instead of an opaque parser failure that
+    /// blanks the whole diagram in the browser.
+    /// </exception>
     public string ToYaml()
     {
+        ValidateEdgeEndpoints();
+
         var sb = new StringBuilder();
 
         var hasSpacing = _spacingRank != null || _spacingNode != null || _spacingCornerRadius != null;
@@ -163,6 +170,26 @@ public sealed class DiagramBuilder
         _flow?.AppendYaml(sb);
 
         return sb.ToString();
+    }
+
+    /// <summary>Every edge endpoint must resolve to a declared node or group id.</summary>
+    private void ValidateEdgeEndpoints()
+    {
+        if (_edges.Count == 0) return;
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in _nodes) ids.Add(node.Id);
+        foreach (var group in _groups) ids.Add(group.Id);
+
+        foreach (var edge in _edges)
+        {
+            if (!ids.Contains(edge.From))
+                throw new InvalidOperationException(
+                    $"Edge references unknown source '{edge.From}' — declare it as a node or group before emitting.");
+            if (!ids.Contains(edge.To))
+                throw new InvalidOperationException(
+                    $"Edge references unknown target '{edge.To}' — declare it as a node or group before emitting.");
+        }
     }
 
     /// <summary>Render the diagram as a fenced <c>```beck</c> Markdown block.</summary>

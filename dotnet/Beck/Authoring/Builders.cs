@@ -26,6 +26,9 @@ public sealed class NodeBuilder
 
     internal NodeBuilder(string id) => _id = id;
 
+    /// <summary>The node's id.</summary>
+    internal string Id => _id;
+
     /// <summary>Set the display title (defaults to the id).</summary>
     public NodeBuilder Title(string title) { _title = title; return this; }
 
@@ -103,6 +106,9 @@ public sealed class GroupBuilder
 
     internal GroupBuilder(string id) => _id = id;
 
+    /// <summary>The group's id.</summary>
+    internal string Id => _id;
+
     /// <summary>Set the group label.</summary>
     public GroupBuilder Label(string label) { _label = label; return this; }
 
@@ -147,6 +153,12 @@ public sealed class EdgeBuilder
         _from = from;
         _to = to;
     }
+
+    /// <summary>The edge's source endpoint id.</summary>
+    internal string From => _from;
+
+    /// <summary>The edge's target endpoint id.</summary>
+    internal string To => _to;
 
     /// <summary>Set the edge label.</summary>
     public EdgeBuilder Label(string label) { _label = label; return this; }
