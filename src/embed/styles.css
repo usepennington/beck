@@ -211,6 +211,12 @@ a.beck-node:hover {
   font-size: 0.7rem;
   font-weight: 500;
   fill: var(--beck-text-muted);
+  /* Same surface-colored halo the packet label uses, so edge strokes (and the
+     faint group/title behind) never bleed through the glyphs. */
+  paint-order: stroke;
+  stroke: var(--beck-surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 .beck-packet-label {
   font-size: 0.66rem;

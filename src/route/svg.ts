@@ -98,15 +98,143 @@ function polylineMidpoint(points: Point[]): Point {
   return points[points.length - 1] ?? { x: 0, y: 0 }
 }
 
-function drawLabel(svg: SVGSVGElement, points: Point[], text: string): void {
-  const mid = polylineMidpoint(points)
+const LABEL_GAP = 6 // clear space between the label box and the edge line
+const LABEL_PAD_X = 4 // breathing room added around the measured glyph box
+const LABEL_PAD_Y = 2
+const LABEL_MARGIN = 4 // keep the label this far inside the canvas
+const LABEL_END_INSET = 14 // don't place a label right on top of an arrowhead
+
+type LabelAnchor = 'start' | 'middle' | 'end'
+interface LabelBox {
+  cx: number
+  cy: number
+  hw: number
+  hh: number
+  anchor: LabelAnchor
+}
+
+/** Signed gap between a label box and a node rect: ≥0 when clear, <0 when overlapping. */
+function boxGap(box: LabelBox, r: Rect): number {
+  const ix = Math.min(box.cx + box.hw, r.x + r.w) - Math.max(box.cx - box.hw, r.x)
+  const iy = Math.min(box.cy + box.hh, r.y + r.h) - Math.max(box.cy - box.hh, r.y)
+  if (ix > 0 && iy > 0) return -Math.min(ix, iy)
+  return Math.hypot(ix > 0 ? 0 : -ix, iy > 0 ? 0 : -iy)
+}
+
+function clearance(box: LabelBox, obstacles: Rect[]): number {
+  let min = Infinity
+  for (const o of obstacles) min = Math.min(min, boxGap(box, o))
+  return min
+}
+
+/**
+ * Pick where the label sits. Instead of the blind geometric midpoint, sample
+ * points along each straight segment and keep the box with the most clearance to
+ * any node — preferring, among near-ties, the spot closest to the edge midpoint.
+ * On vertical-ish segments the text is anchored to one side so it grows *away*
+ * from the line rather than straddling it (the failure mode behind labels that
+ * detoured into the canvas-edge lane and ended up behind a node).
+ */
+function chooseLabelBox(
+  points: Point[],
+  hw: number,
+  hh: number,
+  obstacles: Rect[],
+  bounds: { width: number; height: number },
+  mid: Point,
+): LabelBox {
+  const clampCenter = (cx: number, cy: number) => ({
+    cx: Math.min(Math.max(cx, LABEL_MARGIN + hw), Math.max(LABEL_MARGIN + hw, bounds.width - LABEL_MARGIN - hw)),
+    cy: Math.min(Math.max(cy, LABEL_MARGIN + hh), Math.max(LABEL_MARGIN + hh, bounds.height - LABEL_MARGIN - hh)),
+  })
+
+  let best: LabelBox | null = null
+  let bestClear = -Infinity
+  let bestDist = Infinity
+  const consider = (cx0: number, cy0: number, anchor: LabelAnchor) => {
+    const c = clampCenter(cx0, cy0)
+    const box: LabelBox = { cx: c.cx, cy: c.cy, hw, hh, anchor }
+    const clear = clearance(box, obstacles)
+    const dist = Math.hypot(c.cx - mid.x, c.cy - mid.y)
+    const tie = clear === bestClear || Math.abs(clear - bestClear) <= 6
+    if (best === null || clear > bestClear + 6 || (tie && dist < bestDist)) {
+      best = box
+      bestClear = clear
+      bestDist = dist
+    }
+  }
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i]
+    const b = points[i + 1]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len = Math.hypot(dx, dy)
+    if (len < 1) continue
+    const inset = Math.min(LABEL_END_INSET / len, 0.5)
+    const steps = Math.max(1, Math.min(6, Math.floor(len / 40)))
+    for (let k = 0; k <= steps; k++) {
+      const tt = inset + (1 - 2 * inset) * (k / steps)
+      const px = a.x + dx * tt
+      const py = a.y + dy * tt
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        // vertical-ish: park the text to the clearer side of the line
+        consider(px - LABEL_GAP - hw, py, 'end')
+        consider(px + LABEL_GAP + hw, py, 'start')
+      } else {
+        // horizontal-ish: above or below the line
+        consider(px, py - LABEL_GAP - hh, 'middle')
+        consider(px, py + LABEL_GAP + hh, 'middle')
+      }
+    }
+  }
+
+  if (best === null) {
+    const c = clampCenter(mid.x, mid.y - LABEL_GAP - hh)
+    return { cx: c.cx, cy: c.cy, hw, hh, anchor: 'middle' }
+  }
+  return best
+}
+
+function drawLabel(
+  svg: SVGSVGElement,
+  points: Point[],
+  text: string,
+  obstacles: Rect[],
+  bounds: { width: number; height: number },
+  placed: Rect[],
+): void {
   const t = document.createElementNS(SVGNS, 'text')
-  t.setAttribute('x', String(Math.round(mid.x)))
-  t.setAttribute('y', String(Math.round(mid.y) - 5))
-  t.setAttribute('text-anchor', 'middle')
   t.classList.add('beck-edge-label')
   t.textContent = text
+  // Append before measuring: the overlay is already in the connected DOM at route
+  // time (same as the node measure pass), so getBBox reports real host-font metrics.
   svg.appendChild(t)
+  let w = 0
+  let h = 0
+  try {
+    const bb = t.getBBox()
+    w = bb.width
+    h = bb.height
+  } catch {
+    // getBBox can throw / return empty inside a display:none subtree (collapsed tab,
+    // accordion). The halo carries legibility; we just estimate the box below.
+  }
+  if (!w || !Number.isFinite(w)) w = text.length * 7
+  if (!h || !Number.isFinite(h)) h = 12
+  const hw = w / 2 + LABEL_PAD_X
+  const hh = h / 2 + LABEL_PAD_Y
+
+  // Avoid both node cards and already-placed labels, so labels never stack.
+  const all = placed.length ? obstacles.concat(placed) : obstacles
+  const box = chooseLabelBox(points, hw, hh, all, bounds, polylineMidpoint(points))
+  // Derive the text x from the box + anchor (dominant-baseline centers it on cy).
+  const tx = box.anchor === 'start' ? box.cx - w / 2 : box.anchor === 'end' ? box.cx + w / 2 : box.cx
+  t.setAttribute('x', String(Math.round(tx)))
+  t.setAttribute('y', String(Math.round(box.cy)))
+  t.setAttribute('text-anchor', box.anchor)
+  t.setAttribute('dominant-baseline', 'central')
+  placed.push({ x: box.cx - box.hw, y: box.cy - box.hh, w: box.hw * 2, h: box.hh * 2 })
 }
 
 /** Route + draw every edge in the model. Returns the visible paths for animation. */
@@ -131,6 +259,12 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
     return out
   }
 
+  // Labels avoid every node card (not just this edge's endpoints), so a detouring
+  // edge's label never lands on an unrelated node.
+  const labelObstacles = [...layout.nodes.values()]
+  const labelBounds = { width: layout.width, height: layout.height }
+  const placedLabels: Rect[] = []
+
   const out: RoutedEdge[] = []
   for (const edge of model.edges) {
     const from = rectOf(edge.from)
@@ -150,7 +284,7 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
       bounds: { width: layout.width, height: layout.height },
     })
     const path = drawEdge(svg, d, edge)
-    if (edge.label) drawLabel(svg, points, edge.label)
+    if (edge.label) drawLabel(svg, points, edge.label, labelObstacles, labelBounds, placedLabels)
     out.push({ edge, path })
   }
   return out

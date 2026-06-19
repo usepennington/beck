@@ -4,6 +4,43 @@ import type { LayoutResult, Point, Rect, SizeMap } from './types'
 const FALLBACK = { w: 180, h: 64 }
 const GROUP_PAD = { top: 28, side: 16, bottom: 16 }
 const CANVAS_PAD = 16
+// How far an outer detour lane sits beyond the node stack (mirrors LANE_PAD in
+// route/orthogonal.ts) and the gap+margin reserved around a label parked in the gutter.
+const LANE_RESERVE = 22
+const LABEL_RESERVE_GAP = 10
+
+/**
+ * Width (TB/BT) or height (LR/RL) to reserve on each secondary-axis side when an
+ * edge runs *against* the flow. Such "back" edges (feedback loops) route around
+ * the node stack through an outer lane; without a reserved gutter that lane — and
+ * its label — clamp against the canvas edge on top of the nodes. We reserve enough
+ * for the lane plus the (estimated) label, minus the padding the canvas already has.
+ * Symmetric so the node spine stays centered under the centered title.
+ */
+function backEdgeGutter(model: DiagramModel, nodes: Map<string, Rect>): number {
+  const dir = model.meta.direction
+  const horizontalSecondary = dir === 'TB' || dir === 'BT'
+  let need = 0
+  for (const e of model.edges) {
+    const f = nodes.get(e.from)
+    const t = nodes.get(e.to)
+    if (!f || !t) continue
+    const against =
+      dir === 'TB'
+        ? t.y + t.h <= f.y
+        : dir === 'BT'
+          ? t.y >= f.y + f.h
+          : dir === 'LR'
+            ? t.x + t.w <= f.x
+            : t.x >= f.x + f.w
+    if (!against) continue
+    // Label extends along the secondary axis (its width for TB/BT, ~line-height for LR/RL).
+    const labelExtent = e.label ? (horizontalSecondary ? e.label.length * 7 + 8 : 14) : 0
+    const want = LANE_RESERVE + (labelExtent ? LABEL_RESERVE_GAP + labelExtent : LANE_RESERVE)
+    need = Math.max(need, want)
+  }
+  return need > 0 ? Math.max(0, Math.ceil(need - CANVAS_PAD)) : 0
+}
 
 /** One thing to place in a layer: a node, or a group rendered as a super-node. */
 interface LayItem {
@@ -448,10 +485,21 @@ export function layeredLayout(model: DiagramModel, sizes: SizeMap): LayoutResult
   for (const [id, r] of root.nodeRects) nodes.set(id, offset(r, CANVAS_PAD, CANVAS_PAD))
   for (const [id, r] of root.groupRects) groups.set(id, offset(r, CANVAS_PAD, CANVAS_PAD))
 
-  return {
-    nodes,
-    groups,
-    width: Math.ceil(root.width + CANVAS_PAD * 2),
-    height: Math.ceil(root.height + CANVAS_PAD * 2),
+  let width = Math.ceil(root.width + CANVAS_PAD * 2)
+  let height = Math.ceil(root.height + CANVAS_PAD * 2)
+
+  // Reserve a symmetric secondary-axis gutter so against-flow edges get an outer
+  // lane with room for their label, instead of being clamped onto the nodes.
+  const gutter = backEdgeGutter(model, nodes)
+  if (gutter > 0) {
+    const horizontalSecondary = dir === 'TB' || dir === 'BT'
+    const dx = horizontalSecondary ? gutter : 0
+    const dy = horizontalSecondary ? 0 : gutter
+    for (const [id, r] of nodes) nodes.set(id, offset(r, dx, dy))
+    for (const [id, r] of groups) groups.set(id, offset(r, dx, dy))
+    if (horizontalSecondary) width += gutter * 2
+    else height += gutter * 2
   }
+
+  return { nodes, groups, width, height }
 }
