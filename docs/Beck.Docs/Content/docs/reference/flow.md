@@ -1,0 +1,145 @@
+---
+title: Flow & animation
+description: The flow block, every step type, and the knobs that shape a travelling packet.
+order: 41
+sectionLabel: Reference
+uid: docs.reference.flow
+---
+
+A diagram's animation is a `flow` — an ordered list of steps the engine compiles into a timeline and
+plays when the diagram scrolls into view. When no `flow` is authored, Beck derives one from the
+edges. For a task-oriented walkthrough, see [Animate the flow](/docs/guides/flow).
+
+Animation is skipped entirely — and the motion runtime never loads — when `meta.animate` is `false`
+or the reader prefers reduced motion. See [reduced motion](#reduced-motion).
+
+## The flow block
+
+| key | type | default | description |
+|---|---|---|---|
+| `repeat` | number | `-1` | `-1` loops forever; `0` plays once. `meta.loop: false` forces `0`. |
+| `repeatDelay` | number (s) | `1.5` | Pause between repeats. |
+| `steps` | list | — | Ordered steps; each is a single-key mapping (see below). |
+
+```yaml
+flow:
+  repeat: -1
+  repeatDelay: 1.5
+  steps:
+    - packet: { from: client, to: api, label: GET /item }
+    - working: { node: db }
+    - packet: { from: api, to: db, color: info }
+    - idle: { node: db }
+    - packet: { from: db, to: api, color: success }
+    - wait: 1
+```
+
+### Derived flow
+
+With no `flow` block, Beck topologically sorts the nodes (roots → leaves), emits a `phase` label the
+first time each node sends, sends a `packet` along every edge in order, then waits one second and
+resets — looping forever. This is why `nodes` and `edges` alone already animate.
+
+## Steps
+
+Each step is a mapping with a single key naming its type. `from`/`to`/`node` values must reference a
+declared node id (or, for edge endpoints, a group id).
+
+| step | fields | effect |
+|---|---|---|
+| `packet` | `from`, `to`, `via?`, `color?`, `label?`, + [knobs](#packet-knobs) | One dot travels the edge (or multi-hop chain). |
+| `burst` | `from`, `to` (id or list), `via?`, `count`, `stagger`, `color?`, `label?`, + [knobs](#packet-knobs) | `count` waves; each broadcasts a dot to every target. |
+| `status` | `node`, `text`, `color?` | Set the node's status pill (persists until changed or reset). |
+| `highlight` | `node`, `color?` | A brief scale-and-glow flourish. |
+| `pulse` | `node`, `color?` | A scale bump with an expanding ripple ring. |
+| `activate` | `from`, `to`, `color?` | Persistently recolour an edge and its arrowhead until `reset`. |
+| `stream` | `from`, `to`, `color?` | Continuous flowing dashes along an edge until `reset`. |
+| `working` | `node`, `color?` | Leave a node visibly busy (breathing glow) until `idle` or `reset`. |
+| `idle` | `node` | Clear a node's `working` state. |
+| `fail` | `node`, `text?`, `color?` | A red shake and flash, with optional status text. |
+| `phase` | `<label>` (string) | A named label the handle's `seek(label)` can jump to. |
+| `wait` | `<seconds>` (number) | Pause. Default `0.5`. |
+| `reset` | — | Restore the initial state (clears trails, streams, working, recolours, pills). |
+| `parallel` | `[ <steps> ]` | Run the listed steps simultaneously. |
+
+`burst` clamps `count` to 1–24 (default `3`) and defaults `stagger` to `0.12` seconds. `status`,
+`working`, `stream`, and `activate` persist until a later step or `reset` clears them; everything
+else is a one-shot beat.
+
+```yaml
+- status: { node: scan, text: FAILED, color: danger }
+- fail: { node: scan, text: vulnerable }
+- parallel:
+    - burst: { from: alert, to: [oncall, slack, email], count: 4 }
+    - pulse: { node: alert }
+- phase: notified
+- wait: 1
+- reset:
+```
+
+## Packet knobs
+
+`packet` and `burst` share these. Each unset knob falls back to the traversed edge kind's default
+(see [per-edge-kind motion](#per-edge-kind-motion)), then to an engine constant.
+
+| knob | type | default | description |
+|---|---|---|---|
+| `shape` | `dot` `circle` `ring` | `dot` | Packet form. See [shapes](#packet-shapes). |
+| `size` | number (px) | edge kind | Dot radius. |
+| `speed` | number (px/s) | edge kind | Travel speed. |
+| `glow` | bool | edge kind | Soft glow around the dot. |
+| `impact` | bool | `false` | Emit an expanding ring at the destination on arrival. |
+| `ease` | enum | edge kind | Easing of the travel. See [eases](#eases). |
+| `via` | list of ids | — | Waypoints — the packet chains through each in turn. A group waypoint pulses its members on arrival. |
+| `color` | token or colour | `--beck-packet` | Dot and trail colour. |
+| `label` | string | — | Text that rides above the dot (only the first dot of a `burst` is labelled). |
+
+A travelling packet draws a colour trail in lockstep with its easing and pulses the target node on
+arrival.
+
+### Packet shapes
+
+| shape | look | baseline radius |
+|---|---|---|
+| `dot` | Small filled, glowing disc | keeps the edge-kind size |
+| `circle` | Larger filled disc | `12` |
+| `ring` | Hollow stroked circle | `12` |
+
+An explicit `size` always overrides the shape baseline.
+
+### Eases
+
+| token | motion |
+|---|---|
+| `linear` | Constant speed. |
+| `smooth` | Eases in and out. |
+| `accelerate` | Starts slow, speeds up. |
+| `decelerate` | Starts fast, slows down. |
+| `expo` | Strong exponential ease in and out. |
+| `sine` | Gentle sine ease in and out. |
+| `steps` | Discrete stepping — a digital tick. |
+| `bounce` | Decelerating bounce on arrival. |
+
+## Per-edge-kind motion
+
+When a packet's knobs are unset, it inherits the motion of the edge kind it travels — so `data`,
+`control`, `async`, and `dependency` packets read differently with zero authoring. Explicit knobs
+always win.
+
+| edge kind | size | speed | glow | ease |
+|---|---|---|---|---|
+| `data` | 6 | 420 | yes | `linear` |
+| `control` | 5 | 640 | yes | `accelerate` |
+| `async` | 7.5 | 300 | yes | `smooth` |
+| `dependency` | 4 | 380 | no | `linear` |
+
+## Reduced motion
+
+If `meta.animate` is `false`, a `<beck-diagram>` carries `animate="false"`, or the reader's system
+requests reduced motion, Beck renders the static frame and never loads its animation runtime (GSAP,
+fetched from a CDN at runtime). The persistent CSS-driven effects (`working`, `stream`, status and
+icon tints) consume theme variables directly, so they survive a theme change and keep running even
+while the timeline is paused.
+
+To drive playback yourself — play, pause, seek to a `phase` label — render with
+`window.Beck.renderDiagram` and use the returned handle; see the [API reference](/api).
