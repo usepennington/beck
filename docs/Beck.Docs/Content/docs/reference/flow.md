@@ -99,39 +99,26 @@ arrival.
 
 ### Packet shapes
 
-| shape | look | baseline radius |
-|---|---|---|
-| `dot` | Small filled, glowing disc | keeps the edge-kind size |
-| `circle` | Larger filled disc | `12` |
-| `ring` | Hollow stroked circle | `12` |
+Each shape travels below so you can read it in motion. An explicit `size` always overrides a shape's
+baseline radius.
 
-An explicit `size` always overrides the shape baseline.
+<BeckGallery Of="packet-shapes" />
 
 ### Eases
 
-| token | motion |
-|---|---|
-| `linear` | Constant speed. |
-| `smooth` | Eases in and out. |
-| `accelerate` | Starts slow, speeds up. |
-| `decelerate` | Starts fast, slows down. |
-| `expo` | Strong exponential ease in and out. |
-| `sine` | Gentle sine ease in and out. |
-| `steps` | Discrete stepping — a digital tick. |
-| `bounce` | Decelerating bounce on arrival. |
+An ease only reveals itself in motion, so each one runs live — same edge, same speed, different
+curve.
+
+<BeckGallery Of="eases" />
 
 ## Per-edge-kind motion
 
 When a packet's knobs are unset, it inherits the motion of the edge kind it travels — so `data`,
 `control`, `async`, and `dependency` packets read differently with zero authoring. Explicit knobs
-always win.
+always win. Each card below sends a default packet along an edge of that kind, so the difference in
+size, speed, glow, and easing is something you watch rather than read off a table.
 
-| edge kind | size | speed | glow | ease |
-|---|---|---|---|---|
-| `data` | 6 | 420 | yes | `linear` |
-| `control` | 5 | 640 | yes | `accelerate` |
-| `async` | 7.5 | 300 | yes | `smooth` |
-| `dependency` | 4 | 380 | no | `linear` |
+<BeckGallery Of="edge-kinds" />
 
 ## Reduced motion
 

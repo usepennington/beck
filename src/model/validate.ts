@@ -100,6 +100,7 @@ function buildMeta(m: Record<string, unknown>): DiagramMeta {
     theme: oneOf(m.theme, ['auto', 'light', 'dark'] as const, 'meta.theme', 'auto'),
     animate: optBool(m.animate, 'meta.animate', true),
     loop: optBool(m.loop, 'meta.loop', true),
+    fit: oneOf(m.fit, ['shrink', 'scroll'] as const, 'meta.fit', 'shrink'),
     spacing: {
       rank: optNumber(sp.rank, 'meta.spacing.rank') ?? DEFAULT_SPACING.rank,
       node: optNumber(sp.node, 'meta.spacing.node') ?? DEFAULT_SPACING.node,

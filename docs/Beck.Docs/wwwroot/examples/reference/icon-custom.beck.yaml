@@ -1,0 +1,6 @@
+meta: { title: Custom icon, direction: LR, animate: false }
+nodes:
+  - { id: svc, title: Service, kind: service }
+  - { id: gem, title: Custom, accent: info, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18M9 3 7 9l5 12M15 3l2 6-5 12"/></svg>' }
+edges:
+  - { from: svc, to: gem, label: any glyph }

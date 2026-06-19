@@ -4,6 +4,10 @@
 
 export type Direction = 'TB' | 'BT' | 'LR' | 'RL'
 export type ThemeMode = 'auto' | 'light' | 'dark'
+/** How a diagram wider than its container behaves. `shrink` (default) scales the
+ *  whole diagram down to fit the available width; `scroll` keeps it at natural
+ *  size and lets the container scroll horizontally. Vertical size is unaffected. */
+export type FitMode = 'shrink' | 'scroll'
 export type NodeKind =
   | 'service'
   | 'db'
@@ -48,6 +52,8 @@ export interface DiagramMeta {
   theme: ThemeMode
   animate: boolean
   loop: boolean
+  /** How the diagram behaves when wider than its container (`shrink`/`scroll`). */
+  fit: FitMode
   spacing: Spacing
 }
 

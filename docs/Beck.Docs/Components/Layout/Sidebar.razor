@@ -1,17 +1,39 @@
 @inject IEnumerable<IContentService> ContentServices
 @inject NavigationManager Nav
 
-<aside class="sticky top-[62px] self-start max-h-[calc(100vh-62px)] overflow-y-auto py-[34px]">
-    @foreach (var group in _groups)
-    {
-        <div class="font-mono text-[11px] uppercase tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">@group.Label</div>
-        <div class="flex flex-col gap-0.5 mb-6">
-            @foreach (var item in group.Items)
-            {
-                <a class="block w-full text-left py-1.5 px-2.5 rounded-md text-sm @(IsActive(item.Url) ? "font-medium text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-950/40" : "text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50")" href="@item.Url">@item.Title</a>
-            }
-        </div>
-    }
+@* On lg+ this is a sticky left rail. Below lg it would otherwise bury the article
+   under a viewport-tall list (the grid drops to one column), so the rail collapses
+   behind a tap-to-open disclosure: the toggle shows below lg, the nav is hidden until
+   opened, and the sticky/scroll behaviour only kicks in at lg+. site.js (initDocsNav)
+   flips #docs-nav's `hidden`; the chevron rotates via the aria-expanded selector in
+   BrandStyling. *@
+<aside class="self-start py-6 lg:py-[34px] lg:sticky lg:top-[62px] lg:max-h-[calc(100vh-62px)] lg:overflow-y-auto">
+    <button type="button"
+            class="docs-nav-toggle flex w-full items-center justify-between gap-2 rounded-[10px] border border-base-200 bg-base-50 px-4 py-3 text-sm font-medium text-base-700 transition-colors hover:text-base-900 dark:border-base-800 dark:bg-base-900 dark:text-base-300 dark:hover:text-base-50 lg:hidden"
+            aria-controls="docs-nav" aria-expanded="false">
+        <span class="flex items-center gap-2.5">
+            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+            Documentation menu
+        </span>
+        <svg class="docs-nav-chevron h-[18px] w-[18px] text-base-400 dark:text-base-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6" />
+        </svg>
+    </button>
+
+    <nav id="docs-nav" aria-label="Documentation" class="hidden mt-4 lg:mt-0 lg:block">
+        @foreach (var group in _groups)
+        {
+            <div class="font-mono text-[11px] uppercase tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">@group.Label</div>
+            <div class="flex flex-col gap-0.5 mb-6">
+                @foreach (var item in group.Items)
+                {
+                    <a class="block w-full text-left py-1.5 px-2.5 rounded-md text-sm @(IsActive(item.Url) ? "font-medium text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-950/40" : "text-base-600 hover:bg-base-50 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-900 dark:hover:text-base-50")" href="@item.Url">@item.Title</a>
+                }
+            </div>
+        }
+    </nav>
 </aside>
 
 @code {

@@ -34,6 +34,7 @@ public sealed class DiagramBuilder
     private ThemeMode? _theme;
     private bool? _animate;
     private bool? _loop;
+    private FitMode? _fit;
     private int? _spacingRank;
     private int? _spacingNode;
     private int? _spacingCornerRadius;
@@ -62,6 +63,9 @@ public sealed class DiagramBuilder
 
     /// <summary>Enable or disable looping.</summary>
     public DiagramBuilder Loop(bool loop) { _loop = loop; return this; }
+
+    /// <summary>How the diagram behaves when wider than its container: <see cref="FitMode.Shrink"/> scales it down to fit (default); <see cref="FitMode.Scroll"/> keeps natural size and scrolls horizontally.</summary>
+    public DiagramBuilder Fit(FitMode fit) { _fit = fit; return this; }
 
     /// <summary>Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius (px).</summary>
     public DiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
@@ -130,7 +134,7 @@ public sealed class DiagramBuilder
 
         var hasSpacing = _spacingRank != null || _spacingNode != null || _spacingCornerRadius != null;
         var hasMeta = _title != null || _subtitle != null || _direction != null ||
-                      _theme != null || _animate != null || _loop != null || hasSpacing;
+                      _theme != null || _animate != null || _loop != null || _fit != null || hasSpacing;
         if (hasMeta)
         {
             sb.Append("meta:\n");
@@ -140,6 +144,7 @@ public sealed class DiagramBuilder
             if (_theme is { } t) sb.Append("  theme: ").Append(Tokens.Of(t)).Append('\n');
             if (_animate is { } a) sb.Append("  animate: ").Append(a ? "true" : "false").Append('\n');
             if (_loop is { } l) sb.Append("  loop: ").Append(l ? "true" : "false").Append('\n');
+            if (_fit is { } f) sb.Append("  fit: ").Append(Tokens.Of(f)).Append('\n');
             if (hasSpacing)
             {
                 sb.Append("  spacing:\n");

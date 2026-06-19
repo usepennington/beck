@@ -116,8 +116,8 @@ wwwroot/examples/guides/pennington-platform.beck.yaml
 ```
 <beck-diagram src="/examples/guides/pennington-platform.beck.yaml" mode="auto"></beck-diagram>
 
-This is the convention these docs use throughout, and it is how the [examples](/examples/) gallery
-shows each diagram's source beside the diagram itself.
+This is the convention these docs use throughout, showing each diagram's source beside the diagram
+itself.
 
 Next, learn the language in [Your first diagram](/docs/tutorials/first-diagram), generate diagrams
 from your model in [Generate diagrams from your code](/docs/guides/generate), or fine-tune colours in

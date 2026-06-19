@@ -5,6 +5,7 @@ import { defineBeckElements } from './embed/element'
 import { startHydration } from './embed/hydrate'
 import { renderDiagram } from './core'
 import { setGsapUrl } from './animate/runtime'
+import { ICONS, resolveIcon } from './render/icons'
 
 // Let a host point GSAP at a self-hosted/pinned copy for CSP-locked or offline sites.
 // This must happen before startHydration() — auto-hydration loads GSAP synchronously on
@@ -21,7 +22,10 @@ if (bootGsapUrl) setGsapUrl(bootGsapUrl)
 defineBeckElements()
 const hydrate = startHydration()
 
-const Beck = { renderDiagram, setGsapUrl, defineBeckElements, hydrate }
+// `icons`/`resolveIcon` expose the built-in icon registry so a host can introspect the set
+// (the docs site's icon reference renders straight from this — one source of truth, no copy to
+// drift). `icons` is read-only by convention.
+const Beck = { renderDiagram, setGsapUrl, defineBeckElements, hydrate, icons: ICONS, resolveIcon }
 ;(globalThis as unknown as { Beck: typeof Beck }).Beck = Beck
 
 export default Beck

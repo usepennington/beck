@@ -14,7 +14,7 @@ The `flow` block has its own page: [Flow & animation](/docs/reference/flow). For
 these constructs, see the [syntax cheatsheet](/syntax).
 
 ```yaml
-meta:    { ... }   # optional — title, direction, theme, spacing
+meta:    { ... }   # optional — title, direction, theme, fit, spacing
 nodes:   [ ... ]   # required — the boxes
 groups:  [ ... ]   # optional — labelled boundaries
 edges:   [ ... ]   # optional — the connections
@@ -33,6 +33,7 @@ All keys are optional.
 | `theme` | `auto` `light` `dark` | `auto` | `auto` follows the host page. |
 | `animate` | bool | `true` | `false` renders a static frame and never loads the motion runtime. |
 | `loop` | bool | `true` | `false` plays the flow once (forces `flow.repeat: 0`). |
+| `fit` | `shrink` `scroll` | `shrink` | What a diagram wider than its container does: `shrink` scales it down to fit; `scroll` keeps it at natural size and scrolls horizontally. Vertical size is never constrained. |
 | `spacing` | mapping | see below | Layout gaps and corner radius. |
 
 `spacing` keys:
@@ -128,7 +129,8 @@ animation](/docs/reference/flow) for the exact values and how to override them.
 ## Icons
 
 Set a node's `icon` to one of these named keys. Many keys are aliases that share a glyph. An unknown
-key falls back to the node kind's default icon, so a typo never drops the glyph.
+key falls back to the node kind's default icon, so a typo never drops the glyph. See every glyph
+rendered live in the [icon reference](/docs/reference/icons).
 
 | category | keys |
 |---|---|

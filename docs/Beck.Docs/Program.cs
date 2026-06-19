@@ -1,5 +1,7 @@
 using Beck.Docs;
 using Beck.Docs.Components;
+using Beck.Docs.Components.Reference;
+using Mdazor;
 using Pennington.FrontMatter;
 using Pennington.Infrastructure;
 using Pennington.MonorailCss;
@@ -53,6 +55,12 @@ builder.Services.AddTreeSitter(treeSitter =>
 // Blazor static SSR — unlocks MapRazorComponents<App>() and @page routing so we
 // own the entire chrome (custom landing, playground, sidebar) instead of a template.
 builder.Services.AddRazorComponents();
+
+// Mdazor component registry: Razor components embeddable in Markdown. BeckGallery reflects over
+// the Beck.Authoring token enums and renders a live preview of every value, so the reference
+// pages auto-track the schema instead of hand-maintaining tables. Used by Content/docs/reference.
+builder.Services.AddMdazorComponent<BeckGallery>();
+builder.Services.AddMdazorComponent<IconGallery>();
 
 var app = builder.Build();
 

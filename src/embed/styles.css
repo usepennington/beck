@@ -83,6 +83,15 @@
   width: 100%;
   overflow: visible;
 }
+/* `meta.fit: scroll` — keep the diagram at natural size and scroll the overflow
+   horizontally rather than shrinking it. `overflow-y: hidden` keeps it a single
+   horizontal scrollbar (per spec, pairing it with overflow-x: auto avoids the
+   spurious vertical bar an `auto`/`visible` y-axis would add); core.ts pads the
+   viewport height so that bar never clips the bottom row. */
+.beck-viewport--scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
 .beck-canvas {
   position: relative;
   transform-origin: top left;

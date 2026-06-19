@@ -6,7 +6,7 @@
 @if (_html is not null)
 {
     <PageTitle>@_title — Beck</PageTitle>
-    <div class="mx-auto max-w-[1240px] px-8 grid grid-cols-[230px_1fr] gap-12 items-start max-lg:grid-cols-1">
+    <div class="mx-auto max-w-[1240px] px-8 grid grid-cols-[230px_1fr] gap-x-12 items-start max-lg:grid-cols-1">
         <Sidebar />
         <article class="py-[34px] pb-[90px] min-w-0 max-w-[760px]">
             <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">
@@ -109,7 +109,6 @@ else
     private static readonly Dictionary<string, string> AreaLabels = new()
     {
         ["/docs"] = "Docs",
-        ["/examples"] = "Examples",
     };
 
     private static string AreaOf(string path)

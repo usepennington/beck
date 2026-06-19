@@ -157,6 +157,37 @@ internal static class BrandStyling
           border: 0; background: none; padding: 0; margin: 0; min-height: 0; width: 100%;
         }
 
+        /* ---- icon reference gallery ---- */
+        /* site.js fills [data-beck-icon-gallery] from window.Beck.icons (the engine's own
+           registry), so these card/chip classes exist only in a JS string and must be
+           declarative CSS. The chip echoes a node's accent-tinted icon chip, in brand primary. */
+        [data-beck-icon-gallery] {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+          gap: 12px;
+        }
+        .beck-icon-card {
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
+          padding: 16px 10px; text-align: center;
+          border: 1px solid var(--color-base-200); border-radius: 12px; background: #fff;
+        }
+        .dark .beck-icon-card { border-color: var(--color-base-800); background: var(--color-base-900); }
+        .beck-icon-chip {
+          display: flex; align-items: center; justify-content: center;
+          width: 40px; height: 40px; border-radius: 10px;
+          background: color-mix(in srgb, var(--color-primary-600) 12%, var(--color-base-100));
+          color: var(--color-primary-700);
+        }
+        .dark .beck-icon-chip {
+          background: color-mix(in srgb, var(--color-primary-500) 18%, var(--color-base-800));
+          color: var(--color-primary-400);
+        }
+        .beck-icon-chip svg { width: 22px; height: 22px; }
+        .beck-icon-key { font-family: var(--font-mono); font-size: 12.5px; color: var(--color-base-900); }
+        .dark .beck-icon-key { color: var(--color-base-50); }
+        .beck-icon-aliases { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.4; color: var(--color-base-400); word-break: break-word; }
+        .dark .beck-icon-aliases { color: var(--color-base-500); }
+
         /* ---- API reference sidebar links (scroll-spy class-toggled by site.js) ---- */
         .api-nav-link {
           display: block; width: 100%; text-align: left;
@@ -173,6 +204,12 @@ internal static class BrandStyling
           background: color-mix(in srgb, var(--color-primary-950) 40%, transparent);
           color: var(--color-primary-400);
         }
+
+        /* ---- docs sidebar: mobile disclosure chevron ---- */
+        /* site.js toggles the nav's `hidden` and the button's aria-expanded; the chevron
+           flips off that attribute (a JS-only class wouldn't be IL-discovered). */
+        .docs-nav-chevron { transition: transform .2s ease; }
+        .docs-nav-toggle[aria-expanded="true"] .docs-nav-chevron { transform: rotate(180deg); }
 
         /* ---- global scrollbar polish ---- */
         ::-webkit-scrollbar { width: 11px; height: 11px; }

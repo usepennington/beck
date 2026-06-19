@@ -40,6 +40,17 @@ wwwroot/examples/guides/layout-03.beck.yaml
 
 <beck-diagram src="/examples/guides/layout-03.beck.yaml" mode="auto" animate="false"></beck-diagram>
 
+## Fit a wide diagram to the page
+
+By default a diagram that is wider than its container scales down to fit, so it never overflows the page. On a narrow screen a large diagram can become too small to read. Set `meta.fit: scroll` to keep it at full size and let the container scroll sideways instead:
+
+```yaml
+meta:
+  fit: scroll   # `shrink` (the default) scales to fit; `scroll` keeps full size
+```
+
+In `scroll` mode the diagram stays at its natural width and a horizontal scrollbar appears only when the page is too narrow to show all of it; on a wide page it simply centres as usual. Vertical size is never constrained either way — only the horizontal axis differs.
+
 ## Pin a node to a rank
 
 When the auto-layout isn't what you want, override it per node. `node.rank` forces a node onto a specific layer; `node.order` tie-breaks left-to-right (or top-to-bottom) within a rank.

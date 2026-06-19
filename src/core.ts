@@ -102,6 +102,9 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
 
     const viewport = document.createElement('div')
     viewport.className = 'beck-viewport'
+    // `fit: scroll` keeps the diagram at natural size and scrolls horizontally
+    // instead of shrinking to fit a narrow container (see fit() below).
+    if (model.meta.fit === 'scroll') viewport.classList.add('beck-viewport--scroll')
     const canvas = document.createElement('div')
     canvas.className = 'beck-canvas'
     viewport.appendChild(canvas)
@@ -164,6 +167,17 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
   const fit = () => {
     const avail = state.viewport.clientWidth
     if (!avail || !state.layout.width) return
+    if (model.meta.fit === 'scroll') {
+      // Natural size; the viewport (overflow-x: auto) scrolls when too narrow.
+      // Reserve room for a horizontal scrollbar so it never clips the last row
+      // (offsetHeight − clientHeight is the scrollbar's height when present, 0
+      // for overlay scrollbars or when no scrolling is needed).
+      state.canvas.style.transform = ''
+      state.viewport.style.height = `${state.layout.height}px`
+      const scrollbar = state.viewport.offsetHeight - state.viewport.clientHeight
+      if (scrollbar > 0) state.viewport.style.height = `${state.layout.height + scrollbar}px`
+      return
+    }
     const s = Math.min(1, avail / state.layout.width)
     state.canvas.style.transform = s < 1 ? `scale(${s})` : ''
     state.viewport.style.height = `${state.layout.height * s}px`

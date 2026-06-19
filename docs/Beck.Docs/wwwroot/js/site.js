@@ -207,9 +207,73 @@
 
     var finalDoc = doc;
     var handle = null;
+
+    // FLIP morph — HERO ONLY. Re-rendering destroys and rebuilds the whole diagram
+    // DOM, so a node would otherwise snap to its new spot the instant the script edits
+    // the YAML. We snapshot every node's translate BEFORE the rebuild, then on the
+    // fresh DOM pin each surviving node back at its old position and transition it to
+    // the new one — a CSS transition applied INLINE to these nodes' `transform` only,
+    // so no other Beck diagram on the site inherits it. A single SVG path can't FLIP,
+    // so edges/groups just fade in a beat behind the gliding nodes (which hides the
+    // moment they'd otherwise be drawn to anchors the nodes haven't reached yet). The
+    // inline transition is cleared once it ends so the final stage's GSAP flow never
+    // fights a CSS transition for the same transform. Skipped under reduced motion, and
+    // node gliding is skipped on the animated stage (its nodes don't move) for the same
+    // no-fighting reason.
+    var MOVE_MS = 420, MOVE_EASE = 'cubic-bezier(.22,.7,.28,1)', FADE_MS = 240, FADE_DELAY = 150;
+
+    function clearTransitionLater(el, ms) {
+      var done = function () { el.style.transition = ''; el.removeEventListener('transitionend', done); };
+      el.addEventListener('transitionend', done);
+      setTimeout(done, ms + 140);
+    }
+
+    function morphHero(prev, animate) {
+      if (reduce) return;
+      var movers = [], entering = [];
+      if (!animate) {
+        host.querySelectorAll('.beck-node-wrap').forEach(function (w) {
+          var to = w.style.transform, from = prev[w.dataset.node];
+          if (from && from !== to) movers.push({ w: w, from: from, to: to });
+          else if (!from) entering.push({ w: w, to: to });
+        });
+      }
+      var fades = [host.querySelector('.beck-overlay')];
+      host.querySelectorAll('.beck-group, .beck-group-label').forEach(function (g) { fades.push(g); });
+
+      // 1) Pin everything to its start state with transitions off.
+      movers.forEach(function (m) { m.w.style.transition = 'none'; m.w.style.transform = m.from; });
+      entering.forEach(function (e) { e.w.style.transition = 'none'; e.w.style.opacity = '0'; e.w.style.transform = e.to + ' scale(.96)'; });
+      fades.forEach(function (f) { if (f) { f.style.transition = 'none'; f.style.opacity = '0'; } });
+
+      // 2) Commit the start state, then transition to the end state.
+      void host.offsetWidth;
+      movers.forEach(function (m) {
+        m.w.style.transition = 'transform ' + MOVE_MS + 'ms ' + MOVE_EASE;
+        m.w.style.transform = m.to;
+        clearTransitionLater(m.w, MOVE_MS);
+      });
+      entering.forEach(function (e) {
+        e.w.style.transition = 'transform ' + MOVE_MS + 'ms ' + MOVE_EASE + ', opacity ' + MOVE_MS + 'ms ease';
+        e.w.style.opacity = '1';
+        e.w.style.transform = e.to;
+        clearTransitionLater(e.w, MOVE_MS);
+      });
+      fades.forEach(function (f) {
+        if (!f) return;
+        f.style.transition = 'opacity ' + FADE_MS + 'ms ease ' + FADE_DELAY + 'ms';
+        f.style.opacity = '1';
+        clearTransitionLater(f, FADE_MS + FADE_DELAY);
+      });
+    }
+
     function renderStage(yaml, animate) {
+      // Snapshot the surviving nodes' positions before the rebuild discards them.
+      var prev = {};
+      host.querySelectorAll('.beck-node-wrap').forEach(function (w) { prev[w.dataset.node] = w.style.transform; });
       try { if (handle && handle.destroy) handle.destroy(); } catch (e) {}
       try { handle = window.Beck.renderDiagram(host, yaml, { theme: currentTheme(), animate: animate }); } catch (e) {}
+      morphHero(prev, animate);
     }
     // Highlight the two halves separately and slot the caret between them.
     function paint(head, tail) { codeEl.innerHTML = highlightYaml(head) + CARET + highlightYaml(tail); }
@@ -698,6 +762,61 @@
     });
   }
 
+  // ---- docs sidebar (collapsible on narrow screens) ----------------------
+  // The left rail is a sticky sidebar at lg+, but below that the grid drops to one
+  // column and the rail would bury the article, so it collapses behind a disclosure.
+  // The nav defaults to `hidden` (shown via `lg:block` at lg+ regardless); this just
+  // flips that on tap below lg. The chevron rotates purely off aria-expanded (CSS).
+  function initDocsNav() {
+    var btn = document.querySelector('.docs-nav-toggle');
+    var nav = document.getElementById('docs-nav');
+    if (!btn || !nav || btn.__wired) return;
+    btn.__wired = true;
+
+    function setOpen(open) {
+      nav.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function () { setOpen(nav.classList.contains('hidden')); });
+    // Navigating collapses the menu so the article isn't pushed down after a tap.
+    nav.addEventListener('click', function (e) { if (e.target.closest('a')) setOpen(false); });
+    // Grew past the breakpoint (lg:block takes over): reset to closed so shrinking
+    // back lands on the collapsed default rather than a stuck-open list.
+    window.addEventListener('resize', function () {
+      if (window.innerWidth >= 1024) setOpen(false);
+    });
+  }
+
+  // ---- icon reference: render every built-in icon from the engine registry --
+  // The icon set lives in the engine (window.Beck.icons); we render the reference
+  // straight from it so the page can't drift from the shipped bundle. Keys that map
+  // to the same glyph are aliases — collapsed onto one card. Definition order in the
+  // registry is roughly category-grouped, so we preserve it.
+  function initIconGallery() {
+    var container = document.querySelector('[data-beck-icon-gallery]');
+    if (!container) return;
+    whenBeck(function () {
+      var icons = window.Beck && window.Beck.icons;
+      if (!icons) { container.innerHTML = '<p class="beck-icon-aliases">Icon registry unavailable.</p>'; return; }
+      var groups = [], byGlyph = {};
+      Object.keys(icons).forEach(function (key) {
+        var glyph = icons[key];
+        if (byGlyph[glyph] == null) { byGlyph[glyph] = groups.length; groups.push({ glyph: glyph, keys: [key] }); }
+        else groups[byGlyph[glyph]].keys.push(key);
+      });
+      container.innerHTML = groups.map(function (g) {
+        var aliases = g.keys.slice(1);
+        return '<div class="beck-icon-card">' +
+          '<span class="beck-icon-chip" aria-hidden="true">' + g.glyph + '</span>' +
+          '<code class="beck-icon-key">' + g.keys[0] + '</code>' +
+          (aliases.length ? '<span class="beck-icon-aliases">' + aliases.join(' · ') + '</span>' : '') +
+          '</div>';
+      }).join('');
+      container.setAttribute('data-count', String(groups.length));
+    });
+  }
+
   // ---- boot ---------------------------------------------------------------
   function boot() {
     document.querySelectorAll('.theme-toggle').forEach(function (b) {
@@ -705,14 +824,20 @@
       b.addEventListener('click', toggleTheme);
     });
     initNavToggle();
+    initDocsNav();
     wireCopy();
     // Sync any <beck-diagram> elements to the current theme (now and once Beck upgrades them).
     syncDiagramModes(currentTheme());
-    whenBeck(function () { syncDiagramModes(currentTheme()); });
+    whenBeck(function () {
+      syncDiagramModes(currentTheme());
+      // Single-source the playground's icon autocomplete from the engine registry too.
+      if (window.Beck && window.Beck.icons) SCHEMA.ICONS = Object.keys(window.Beck.icons);
+    });
     initHero();
     initPlayground();
     initSyntaxFilter();
     initApiNav();
+    initIconGallery();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
