@@ -1,0 +1,15 @@
+meta: { title: Live link, direction: LR }
+nodes:
+  - { id: producer, title: Producer, kind: service }
+  - { id: topic, title: Topic, icon: kafka, kind: queue }
+  - { id: consumer, title: Consumer, kind: service }
+edges:
+  - { from: producer, to: topic }
+  - { from: topic, to: consumer }
+flow:
+  steps:
+    - activate: { from: producer, to: topic, color: success }
+    - stream: { from: topic, to: consumer, color: info }
+    - wait: 2
+    - reset:
+

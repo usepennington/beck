@@ -1,0 +1,13 @@
+meta: { title: Web Platform, direction: TB }
+nodes:
+  - { id: web, title: Web App, kind: user }
+  - { id: gw, title: API Gateway, kind: gateway }
+  - { id: orders, title: Orders Service }
+  - { id: db, title: Postgres, kind: db }
+groups:
+  - { id: services, label: Services, members: [gw, orders], accent: primary }
+edges:
+  - { from: web, to: gw }
+  - { from: gw, to: orders }
+  - { from: orders, to: db, label: query }
+

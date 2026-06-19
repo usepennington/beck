@@ -1,0 +1,7 @@
+meta: { direction: LR }
+nodes:
+  - { id: themed, title: Themed, subtitle: accent primary, accent: primary }
+  - { id: frozen, title: Frozen, subtitle: raw hex, accent: "#7c3aed" }
+edges:
+  - { from: themed, to: frozen }
+

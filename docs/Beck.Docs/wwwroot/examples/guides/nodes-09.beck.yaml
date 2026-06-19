@@ -1,0 +1,8 @@
+nodes:
+  - { id: plain, title: Themed card }
+  - id: branded
+    title: Branded card
+    surface: '#0f172a'
+    textColor: '#e2e8f0'
+    accent: '#38bdf8'
+

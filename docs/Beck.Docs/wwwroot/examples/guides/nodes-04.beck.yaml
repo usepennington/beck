@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: ok, title: Healthy, accent: success }
+  - { id: warn, title: Degraded, accent: warn }
+  - { id: down, title: Offline, accent: danger }
+edges:
+  - { from: ok, to: warn }
+  - { from: warn, to: down }
+

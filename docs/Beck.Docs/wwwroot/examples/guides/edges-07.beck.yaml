@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: api, title: API, kind: gateway }
+  - { id: cache, title: Redis, kind: cache }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: api, to: cache, toSide: top }
+  - { from: api, to: db, toSide: bottom }
+

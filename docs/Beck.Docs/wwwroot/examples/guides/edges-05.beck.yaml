@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: a, title: Primary, kind: db }
+  - { id: b, title: Replica, kind: db }
+  - { id: c, title: Peer }
+edges:
+  - { from: a, to: b, label: replicate }
+  - { from: a, to: c, arrow: both }
+

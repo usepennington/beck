@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: api, title: API, kind: gateway }
+  - { id: ok, title: Success }
+  - { id: err, title: Error }
+edges:
+  - { from: api, to: ok, color: success }
+  - { from: api, to: err, color: danger }
+

@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: lb, title: Load Balancer, icon: lb }
+  - { id: a, title: Node A }
+  - { id: b, title: Node B }
+edges:
+  - { from: lb, to: a, curve: straight }
+  - { from: lb, to: b, curve: s }
+

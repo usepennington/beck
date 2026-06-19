@@ -1,0 +1,7 @@
+meta: { direction: LR }
+nodes:
+  - { id: a, title: Service A }
+  - { id: b, title: Service B }
+edges:
+  - { from: a, to: b, style: dashed, label: optional }
+

@@ -1,0 +1,9 @@
+meta: { direction: LR, spacing: { rank: 140, node: 56, cornerRadius: 24 } }
+nodes:
+  - { id: gw, title: Gateway, kind: gateway }
+  - { id: svc, title: Service }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: gw, to: svc }
+  - { from: svc, to: db }
+

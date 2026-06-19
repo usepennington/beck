@@ -1,0 +1,14 @@
+meta: { title: Fan-out, direction: TB }
+nodes:
+  - { id: broker, title: Broker, kind: queue }
+  - { id: a, title: Worker A }
+  - { id: b, title: Worker B }
+  - { id: c, title: Worker C }
+edges:
+  - { from: broker, to: a }
+  - { from: broker, to: b }
+  - { from: broker, to: c }
+flow:
+  steps:
+    - burst: { from: broker, to: [a, b, c], count: 4, stagger: 0.1, color: warn }
+

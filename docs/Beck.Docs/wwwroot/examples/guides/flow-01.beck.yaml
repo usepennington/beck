@@ -1,0 +1,9 @@
+meta: { title: Auto flow, direction: LR }
+nodes:
+  - { id: client, title: Client, kind: user }
+  - { id: api, title: API, kind: gateway }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: client, to: api }
+  - { from: api, to: db, label: queries }
+

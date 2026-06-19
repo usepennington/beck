@@ -1,0 +1,18 @@
+meta: { title: CI run, direction: LR }
+nodes:
+  - { id: build, title: Build, icon: code }
+  - { id: test, title: Tests, kind: service }
+  - { id: deploy, title: Deploy, kind: gateway }
+edges:
+  - { from: build, to: test }
+  - { from: test, to: deploy }
+flow:
+  steps:
+    - working: { node: build }
+    - packet: { from: build, to: test, label: artifact }
+    - idle: { node: build }
+    - status: { node: build, text: built, color: success }
+    - pulse: { node: test }
+    - packet: { from: test, to: deploy }
+    - fail: { node: deploy, text: rollout failed }
+

@@ -1,0 +1,3 @@
+nodes:
+  - { id: docs, title: API docs, icon: api, href: https://example.com/api, target: _blank }
+

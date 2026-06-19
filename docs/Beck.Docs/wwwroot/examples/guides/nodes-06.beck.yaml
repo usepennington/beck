@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: live, title: Live, variant: solid }
+  - { id: minor, title: Supporting, variant: subtle }
+  - { id: planned, title: Planned, variant: ghost }
+edges:
+  - { from: live, to: minor }
+  - { from: minor, to: planned }
+

@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: edge, title: Edge, kind: gateway, icon: cdn }
+  - { id: app, title: App }
+  - { id: vault, title: Secrets, icon: vault }
+edges:
+  - { from: edge, to: app }
+  - { from: app, to: vault }
+

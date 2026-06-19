@@ -1,0 +1,9 @@
+meta: { direction: LR }
+nodes:
+  - { id: api, title: API, kind: gateway }
+  - { id: queue, title: Events, kind: queue }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: api, to: queue, kind: async, label: publish }
+  - { from: api, to: db, kind: dependency }
+

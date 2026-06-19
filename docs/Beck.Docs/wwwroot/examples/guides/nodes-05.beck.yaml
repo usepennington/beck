@@ -1,0 +1,3 @@
+nodes:
+  - { id: brand, title: Brand service, accent: '#7c3aed' }
+

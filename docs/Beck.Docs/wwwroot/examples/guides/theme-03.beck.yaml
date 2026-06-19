@@ -1,0 +1,7 @@
+meta: { direction: LR }
+nodes:
+  - { id: edge, title: Edge, kind: external }
+  - { id: hero, title: Hero, surface: "#0f172a", textColor: "#f8fafc" }
+edges:
+  - { from: edge, to: hero }
+

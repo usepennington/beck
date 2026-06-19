@@ -1,0 +1,7 @@
+meta: { title: Always dark, theme: dark, direction: LR }
+nodes:
+  - { id: app, title: App, kind: user }
+  - { id: api, title: API, kind: gateway }
+edges:
+  - { from: app, to: api }
+

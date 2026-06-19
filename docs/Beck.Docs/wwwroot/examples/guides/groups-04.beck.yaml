@@ -1,0 +1,10 @@
+meta: { direction: TB }
+nodes:
+  - { id: client, title: Client, kind: user }
+  - { id: auth, title: Auth, group: services }
+  - { id: orders, title: Orders, group: services }
+groups:
+  - { id: services, label: Services, accent: primary }
+edges:
+  - { from: client, to: services, label: requests }
+

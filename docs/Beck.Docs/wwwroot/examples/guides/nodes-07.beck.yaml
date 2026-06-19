@@ -1,0 +1,7 @@
+meta: { direction: LR }
+nodes:
+  - { id: api, title: API, subtitle: us-east-1 }
+  - { id: cache, title: Redis, kind: cache, status: warm }
+edges:
+  - { from: api, to: cache }
+

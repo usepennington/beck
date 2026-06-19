@@ -50,11 +50,12 @@ from your edges.
 **Learn by doing.** Start with [Your first diagram](/docs/tutorials/first-diagram) to build one
 block by block, then [Author a diagram in C#](/docs/tutorials/csharp) to generate one from code.
 
-**Get something done.** The how-to guides are task-focused: [add Beck to your
-site](/docs/guides/install), [style your nodes](/docs/guides/nodes), [connect and route
-edges](/docs/guides/edges), [control the layout](/docs/guides/layout), [group related
-nodes](/docs/guides/groups), [match your theme](/docs/guides/theme), [animate the
-flow](/docs/guides/flow), or [generate diagrams from your code](/docs/guides/generate).
+**Get something done.** The how-to guides are task-focused: add Beck to [your
+site](/docs/guides/install) or a [Pennington site](/docs/guides/pennington), [style your
+nodes](/docs/guides/nodes), [connect and route edges](/docs/guides/edges), [control the
+layout](/docs/guides/layout), [group related nodes](/docs/guides/groups), [match your
+theme](/docs/guides/theme), [animate the flow](/docs/guides/flow), or [generate diagrams from your
+code](/docs/guides/generate).
 
 **Look something up.** The [YAML schema](/docs/reference/yaml) and [flow &
 animation](/docs/reference/flow) references list every field and option. For a visual tour of every

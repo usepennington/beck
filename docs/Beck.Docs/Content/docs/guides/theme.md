@@ -1,7 +1,7 @@
 ---
 title: Match your theme and colours
 description: How diagrams adopt your palette, choosing a theme mode, and overriding tokens.
-order: 25
+order: 26
 sectionLabel: How-to guides
 uid: docs.guide.theme
 ---
@@ -16,14 +16,11 @@ Every colour Beck paints is a `--beck-*` custom property that defaults to your s
 
 To stay on-theme, give nodes and edges an **accent token** rather than a raw colour. The tokens — `primary`, `success`, `warn`, `danger`, `info`, `neutral` — resolve through `--beck-*`, so they follow your palette and adapt to dark mode. A raw colour (a hex, `rgb()`, or CSS named colour) is used verbatim and stays frozen in both themes.
 
-```beck
-meta: { direction: LR, animate: false }
-nodes:
-  - { id: themed, title: Themed, subtitle: accent primary, accent: primary }
-  - { id: frozen, title: Frozen, subtitle: raw hex, accent: "#7c3aed" }
-edges:
-  - { from: themed, to: frozen }
+```yaml:symbol
+wwwroot/examples/guides/theme-01.beck.yaml
 ```
+
+<beck-diagram src="/examples/guides/theme-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
 
 The left card tracks your theme; the right one will not budge when the page switches to dark. Reach for a raw colour only when you genuinely want a fixed, off-palette swatch.
 
@@ -31,14 +28,11 @@ The left card tracks your theme; the right one will not budge when the page swit
 
 By default `meta.theme` is `auto`, which follows the host page. Set it to `light` or `dark` to pin a single diagram regardless of the surrounding theme.
 
-```beck
-meta: { title: Always dark, theme: dark, direction: LR, animate: false }
-nodes:
-  - { id: app, title: App, kind: user }
-  - { id: api, title: API, kind: gateway }
-edges:
-  - { from: app, to: api }
+```yaml:symbol
+wwwroot/examples/guides/theme-02.beck.yaml
 ```
+
+<beck-diagram src="/examples/guides/theme-02.beck.yaml" mode="auto" animate="false"></beck-diagram>
 
 You can also set the mode imperatively when you mount the engine yourself: `<beck-diagram mode="light|dark|auto">`, or `window.Beck.renderDiagram(host, yaml, { theme })`. A live handle exposes `setTheme(mode)` if you want to flip it after render.
 
@@ -55,10 +49,10 @@ To recolour every diagram, **define the host ramp** — this is preferred becaus
 If you would rather scope it to Beck, set a `--beck-*` variable on an ancestor and give it a dark variant under your dark selector:
 
 ```css
-.beck-root {
+body .beck-root {
   --beck-primary: #2563eb;
 }
-[data-theme="dark"] .beck-root {
+body .beck-root[data-theme="dark"] {
   --beck-primary: #60a5fa;
 }
 ```
@@ -69,14 +63,11 @@ For the full list of token names and what each one paints, see the [theme tokens
 
 To change just one card rather than a token, set `surface` and `textColor` on that node — both take a raw CSS colour and bypass the theme for that card alone. See [Style your nodes](/docs/guides/nodes) for the details.
 
-```beck
-meta: { direction: LR, animate: false }
-nodes:
-  - { id: edge, title: Edge, kind: external }
-  - { id: hero, title: Hero, surface: "#0f172a", textColor: "#f8fafc" }
-edges:
-  - { from: edge, to: hero }
+```yaml:symbol
+wwwroot/examples/guides/theme-03.beck.yaml
 ```
+
+<beck-diagram src="/examples/guides/theme-03.beck.yaml" mode="auto" animate="false"></beck-diagram>
 
 ## Pennington and MonorailCSS
 
@@ -94,3 +85,4 @@ That single rule keeps every `success`/`info` accent on-brand without touching y
 ---
 
 For the complete set of theme tokens and their defaults, see the [YAML schema reference](/docs/reference/yaml#colours-and-theme-tokens).
+

@@ -1,0 +1,5 @@
+nodes:
+  - id: custom
+    title: Custom mark
+    icon: '<svg viewBox="0 0 24 24"><path d="M12 2 2 22h20z" fill="currentColor"/></svg>'
+

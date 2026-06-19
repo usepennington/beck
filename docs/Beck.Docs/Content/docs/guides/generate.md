@@ -1,7 +1,7 @@
 ---
 title: Generate diagrams from your code
 description: Build diagrams with the C# DiagramBuilder so they regenerate from your real model.
-order: 27
+order: 28
 sectionLabel: How-to guides
 uid: docs.guide.generate
 ---
@@ -69,20 +69,11 @@ A fence from `.ToFence()` renders by dropping it straight into any Markdown page
 
 Here is the kind of diagram the snippet above produces:
 
-```beck
-meta: { title: Web Platform, direction: TB, animate: false }
-nodes:
-  - { id: web, title: Web App, kind: user }
-  - { id: gw, title: API Gateway, kind: gateway }
-  - { id: orders, title: Orders Service }
-  - { id: db, title: Postgres, kind: db }
-groups:
-  - { id: services, label: Services, members: [gw, orders], accent: primary }
-edges:
-  - { from: web, to: gw }
-  - { from: gw, to: orders }
-  - { from: orders, to: db, label: query }
+```yaml:symbol
+wwwroot/examples/guides/generate-01.beck.yaml
 ```
+
+<beck-diagram src="/examples/guides/generate-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
 
 ## Regenerate in CI
 
@@ -106,3 +97,4 @@ If you'd rather assert inside the test suite, write the file in a test and run `
 - The [API reference](/api) — the complete `Beck.Authoring` builder API.
 - [Author a diagram in C#](/docs/tutorials/csharp) — the hands-on introduction to the builder.
 - [Flow & animation reference](/docs/reference/flow) — the vocabulary for scripting `.Flow(...)` once your generated diagram should move.
+

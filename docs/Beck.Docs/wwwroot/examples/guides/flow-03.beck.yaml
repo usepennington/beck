@@ -1,0 +1,10 @@
+meta: { title: Shaped packet, direction: LR }
+nodes:
+  - { id: ingest, title: Ingest, kind: gateway }
+  - { id: store, title: Warehouse, icon: warehouse, kind: db }
+edges:
+  - { from: ingest, to: store }
+flow:
+  steps:
+    - packet: { from: ingest, to: store, shape: ring, ease: decelerate, size: 14, speed: 220, glow: true, impact: true, color: info }
+

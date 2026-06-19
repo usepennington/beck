@@ -1,0 +1,11 @@
+meta: { direction: LR }
+nodes:
+  - { id: gw, title: Gateway, kind: gateway }
+  - { id: svc, title: Service }
+  - { id: db, title: Postgres, kind: db, rank: 2 }
+  - { id: metrics, title: Metrics, icon: metrics, rank: 2, order: 1 }
+edges:
+  - { from: gw, to: svc }
+  - { from: svc, to: db }
+  - { from: svc, to: metrics }
+

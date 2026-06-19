@@ -1,0 +1,13 @@
+meta: { direction: LR }
+nodes:
+  - { id: user, title: Customer, kind: user }
+  - { id: gw, title: Gateway, kind: gateway }
+  - { id: svc, title: Orders, kind: service }
+  - { id: q, title: Events, kind: queue }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: user, to: gw }
+  - { from: gw, to: svc }
+  - { from: svc, to: q }
+  - { from: svc, to: db }
+

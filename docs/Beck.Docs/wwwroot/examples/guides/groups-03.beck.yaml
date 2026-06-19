@@ -1,0 +1,15 @@
+meta: { direction: TB }
+nodes:
+  - { id: web, title: Web, kind: user }
+  - { id: api, title: API, kind: gateway, group: webtier }
+  - { id: cache, title: Redis, kind: cache, group: datasubnet }
+  - { id: db, title: Postgres, kind: db, group: datasubnet }
+groups:
+  - { id: webtier, label: Web Tier, accent: primary }
+  - { id: datasubnet, label: Data Subnet, accent: info }
+  - { id: vpc, label: VPC, members: [webtier, datasubnet] }
+edges:
+  - { from: web, to: api }
+  - { from: api, to: cache }
+  - { from: api, to: db }
+

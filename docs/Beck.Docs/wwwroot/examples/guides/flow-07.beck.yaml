@@ -1,0 +1,22 @@
+meta: { title: Read path, direction: LR }
+nodes:
+  - { id: client, title: Client, kind: user }
+  - { id: api, title: API, kind: gateway }
+  - { id: cache, title: Redis, kind: cache }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: client, to: api }
+  - { from: api, to: cache }
+  - { from: api, to: db }
+flow:
+  steps:
+    - phase: lookup
+    - packet: { from: client, to: api, label: GET /item }
+    - parallel: [ { packet: { from: api, to: cache, color: warn } }, { working: { node: db } } ]
+    - status: { node: cache, text: miss, color: warn }
+    - packet: { from: api, to: db, label: SELECT }
+    - idle: { node: db }
+    - packet: { from: db, to: api, color: success }
+    - wait: 1
+    - reset:
+
