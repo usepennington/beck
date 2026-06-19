@@ -144,3 +144,10 @@ See `dotnet/Beck/README.md` for the package usage.
 The engine + playground, the fenced-block hydrator, and the `Beck` NuGet package (client static web
 asset + `Beck.Authoring`) are complete and verified end-to-end (C# → YAML → fenced block → rendered,
 host-themed diagram).
+
+## Acknowledgements
+
+Beck grew out of [`abergs/animations`](https://github.com/abergs/animations) by
+[Anders Åberg](https://andersaberg.com/) — an experiment in animated architecture diagrams with GSAP
+and Tailwind CSS. That project was the inspiration and the jumping-off point for this codebase, and
+Beck would not exist without it. Thank you, Anders.
