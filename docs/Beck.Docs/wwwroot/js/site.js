@@ -5,6 +5,20 @@
 (function () {
   'use strict';
 
+  // Prefix a root-relative path (`/foo`) with the deploy base path stamped on
+  // <body data-base-url> (e.g. `/Beck` on a GitHub Pages sub-path deploy). Mirrors
+  // the engine's withBase (src/render/node.ts): Pennington's server-side HTML
+  // rewriter only fixes up href/src attributes, so client-side fetches of custom
+  // attributes (the playground's <option data-src>) must apply the base themselves
+  // or they 404 against the domain root. No-op at the site root and idempotent.
+  function withBase(href) {
+    var base = (document.body && document.body.dataset && document.body.dataset.baseUrl) || '';
+    if (!base || href.charAt(0) !== '/' || href.indexOf('//') === 0) return href;
+    base = base.replace(/\/+$/, '');
+    if (!base || href === base || href.indexOf(base + '/') === 0) return href;
+    return base + href;
+  }
+
   function currentTheme() {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
   }
@@ -669,7 +683,7 @@
         var opt = examples.options[examples.selectedIndex];
         var src = opt && opt.getAttribute('data-src');
         if (!src) return;
-        fetch(src).then(function (r) { return r.text(); }).then(function (txt) { setYaml(txt); render(); });
+        fetch(withBase(src)).then(function (r) { return r.text(); }).then(function (txt) { setYaml(txt); render(); });
       });
     }
     window.addEventListener('beck:themechange', function (e) {
