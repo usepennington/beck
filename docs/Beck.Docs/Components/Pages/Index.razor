@@ -5,7 +5,7 @@
 <section class="mx-auto max-w-[1240px] px-8 pt-[78px] pb-[60px] grid grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)] gap-[52px] items-center max-[820px]:grid-cols-1 max-[820px]:pt-12">
     <div>
         <div class="font-mono text-xs uppercase tracking-[0.15em] text-primary-700 dark:text-primary-400 mb-5">Diagrams as code · for .NET</div>
-        <h1 class="text-[54px] font-semibold leading-[1.04] tracking-[-0.025em] mb-5 text-base-900 dark:text-base-50">Your architecture,<br />drawn from YAML.</h1>
+        <h1 class="text-[54px] font-semibold leading-[1.04] tracking-[-0.025em] mb-5 text-base-900 dark:text-base-50">Nice looking architecture diagrams</h1>
         <p class="text-lg leading-relaxed text-base-600 dark:text-base-400 mb-[30px] max-w-[460px]">
             Describe your system once in a few lines of YAML. Beck handles layout, routing, and
             styling — and renders clean, animated architecture diagrams you can drop straight into
@@ -29,11 +29,12 @@
             <span class="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-primary-700 dark:text-primary-400"><span class="h-[7px] w-[7px] rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse"></span>live</span>
         </div>
         <div class="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-            @* Left: site.js types the YAML here via typed.js (syntax-highlighted HTML).
-               The wrapper IS the grid column — typed.js appends its blinking cursor as a
-               sibling of #hero-code, so it must live inside the column, not steal a track.
-               #hero-code is inline so that cursor trails the last character. *@
-            <div class="border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 p-4 min-h-[300px] overflow-hidden">
+            @* Left: site.js types the YAML here (syntax-highlighted HTML) as a scripted
+               editing session — type a small diagram, then go back up to insert nodes,
+               then wire them. The caret is slotted between the text before and after it,
+               so a mid-document insert pushes the edges block down. #hero-code is inline
+               so the caret trails the character it sits after. *@
+            <div class="border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 p-4 min-h-[450px] overflow-hidden">
                 <code id="hero-code" class="inline whitespace-pre font-mono text-[12px] leading-[1.85] text-base-700 dark:text-base-300" aria-hidden="true"></code>
             </div>
             @* Right: the live diagram re-renders in lock-step as each line lands. *@

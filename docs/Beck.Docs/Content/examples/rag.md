@@ -2,7 +2,7 @@
 title: RAG answer pipeline
 description: Embed a question, retrieve context, and answer — with a scripted flow.
 order: 3
-sectionLabel: Data pipelines
+sectionLabel: AI & agents
 uid: examples.rag
 ---
 

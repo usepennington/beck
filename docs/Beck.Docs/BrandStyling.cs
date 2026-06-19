@@ -114,12 +114,15 @@ internal static class BrandStyling
         #pg-status.ok  { color: var(--color-primary-600); }
         #pg-status.err { color: #e6685b; }
 
-        /* ---- hero: typed.js writes the YAML while the diagram renders in step ---- */
-        /* #hero-code is the typed.js target (Tailwind classes do the framing); only the
-           cursor it injects needs colouring, and the host wants a clean overflow. */
+        /* ---- hero: site.js writes the YAML while the diagram renders in step ---- */
+        /* #hero-code is the typewriter target (Tailwind classes do the framing); the
+           caret site.js slots in needs colouring + a blink, and the host a clean
+           overflow. Re-rendering the caret each keystroke restarts the animation, so it
+           sits solid while typing and only blinks during the pauses between lines. */
         #hero-code { overflow: hidden; }
-        #hero-code .typed-cursor { color: var(--color-primary-600); font-weight: 400; }
-        .dark #hero-code .typed-cursor { color: var(--color-primary-400); }
+        #hero-code .beck-caret { color: var(--color-primary-600); font-weight: 400; animation: beck-caret-blink 1s steps(1) infinite; }
+        .dark #hero-code .beck-caret { color: var(--color-primary-400); }
+        @keyframes beck-caret-blink { 50% { opacity: 0; } }
         #hero-host .beck-root { max-width: 100%; }
 
         /* ---- syntax cheatsheet: filter chips (class-toggled by site.js) ---- */

@@ -1,0 +1,46 @@
+meta:
+  title: Incident Response
+  subtitle: A metric breaches, an alert fires, the on-call is paged
+  direction: TB
+nodes:
+  - { id: svc, title: Checkout Service, icon: server }
+  - { id: prom, title: Prometheus, icon: chart, accent: info, subtitle: scrapes metrics }
+  - { id: alert, title: Alertmanager, kind: gateway, icon: bell, accent: warn }
+  - { id: page, title: PagerDuty, icon: mobile, accent: danger, subtitle: on-call }
+  - { id: slack, title: Slack, icon: webhook, accent: primary }
+  - { id: email, title: Email, icon: mail }
+  - { id: oncall, title: On-call Eng, kind: user }
+groups:
+  - { id: channels, label: Notification Channels, members: [page, slack, email], accent: warn }
+edges:
+  - { from: svc, to: prom, label: metrics }
+  - { from: prom, to: alert, label: threshold, kind: control }
+  - { from: alert, to: page }
+  - { from: alert, to: slack }
+  - { from: alert, to: email }
+  - { from: page, to: oncall, label: notify, curve: straight }
+flow:
+  repeat: -1
+  repeatDelay: 2
+  steps:
+    - phase: healthy
+    # Steady metrics scrape — quiet, ongoing traffic.
+    - stream: { from: svc, to: prom, color: info }
+    - wait: 0.9
+    - phase: incident
+    - fail: { node: svc, text: 5xx spike, color: danger }
+    - status: { node: prom, text: p99 ↑, color: danger }
+    - packet: { from: svc, to: prom, color: danger }
+    - highlight: { node: alert, color: danger }
+    - status: { node: alert, text: FIRING, color: danger }
+    - phase: escalate
+    # The whole escalation path lights up and stays lit (persistent recolour).
+    - parallel:
+        - activate: { from: alert, to: page, color: danger }
+        - activate: { from: alert, to: slack, color: warn }
+        - activate: { from: alert, to: email, color: warn }
+    - burst: { from: alert, to: [page, slack, email], count: 2, stagger: 0.12, color: danger, impact: true }
+    - pulse: { node: page, color: danger }
+    - packet: { from: page, to: oncall, label: paged, color: danger, shape: circle, ease: expo }
+    - status: { node: oncall, text: ack ✓, color: success }
+    - wait: 1.6

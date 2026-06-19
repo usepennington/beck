@@ -1,0 +1,59 @@
+meta:
+  title: AI Agent Loop
+  subtitle: An agent plans, calls tools in parallel, then synthesises an answer
+  direction: LR
+nodes:
+  - { id: user, title: You, kind: user, subtitle: Asks a question }
+  - { id: agent, title: Agent, icon: agent, subtitle: Plan & act }
+  - { id: search, title: Web Search, icon: search }
+  - { id: code, title: Code Runner, icon: terminal }
+  - { id: store, title: Vector Store, icon: vector, kind: db, accent: info, subtitle: pgvector }
+  - { id: llm, title: LLM, icon: model, accent: primary, subtitle: Claude }
+groups:
+  - { id: tools, label: Tools, members: [search, code, store], accent: info }
+edges:
+  - { from: user, to: agent, label: ask }
+  - { from: agent, to: search }
+  - { from: agent, to: code }
+  - { from: agent, to: store }
+  - { from: agent, to: llm, label: synthesise }
+  - { from: agent, to: user, kind: control }
+flow:
+  repeat: -1
+  repeatDelay: 2
+  steps:
+    - working: { node: agent, color: primary }
+    - packet: { from: user, to: agent, label: ask }
+    - phase: tool calls
+    # One tool call fans out to every tool at once — hollow `ring` packets that
+    # decelerate into a burst on arrival.
+    - parallel:
+        - packet: { from: agent, to: search, shape: ring, ease: decelerate, impact: true }
+        - packet: { from: agent, to: code, shape: ring, ease: decelerate, impact: true }
+        - packet: { from: agent, to: store, shape: ring, ease: decelerate, impact: true }
+    - parallel:
+        - working: { node: search, color: info }
+        - working: { node: code, color: info }
+        - working: { node: store, color: info }
+    - wait: 0.7
+    # Results come back green along the same edges (reverse travel).
+    - parallel:
+        - packet: { from: search, to: agent, color: success, impact: true }
+        - packet: { from: code, to: agent, color: success, impact: true }
+        - packet: { from: store, to: agent, color: success, impact: true }
+    - parallel:
+        - idle: { node: search }
+        - idle: { node: code }
+        - idle: { node: store }
+    - phase: synthesise
+    - packet: { from: agent, to: llm, label: context }
+    - working: { node: llm, color: primary }
+    - status: { node: llm, text: generating…, color: primary }
+    - wait: 0.9
+    - packet: { from: llm, to: agent, color: success }
+    - parallel:
+        - idle: { node: llm }
+        - idle: { node: agent }
+    # The answer bounces home to the user — a filled disc that settles on arrival.
+    - packet: { from: agent, to: user, label: answer, color: success, shape: circle, ease: bounce, impact: true }
+    - wait: 1.4

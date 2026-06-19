@@ -1,0 +1,46 @@
+meta:
+  title: Streaming Analytics
+  subtitle: Clickstream ingest, windowed processing, live serving
+  direction: LR
+nodes:
+  - { id: web, title: Web & Mobile, kind: user, icon: browser, subtitle: clickstream }
+  - { id: collector, title: Event Collector, kind: gateway, icon: webhook }
+  - { id: bus, title: Kafka, kind: queue, icon: kafka, subtitle: events.raw }
+  - { id: flink, title: Stream Processor, icon: bolt, accent: info, subtitle: Flink }
+  - { id: warehouse, title: Warehouse, kind: db, icon: warehouse, subtitle: ClickHouse }
+  - { id: dash, title: Live Dashboard, icon: chart, accent: primary }
+  - { id: dlq, title: Dead Letter, kind: queue, icon: queue, accent: danger }
+  - { id: replay, title: Replay (planned), kind: ghost }
+groups:
+  - { id: serving, label: Serving Layer, members: [warehouse, dash], accent: info }
+edges:
+  - { from: web, to: collector, label: events, kind: async }
+  - { from: collector, to: bus, label: publish, kind: async }
+  - { from: bus, to: flink, kind: async }
+  - { from: flink, to: warehouse, label: upsert }
+  - { from: flink, to: dash, label: push }
+  - { from: flink, to: dlq, label: on error, kind: dependency }
+  - { from: dlq, to: replay, kind: dependency }
+flow:
+  repeat: -1
+  repeatDelay: 1.6
+  steps:
+    - phase: ingest
+    # The clickstream firehose: many small dots, staggered.
+    - burst: { from: web, to: collector, count: 5, stagger: 0.1 }
+    - burst: { from: collector, to: bus, count: 4, stagger: 0.1 }
+    # Trace a single event end-to-end through the collector and bus in one hop —
+    # a big, slow dot (size + speed knobs) so it stands out from the firehose.
+    - packet: { from: web, to: flink, via: [collector, bus], label: event, size: 9, speed: 220 }
+    # Ongoing traffic on the hot path keeps flowing as dashes.
+    - stream: { from: bus, to: flink, color: info }
+    - working: { node: flink, color: info }
+    - phase: process
+    - status: { node: flink, text: windowing…, color: info }
+    - stream: { from: flink, to: warehouse, color: primary }
+    - packet: { from: flink, to: dash, label: metrics, color: success, shape: circle, ease: smooth, impact: true }
+    - pulse: { node: dash, color: success }
+    - wait: 0.8
+    - packet: { from: flink, to: dlq, label: drop, color: danger }
+    - pulse: { node: dlq, color: danger }
+    - wait: 1.2

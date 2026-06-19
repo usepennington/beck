@@ -125,13 +125,14 @@
     return { nodes: nodes, edges: edges };
   }
 
-  // ---- hero: typed.js writes the YAML, the diagram grows in step ----------
+  // ---- hero: a tiny typewriter writes the YAML, the diagram grows in step --
   function escHtml(s) {
     return s.replace(/[&<>]/g, function (c) { return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'; });
   }
   // Wrap a Beck-YAML string in tok-* spans (same vocabulary BrandStyling colours).
-  // The plain-text content is byte-for-byte the input, so typed.js progress
-  // (element.textContent length) maps cleanly onto line offsets.
+  // Called per typewriter frame on the prefix (before the caret) and suffix (after
+  // it) independently; the caret only ever sits at a line boundary, so no token span
+  // crosses the split and the two halves highlight correctly.
   function highlightYaml(src) {
     return src.split('\n').map(function (line) {
       var out = '', i = 0, m;
@@ -156,89 +157,85 @@
     var host = document.getElementById('hero-host');
     if (!codeEl || !host) return;
 
-    var lines = [
-      'meta:',
-      '  title: Web Platform',
-      '  direction: TB',
-      'nodes:',
-      '  - { id: client, title: Client, kind: user }',
-      '  - { id: api, title: API Gateway, kind: gateway }',
-      '  - { id: orders, title: Orders }',
-      '  - { id: users, title: Users, kind: db }',
-      'edges:',
-      '  - { from: client, to: api }',
-      '  - { from: api, to: orders }',
-      '  - { from: api, to: users }'
-    ];
-    var fullText = lines.join('\n');
-    var upto = function (last) { return lines.slice(0, last + 1).join('\n'); };
-    var endAt = function (last) { return upto(last).length; };
+    var CARET = '<span class="beck-caret" aria-hidden="true">▍</span>';
+    var TYPE = 14, LINE_PAUSE = 300, STAGE_PAUSE = 1150, SEEK_PAUSE = 440, START_DELAY = 320;
 
-    // Type-then-pause: drop a short typed.js pause (`^ms`, stripped from the output so
-    // it doesn't disturb the stage offsets) once each node / edge line lands, giving
-    // every new element and connector a beat on screen before the next one types in.
-    var PAUSE_AFTER = { 4: 1, 5: 1, 6: 1, 7: 1, 9: 1, 10: 1 };
-    var typedHtml = lines.map(function (line, i) {
-      return highlightYaml(line) + (PAUSE_AFTER[i] ? '^650' : '');
-    }).join('\n');
-
-    // Each stage is a COMPLETE, valid snapshot rendered once typing passes its
-    // offset, so the preview never flashes a parse error. The build-up frames are
-    // static; the finished diagram animates its flow.
-    var stages = [
-      { at: endAt(4), yaml: upto(4), animate: false },   // client
-      { at: endAt(5), yaml: upto(5), animate: false },   // + api
-      { at: endAt(6), yaml: upto(6), animate: false },   // + orders
-      { at: endAt(7), yaml: upto(7), animate: false },   // + users (all four nodes)
-      { at: endAt(9), yaml: upto(9), animate: false },   // + client → api
-      { at: endAt(10), yaml: upto(10), animate: false }, // + api → orders
-      { at: endAt(11), yaml: fullText, animate: true }   // + api → users, live
-    ];
-
-    var handle = null, rendered = -1;
-    function renderStage(i) {
-      if (i <= rendered) return;
-      rendered = i;
-      try { if (handle && handle.destroy) handle.destroy(); } catch (e) {}
-      try { handle = window.Beck.renderDiagram(host, stages[i].yaml, { theme: currentTheme(), animate: stages[i].animate }); } catch (e) {}
-    }
-    function syncToLength(len) {
-      for (var i = stages.length - 1; i >= 0; i--) {
-        if (len >= stages[i].at) { renderStage(i); return; }
+    // The hero is scripted as a real editing session, not one top-to-bottom dump:
+    // type a small working diagram, then go BACK UP and add two nodes (the edge below
+    // stays on screen), then come back down and wire them. The caret therefore lives
+    // BETWEEN a fixed prefix and suffix — `head` is everything before it, `tail`
+    // everything after — so a mid-document insert pushes the `edges:` block down
+    // instead of erasing and retyping it (which a back-spacing typewriter would do).
+    var ops = [], doc = '', caret = 0;
+    function seekOp(index) { caret = index; ops.push({ t: 'seek', head: doc.slice(0, index), tail: doc.slice(index) }); }
+    function typeOp(text) {
+      for (var i = 0; i < text.length; i++) {
+        doc = doc.slice(0, caret) + text.charAt(i) + doc.slice(caret);
+        caret++;
+        ops.push({ t: 'char', head: doc.slice(0, caret), tail: doc.slice(caret) });
       }
     }
+    // Each render fires on a COMPLETE, valid snapshot (caret at a line end), so the
+    // preview never flashes a parse error. Build-up frames are static; the finished
+    // diagram animates its flow.
+    function renderOp(animate) { ops.push({ t: 'render', yaml: doc, animate: !!animate }); }
+    function pauseOp(ms) { ops.push({ t: 'pause', ms: ms }); }
+
+    // Stage 1 — type a small, complete diagram (client → api).
+    seekOp(0); pauseOp(START_DELAY);
+    typeOp('meta:\n  title: Web Platform\n  direction: TB\nnodes:\n  - { id: client, title: Client, kind: user }');
+    renderOp(false); pauseOp(LINE_PAUSE);
+    typeOp('\n  - { id: api, title: API Gateway, kind: gateway }');
+    renderOp(false); pauseOp(LINE_PAUSE);
+    typeOp('\nedges:\n  - { from: client, to: api }');
+    renderOp(false); pauseOp(STAGE_PAUSE);
+
+    // Stage 2 — jump back up to just below the nodes and add two more (the edge below
+    // the insertion point rides down untouched).
+    seekOp(doc.indexOf('\nedges:')); pauseOp(SEEK_PAUSE);
+    typeOp('\n  - { id: orders, title: Orders }');
+    renderOp(false); pauseOp(LINE_PAUSE);
+    typeOp('\n  - { id: users, title: Users, kind: db }');
+    renderOp(false); pauseOp(STAGE_PAUSE);
+
+    // Stage 3 — back to the bottom; wire the new nodes up. The finished diagram plays.
+    seekOp(doc.length); pauseOp(SEEK_PAUSE);
+    typeOp('\n  - { from: api, to: orders }');
+    renderOp(false); pauseOp(LINE_PAUSE);
+    typeOp('\n  - { from: api, to: users }');
+    renderOp(true);
+
+    var finalDoc = doc;
+    var handle = null;
+    function renderStage(yaml, animate) {
+      try { if (handle && handle.destroy) handle.destroy(); } catch (e) {}
+      try { handle = window.Beck.renderDiagram(host, yaml, { theme: currentTheme(), animate: animate }); } catch (e) {}
+    }
+    // Highlight the two halves separately and slot the caret between them.
+    function paint(head, tail) { codeEl.innerHTML = highlightYaml(head) + CARET + highlightYaml(tail); }
 
     window.addEventListener('beck:themechange', function (e) {
       if (handle && handle.setTheme) handle.setTheme(e.detail.theme);
     });
 
-    whenBeck(function () {
-      // Drive the diagram off the typed text growing: a MutationObserver watches the
-      // element's textContent length and fires the matching stage. Decoupled from
-      // typed.js internals, so it's robust to the library's HTML-typing quirks.
-      var obs = new MutationObserver(function () { syncToLength((codeEl.textContent || '').length); });
-      obs.observe(codeEl, { childList: true, characterData: true, subtree: true });
+    var reduce = false;
+    try { reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
-      if (window.Typed) {
-        // eslint-disable-next-line no-new
-        new window.Typed('#hero-code', {
-          strings: [typedHtml],
-          contentType: 'html',
-          typeSpeed: 11,
-          startDelay: 300,
-          showCursor: true,
-          cursorChar: '▍',
-          loop: false,
-          onComplete: function (self) {
-            syncToLength(fullText.length);
-            if (self && self.cursor) setTimeout(function () { self.cursor.style.opacity = '0'; }, 1600);
-          }
-        });
-      } else {
-        // typed.js CDN blocked — render the finished state immediately.
-        codeEl.innerHTML = highlightYaml(fullText);
-        syncToLength(fullText.length);
-      }
+    whenBeck(function () {
+      if (reduce) { codeEl.innerHTML = highlightYaml(finalDoc); renderStage(finalDoc, false); return; }
+      var i = 0;
+      (function step() {
+        if (i >= ops.length) {
+          var c = codeEl.querySelector('.beck-caret');
+          if (c) setTimeout(function () { c.style.animation = 'none'; c.style.transition = 'opacity .5s'; c.style.opacity = '0'; }, 1600);
+          return;
+        }
+        var op = ops[i++];
+        if (op.t === 'char') { paint(op.head, op.tail); setTimeout(step, TYPE); }
+        else if (op.t === 'seek') { paint(op.head, op.tail); step(); }
+        else if (op.t === 'render') { renderStage(op.yaml, op.animate); step(); }
+        else { setTimeout(step, op.ms); }
+      })();
     });
   }
 

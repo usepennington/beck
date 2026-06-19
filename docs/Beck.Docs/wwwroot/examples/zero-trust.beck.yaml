@@ -1,0 +1,55 @@
+meta:
+  title: Zero-Trust Access
+  subtitle: Every request is authorised before it reaches a protected service
+  direction: LR
+nodes:
+  - { id: client, title: Client, kind: user, icon: browser }
+  - { id: waf, title: WAF, icon: firewall, accent: warn }
+  - { id: gw, title: API Gateway, kind: gateway, icon: shield }
+  - { id: authz, title: Policy Engine, icon: lock, accent: info, subtitle: OPA }
+  - { id: vault, title: Secrets, icon: vault, surface: '#0f172a', textColor: '#e2e8f0', subtitle: Vault }
+  - { id: svc, title: Orders API }
+  - { id: db, title: Postgres, kind: db, icon: database }
+groups:
+  - { id: protected, label: Protected Zone, members: [svc, db], accent: success }
+edges:
+  - { from: client, to: waf, label: https }
+  - { from: waf, to: gw }
+  - { from: gw, to: authz, label: authorize, kind: control, arrow: both, curve: s }
+  - { from: gw, to: svc, label: allow }
+  - { from: svc, to: vault, label: fetch secret, kind: dependency }
+  - { from: svc, to: db, label: query }
+flow:
+  repeat: -1
+  repeatDelay: 1.8
+  steps:
+    - phase: request
+    - packet: { from: client, to: waf, label: request, shape: circle, ease: decelerate, impact: true }
+    - packet: { from: waf, to: gw }
+    - phase: policy check
+    - working: { node: authz, color: info }
+    # A hollow ring packet asks the policy engine for a decision.
+    - packet: { from: gw, to: authz, label: evaluate, shape: ring }
+    - status: { node: authz, text: checking…, color: info }
+    - wait: 0.6
+    - status: { node: authz, text: allow ✓, color: success }
+    - packet: { from: authz, to: gw, color: success }
+    - idle: { node: authz }
+    - phase: allowed path
+    # The approved route lights green and stays lit.
+    - activate: { from: gw, to: svc, color: success }
+    - packet: { from: gw, to: svc, color: success, impact: true }
+    - working: { node: svc, color: success }
+    # Fan out to secrets + data at once; the secret fetch is a quiet, un-glowing dot.
+    - parallel:
+        - packet: { from: svc, to: vault, label: secret, color: info, glow: false }
+        - packet: { from: svc, to: db, label: query }
+    - status: { node: svc, text: 200 OK, color: success }
+    - idle: { node: svc }
+    - wait: 1
+    # Tear the approved-path state down so the next beat reads as a separate request.
+    - { reset: true }
+    - phase: blocked attempt
+    - packet: { from: client, to: waf, color: danger, label: malicious }
+    - fail: { node: waf, text: ✗ blocked, color: danger }
+    - wait: 1.6

@@ -29,10 +29,8 @@
 
     @* The Beck engine: auto-registers <beck-diagram> and hydrates ```beck fences. *@
     <script src="/_content/Beck/beck.global.js" defer></script>
-    @* typed.js drives the homepage hero's "watch the YAML being written" effect.
-       Loaded before site.js (both deferred → execute in order) so window.Typed
-       exists when site.js boots; site.js degrades gracefully if the CDN fails. *@
-    <script src="https://cdn.jsdelivr.net/npm/typed.js@2.1.0/dist/typed.umd.js" defer></script>
+    @* site.js drives the homepage hero typewriter (no external typing lib) plus the
+       theme toggle, copy buttons and the Monaco playground. *@
     <script src="/js/site.js" defer></script>
 
     <HeadOutlet />
