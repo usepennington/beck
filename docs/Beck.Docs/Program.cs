@@ -22,6 +22,8 @@ builder.Services.AddPennington(penn =>
         md.ContentPath = "Content";
         md.BasePageUrl = "/";
     });
+
+    penn.AddLlmsTxt();
 });
 
 // MonorailCSS: scans compiled IL + watched source for utility-class literals and serves
