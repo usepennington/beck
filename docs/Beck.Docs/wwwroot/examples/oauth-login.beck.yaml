@@ -1,0 +1,24 @@
+type: sequence
+meta:
+  title: OAuth Login
+  subtitle: Authorization code flow with PKCE
+participants:
+  - { id: user, title: Browser, icon: browser, kind: user }
+  - { id: app, title: Web App }
+  - { id: idp, title: Identity Provider, icon: lock, accent: info }
+  - { id: api, title: API, icon: api }
+messages:
+  - section: Authorize
+  - { from: user, to: app, label: GET /login }
+  - { from: app, to: app, label: generate PKCE pair }
+  - { from: app, to: user, label: redirect to IdP, reply: true }
+  - { from: user, to: idp, label: authorize + challenge }
+  - { from: idp, to: user, label: code, reply: true }
+  - section: Token exchange
+  - { from: user, to: app, label: "callback?code=…" }
+  - { from: app, to: idp, label: code + verifier }
+  - { from: idp, to: app, label: access token, reply: true }
+  - section: Authenticated call
+  - { from: app, to: api, label: GET /me (bearer) }
+  - { from: api, to: app, label: 200 profile, reply: true }
+  - { from: app, to: user, label: signed in, reply: true }

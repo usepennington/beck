@@ -36,9 +36,17 @@ flow:
 
 ### Derived flow
 
-With no `flow` block, Beck topologically sorts the nodes (roots → leaves), emits a `phase` label the
-first time each node sends, sends a `packet` along every edge in order, then waits one second and
-resets — looping forever. This is why `nodes` and `edges` alone already animate.
+With no `flow` block, Beck derives one — a bare document already animates. What it derives depends
+on the diagram type:
+
+- **architecture** and **state** — a topological walk from roots to leaves: a `phase` label the
+  first time each node (or state) sends, a `packet` along every edge (or transition) in order, then
+  a wait and a `reset`, looping forever.
+- **sequence** — the authored message order *is* the story: one `packet` per message, in order,
+  with each `- section:` band emitted as a seekable `phase`. Reply packets land green with a
+  decelerating ease, so request/response pairs read at a glance.
+- **class** — a quiet structural cascade rather than a packet story: each inheritance level lights
+  up in turn, top to bottom, with the relations into that level recolouring as it does.
 
 ## Steps
 

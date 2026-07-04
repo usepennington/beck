@@ -1,0 +1,16 @@
+type: state
+meta:
+  title: Circuit Breaker
+  direction: LR
+states:
+  - { id: closed, title: Closed, subtitle: calls pass through, accent: success }
+  - { id: open, title: Open, subtitle: calls fail fast, accent: danger }
+  - { id: half, title: Half-Open, subtitle: one probe call, accent: warn }
+transitions:
+  - { from: "[*]", to: closed }
+  - { from: closed, to: closed, label: success }
+  - { from: closed, to: open, label: trip threshold }
+  - { from: open, to: open, label: fail fast }
+  - { from: open, to: half, label: cooldown elapsed }
+  - { from: half, to: closed, label: probe ok }
+  - { from: half, to: open, label: probe fails }

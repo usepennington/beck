@@ -168,3 +168,6 @@ From here:
 - Put a diagram in your own site with [Add Beck to your site](/docs/guides/install).
 - Make it yours: [style your nodes](/docs/guides/nodes), [match your
   theme](/docs/guides/theme), or [script the animation](/docs/guides/flow).
+- Try the other diagram types — the same document shape draws a
+  [sequence](/docs/guides/sequence), a [state machine](/docs/guides/state), or a [class
+  model](/docs/guides/class).

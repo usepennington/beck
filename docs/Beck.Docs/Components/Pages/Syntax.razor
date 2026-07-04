@@ -260,6 +260,12 @@
             "participants: [ { id: api, title: API }, { id: pay, title: Payments, icon: lock, accent: info } ]\nmessages:\n  - { from: api, to: api, label: validate }\n  - section: Payment\n  - { from: api, to: pay, label: capture }\n  - { from: pay, to: api, label: ok, reply: true }",
             "sequence"),
 
+        new("Async message", "messages", "sequence",
+            "kind: async renders dashed with an open arrowhead and slow, eased packet motion — fire-and-forget events.",
+            "messages:\n  - { from: api, to: bus,\n      label: OrderPlaced,\n      kind: async }",
+            "participants: [ { id: api, title: API }, { id: bus, title: Event Bus, kind: queue } ]\nmessages:\n  - { from: api, to: bus, label: OrderPlaced, kind: async }",
+            "sequence"),
+
         // ---- State diagrams ----
         new("State diagram", "type: state", "state",
             "transitions auto-create their states; \"[*]\" is the entry dot / exit bullseye.",
@@ -273,6 +279,12 @@
             "meta: { direction: LR }\nstates:\n  - { id: review, title: In Review, accent: warn }\ntransitions:\n  - { from: \"[*]\", to: draft }\n  - { from: draft, to: review, label: submit }\n  - { from: review, to: draft, label: reject }",
             "state"),
 
+        new("Self-transition", "transitions", "state",
+            "A transition from a state to itself draws a compact loop — retries, heartbeats, re-entrant states.",
+            "transitions:\n  - { from: retrying, to: retrying,\n      label: backoff }",
+            "meta: { direction: LR }\nstates:\n  - { id: retrying, title: Retrying, accent: warn }\ntransitions:\n  - { from: \"[*]\", to: calling }\n  - { from: calling, to: retrying, label: error }\n  - { from: retrying, to: retrying, label: backoff }\n  - { from: retrying, to: calling, label: retry }",
+            "state"),
+
         // ---- Class diagrams ----
         new("Class diagram", "type: class", "class",
             "Classes are cards with «stereotype», fields, and methods compartments.",
@@ -284,6 +296,18 @@
             "inherits draws a hollow triangle at the parent; composition a filled diamond at the whole.",
             "relations:\n  - { from: order, to: entity,\n      kind: inherits }\n  - { from: order, to: line,\n      kind: composition,\n      fromCard: \"1\", toCard: \"*\" }",
             "classes:\n  - { id: entity, name: Entity, stereotype: abstract, accent: neutral, fields: [\"Id: Guid\"] }\n  - { id: order, name: Order, fields: [\"Total: Money\"] }\n  - { id: line, name: OrderLine, fields: [\"Sku: string\"] }\nrelations:\n  - { from: order, to: entity, kind: inherits }\n  - { from: order, to: line, kind: composition, fromCard: \"1\", toCard: \"*\" }",
+            "class"),
+
+        new("Implements & dependency", "relations", "class",
+            "implements draws a dashed hollow triangle at the interface; dependency a dashed open arrowhead.",
+            "relations:\n  - { from: svc, to: iface,\n      kind: implements }\n  - { from: svc, to: mailer,\n      kind: dependency }",
+            "classes:\n  - { id: iface, name: INotifier, stereotype: interface, accent: info }\n  - { id: svc, name: OrderService, methods: [\"Place(order)\"] }\n  - { id: mailer, name: Mailer }\nrelations:\n  - { from: svc, to: iface, kind: implements }\n  - { from: svc, to: mailer, kind: dependency, label: uses }",
+            "class"),
+
+        new("Namespace groups", "groups", "class",
+            "groups work in class diagrams too — labelled namespace or module boxes around related cards.",
+            "groups:\n  - { id: domain, label: Domain,\n      members: [order, line] }",
+            "classes:\n  - { id: order, name: Order, fields: [\"Total: Money\"] }\n  - { id: line, name: OrderLine, fields: [\"Sku: string\"] }\n  - { id: mailer, name: Mailer }\ngroups:\n  - { id: domain, label: Domain, members: [order, line], accent: primary }\nrelations:\n  - { from: order, to: line, kind: composition, fromCard: \"1\", toCard: \"*\" }\n  - { from: mailer, to: order, kind: dependency }",
             "class"),
     ];
 }
