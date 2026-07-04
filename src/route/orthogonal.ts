@@ -33,6 +33,9 @@ const CHANNEL_OFFSET = 18
 const LANE_PAD = 22
 /** Keep detour lanes at least this far inside the canvas edge. */
 const LANE_MARGIN = 6
+/** How far a self-loop's apex sits off its node's face (mirrored by the
+ *  self-loop gutter in layout/layered.ts, which reserves canvas room for it). */
+const SELF_LOOP_EXTENT = 30
 
 const center = (r: Rect): Point => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })
 const isVertical = (s: Side) => s === 'top' || s === 'bottom'
@@ -204,21 +207,27 @@ function sCurve(a: Point, b: Point, fromSide: Side): string {
 /** Route one edge between two rects, returning the path data + turn points. */
 export function routeEdge(req: RouteRequest): RoutedPath {
   // Self-loop (a state's transition to itself): a small rounded detour off the
-  // right side of the rect, entering back a little lower. One continuous path.
+  // face the rank edges DON'T use — the bottom in a horizontal (LR/RL) layout,
+  // the right in a vertical one — so the loop and its label sit in clear space
+  // instead of the lane the node's other edges leave through. One continuous path.
   const self =
     req.from === req.to ||
     (req.from.x === req.to.x && req.from.y === req.to.y && req.from.w === req.to.w && req.from.h === req.to.h)
   if (self) {
     const r = req.from
-    const x = r.x + r.w
-    const y1 = r.y + r.h * 0.3
-    const y2 = r.y + r.h * 0.7
-    const poly = [
-      { x, y: y1 },
-      { x: x + 30, y: y1 },
-      { x: x + 30, y: y2 },
-      { x, y: y2 },
-    ]
+    const poly = req.primaryHorizontal
+      ? [
+          { x: r.x + r.w * 0.3, y: r.y + r.h },
+          { x: r.x + r.w * 0.3, y: r.y + r.h + SELF_LOOP_EXTENT },
+          { x: r.x + r.w * 0.7, y: r.y + r.h + SELF_LOOP_EXTENT },
+          { x: r.x + r.w * 0.7, y: r.y + r.h },
+        ]
+      : [
+          { x: r.x + r.w, y: r.y + r.h * 0.3 },
+          { x: r.x + r.w + SELF_LOOP_EXTENT, y: r.y + r.h * 0.3 },
+          { x: r.x + r.w + SELF_LOOP_EXTENT, y: r.y + r.h * 0.7 },
+          { x: r.x + r.w, y: r.y + r.h * 0.7 },
+        ]
     return { d: roundedPath(poly, Math.min(req.radius, 10)), points: poly }
   }
 

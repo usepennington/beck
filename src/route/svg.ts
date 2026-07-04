@@ -302,6 +302,28 @@ function chooseLabelBox(
     }
   }
 
+  // Last resort: when every off-line spot collides with something, straddling
+  // the line itself (the surface halo keeps the glyphs legible) reads better
+  // than clipping into a card — e.g. an LR edge label wider than the rank gap.
+  if (bestClear < 0) {
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i]
+      const b = points[i + 1]
+      if (Math.hypot(b.x - a.x, b.y - a.y) < 1) continue
+      const c = clampCenter((a.x + b.x) / 2, (a.y + b.y) / 2)
+      const box: LabelBox = { cx: c.cx, cy: c.cy, hw, hh, anchor: 'middle' }
+      let clear = clearance(box, obstacles, lines)
+      for (let j = 0; j < points.length - 1; j++) {
+        if (j === i) continue
+        clear = Math.min(clear, segGap(box, points[j], points[j + 1]))
+      }
+      if (clear > bestClear) {
+        best = box
+        bestClear = clear
+      }
+    }
+  }
+
   if (best === null) {
     const c = clampCenter(mid.x, mid.y - LABEL_GAP - hh)
     return { cx: c.cx, cy: c.cy, hw, hh, anchor: 'middle' }
@@ -454,7 +476,7 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
  * edge per face keeps the center; opposite-direction pairs between the same
  * two nodes naturally land side by side (both faces sort the pair with the
  * same tie-break, keeping the two lines parallel). Self-loops keep their
- * dedicated right-face routing.
+ * dedicated off-axis face routing (bottom in LR/RL, right in TB/BT).
  */
 function anchorShifts(
   edges: EdgeModel[],
