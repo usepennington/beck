@@ -15,6 +15,11 @@ export interface RouteRequest {
   primaryHorizontal?: boolean
   /** Canvas extent; detour lanes are clamped inside it so edges never escape. */
   bounds?: { width: number; height: number }
+  /**
+   * Perpendicular anchor shift (px) for A⇄B edge pairs: each direction gets an
+   * opposite sign so the two lines run side by side instead of overlapping.
+   */
+  pairOffset?: number
 }
 
 export interface RoutedPath {
@@ -149,6 +154,12 @@ function laneDetour(
   return null
 }
 
+/** Shift an anchor along the node face it sits on (perpendicular to travel). */
+function shiftAnchor(p: Point, side: Side, off: number): Point {
+  if (!off) return p
+  return isVertical(side) ? { x: p.x + off, y: p.y } : { x: p.x, y: p.y + off }
+}
+
 function orthogonalPolyline(
   from: Rect,
   to: Rect,
@@ -156,9 +167,10 @@ function orthogonalPolyline(
   toSide: Side,
   obstacles: Rect[],
   bounds?: { width: number; height: number },
+  pairOffset = 0,
 ): Point[] {
-  const a = anchor(from, fromSide)
-  const b = anchor(to, toSide)
+  const a = shiftAnchor(anchor(from, fromSide), fromSide, pairOffset)
+  const b = shiftAnchor(anchor(to, toSide), toSide, pairOffset)
   const vert = isVertical(fromSide) && isVertical(toSide)
   const horz = !isVertical(fromSide) && !isVertical(toSide)
 
@@ -192,11 +204,31 @@ function sCurve(a: Point, b: Point, fromSide: Side): string {
 
 /** Route one edge between two rects, returning the path data + turn points. */
 export function routeEdge(req: RouteRequest): RoutedPath {
+  // Self-loop (a state's transition to itself): a small rounded detour off the
+  // right side of the rect, entering back a little lower. One continuous path.
+  const self =
+    req.from === req.to ||
+    (req.from.x === req.to.x && req.from.y === req.to.y && req.from.w === req.to.w && req.from.h === req.to.h)
+  if (self) {
+    const r = req.from
+    const x = r.x + r.w
+    const y1 = r.y + r.h * 0.3
+    const y2 = r.y + r.h * 0.7
+    const poly = [
+      { x, y: y1 },
+      { x: x + 30, y: y1 },
+      { x: x + 30, y: y2 },
+      { x, y: y2 },
+    ]
+    return { d: roundedPath(poly, Math.min(req.radius, 10)), points: poly }
+  }
+
   const auto = autoSides(req.from, req.to, req.primaryHorizontal ?? false)
   const fromSide = req.fromSide ?? auto.fromSide
   const toSide = req.toSide ?? auto.toSide
-  const a = anchor(req.from, fromSide)
-  const b = anchor(req.to, toSide)
+  const off = req.pairOffset ?? 0
+  const a = shiftAnchor(anchor(req.from, fromSide), fromSide, off)
+  const b = shiftAnchor(anchor(req.to, toSide), toSide, off)
 
   if (req.curve === 'straight') {
     return { d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`, points: [a, b] }
@@ -204,6 +236,6 @@ export function routeEdge(req: RouteRequest): RoutedPath {
   if (req.curve === 's') {
     return { d: sCurve(a, b, fromSide), points: [a, b] }
   }
-  const poly = orthogonalPolyline(req.from, req.to, fromSide, toSide, req.obstacles, req.bounds)
+  const poly = orthogonalPolyline(req.from, req.to, fromSide, toSide, req.obstacles, req.bounds, off)
   return { d: roundedPath(poly, req.radius), points: poly }
 }

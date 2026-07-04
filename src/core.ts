@@ -4,8 +4,10 @@ import { createNode, type RenderedNode } from './render/node'
 import { createGroup } from './render/group'
 import { measureNodes } from './layout/measure'
 import { layeredLayout } from './layout/layered'
+import { sequenceLayout, type SequenceLayout } from './layout/sequence'
 import type { LayoutResult } from './layout/types'
 import { createOverlay, routeEdges, type RoutedEdge } from './route/svg'
+import { routeSequenceEdges } from './route/sequence'
 import { loadGsap, prefersReducedMotion, setGsapUrl, type Timeline } from './animate/runtime'
 import { buildTimeline, type CompiledFlow } from './animate/timeline'
 import { STYLES } from './styles'
@@ -119,7 +121,10 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
     }
 
     const sizes = measureNodes(rendered.values())
-    const layout = layeredLayout(model, sizes)
+    // The diagram type picks the layout/routing strategy; everything else in
+    // this pipeline (measure, node DOM, overlay, animation) is shared.
+    const isSequence = model.meta.type === 'sequence'
+    const layout = isSequence ? sequenceLayout(model, sizes) : layeredLayout(model, sizes)
 
     for (const [id, rn] of rendered) {
       const r = layout.nodes.get(id)
@@ -154,7 +159,9 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
 
     const svg = createOverlay(layout.width, layout.height)
     canvas.appendChild(svg)
-    const edges = routeEdges(svg, model, layout)
+    const edges = isSequence
+      ? routeSequenceEdges(svg, model, layout as SequenceLayout)
+      : routeEdges(svg, model, layout)
 
     canvas.style.width = `${layout.width}px`
     canvas.style.height = `${layout.height}px`

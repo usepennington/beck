@@ -83,6 +83,7 @@ That YAML is a complete diagram. Paste it into a ` ```beck ` fence on any page w
 included and it renders live:
 
 ```beck
+type: architecture
 meta:
   title: My first system
   direction: LR
@@ -120,6 +121,7 @@ send a request to the API, mark the database busy while it works, then return a 
 Drop that in just before `.ToYaml()`. The diagram now tells a story:
 
 ```beck
+type: architecture
 meta:
   title: My first system
   direction: LR

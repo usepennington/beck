@@ -1,3 +1,4 @@
+type: architecture
 meta:
   title: Web Platform
   subtitle: Gateway fan-out into grouped services and stores

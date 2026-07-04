@@ -51,6 +51,7 @@ the engine hydrates it on load — no Markdig extension, no server-side step:
 
 ````markdown
 ```beck
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: web, title: Web App, kind: user }

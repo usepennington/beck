@@ -1,3 +1,4 @@
+type: architecture
 meta: { direction: TB }
 nodes:
   - { id: web, title: Web, kind: user }

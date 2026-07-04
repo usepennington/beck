@@ -1,0 +1,19 @@
+type: state
+meta:
+  title: Order Lifecycle
+  direction: LR
+states:
+  - { id: placed, title: Placed }
+  - { id: paid, title: Paid, accent: primary }
+  - { id: shipped, title: Shipped, accent: info }
+  - { id: delivered, title: Delivered, accent: success }
+  - { id: cancelled, title: Cancelled, accent: danger }
+transitions:
+  - { from: "[*]", to: placed }
+  - { from: placed, to: paid, label: payment ok }
+  - { from: placed, to: cancelled, label: timeout }
+  - { from: paid, to: shipped, label: dispatch }
+  - { from: shipped, to: shipped, label: track }
+  - { from: shipped, to: delivered, label: handover }
+  - { from: delivered, to: "[*]" }
+  - { from: cancelled, to: "[*]" }

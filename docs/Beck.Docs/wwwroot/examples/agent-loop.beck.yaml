@@ -1,3 +1,4 @@
+type: architecture
 meta:
   title: AI Agent Loop
   subtitle: An agent plans, calls tools in parallel, then synthesises an answer

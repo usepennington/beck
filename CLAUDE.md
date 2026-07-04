@@ -4,8 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Beck turns a declarative **YAML** description into a beautiful, animated architecture diagram
-("Mermaid, but sexy"). One repo produces two artifacts joined by the YAML schema contract:
+Beck turns a declarative **YAML** description into a beautiful, animated diagram ("Mermaid, but
+sexy"). Every document declares a root `type:` — `architecture` (the layered node/edge graph),
+`sequence`, `state`, or `class` — sharing one meta/flow/theming system (untyped documents render
+as architecture with a console deprecation warning; docs never show the untyped form). One repo
+produces two artifacts joined by the YAML schema contract:
 
 - **A TypeScript engine** (`src/`) — built with Vite, runs in the browser.
 - **A single .NET NuGet package** (`dotnet/Beck`) — a Razor Class Library that *embeds the prebuilt
@@ -41,15 +44,26 @@ Playwright MCP against `vite preview` / a static server (see "Verifying" below).
 Each stage is a near-pure function with an explicit contract; `core.ts` orchestrates them:
 
 ```
-YAML → model/ (parse → validate+defaults) → DiagramModel
+YAML → model/ (parse → validate+defaults; buildModel dispatches on root `type:` to the
+       architecture / sequence / state / class builders — sequence.ts, state.ts, classes.ts)
      → measure (render cards off-flow, read getBoundingClientRect)
-     → layout/ (Sugiyama-lite: rank → order(+virtual nodes) → coords; groups = recursive compound
-       sub-layout — each group is laid out then fed to its parent as one sized super-node, so groups
-       nest and span ranks; `layoutLayer` is the group-free engine, `layeredLayout` the recursive driver)
-     → route/ (auto orthogonal step-round edges + obstacle avoidance) → SVG overlay
-     → render/ (position DOM via transform, group boxes)
+     → layout/ (per type: layered.ts — Sugiyama-lite: rank → order(+virtual nodes) → coords;
+       groups = recursive compound sub-layout — each group is laid out then fed to its parent as one
+       sized super-node, so groups nest and span ranks; `layoutLayer` is the group-free engine,
+       `layeredLayout` the recursive driver. sequence.ts — fixed grid: participant columns, message
+       rows, request/reply activation-bar pairing)
+     → route/ (auto orthogonal step-round edges + obstacle avoidance; route/sequence.ts draws
+       lifelines/activation bars/section bands + message paths) → SVG overlay
+     → render/ (position DOM via transform, group boxes; node shapes: card, state pill, start/end
+       pseudo-states, class compartment card)
      → animate/ (compile flow → GSAP timeline; play on scroll-into-view)
 ```
+
+State and class diagrams compile onto the layered engine in their model builders (states→pill
+nodes, transitions→edges; classes→compartment-card nodes, relations→edges with UML end markers —
+`inherits`/`implements` are FLIPPED to parent→child so parents rank above children). Sequence
+diagrams have their own layout+router but reuse everything else; their derived flow pins each
+packet to its row via the flow step's `edge` id (many messages share one from/to pair).
 
 `mountModel(root, model, opts)` in `src/core.ts` runs all of this and returns a `DiagramHandle`
 (`play/pause/reset/seek/setTheme/relayout/destroy/ready`). `renderDiagram(host, yaml, opts)` is the
@@ -92,8 +106,10 @@ renders in light DOM (via `renderDiagram`) so host CSS reaches it; `src/embed/hy
   needs no Node. **After changing the engine, run `npm run build:lib` and commit the regenerated
   bundle**, or the package ships stale JS. (`dist/` and `dist-lib/` are gitignored; the wwwroot copy
   is intentionally committed.)
-- `Beck.Authoring` (`dotnet/Beck/Authoring/`) is a dependency-free fluent `DiagramBuilder` that emits
-  YAML via a tiny hand-rolled `YamlWriter` (no YamlDotNet). The C# enums map to schema tokens in
+- `Beck.Authoring` (`dotnet/Beck/Authoring/`) is a dependency-free fluent builder family — one per
+  diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
+  `ClassDiagramBuilder` + its reflection `FromTypes`), sharing `MetaOptions` — that emits YAML via
+  a tiny hand-rolled `YamlWriter` (no YamlDotNet). The C# enums map to schema tokens in
   `Tokens.Of(...)` (note `EdgeCurve.StepRound` → `"step-round"`, `Direction` stays uppercase). When
   you add a YAML field, update **both** `src/model/` (the parser) and the matching C# builder.
 - The RCL pulls in a `Microsoft.AspNetCore.App` framework reference (Razor SDK). That's fine for web

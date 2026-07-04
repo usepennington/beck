@@ -131,7 +131,7 @@
       if (/^nodes:/.test(t)) { section = 'nodes'; continue; }
       if (/^edges:/.test(t)) { section = 'edges'; continue; }
       if (/^groups:/.test(t)) { section = 'groups'; continue; }
-      if (/^(meta|flow|title|direction):/.test(t)) { section = null; continue; }
+      if (/^(meta|flow|title|direction|type|participants|messages|states|transitions|classes|relations):/.test(t)) { section = /^(participants|states|classes):/.test(t) ? 'nodes' : /^(messages|transitions|relations):/.test(t) ? 'edges' : null; continue; }
       if (!t.startsWith('-')) continue;
       if (section === 'nodes') nodes++;
       else if (section === 'edges') edges++;
@@ -197,7 +197,7 @@
 
     // Stage 1 — type a small, complete diagram (client → api).
     seekOp(0); pauseOp(START_DELAY);
-    typeOp('meta:\n  title: Web Platform\n  direction: TB\nnodes:\n  - { id: client, title: Client, kind: user }');
+    typeOp('type: architecture\nmeta:\n  title: Web Platform\n  direction: TB\nnodes:\n  - { id: client, title: Client, kind: user }');
     renderOp(false); pauseOp(LINE_PAUSE);
     typeOp('\n  - { id: api, title: API Gateway, kind: gateway }');
     renderOp(false); pauseOp(LINE_PAUSE);

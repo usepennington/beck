@@ -1,3 +1,4 @@
+type: architecture
 nodes:
   - { id: plain, title: Themed card }
   - id: branded

@@ -173,6 +173,23 @@ public enum ArrowEnds
     Both,
 }
 
+/// <summary>How two classes in a <c>type: class</c> diagram relate.</summary>
+public enum RelationKind
+{
+    /// <summary>Child extends parent (hollow triangle at the parent).</summary>
+    Inherits,
+    /// <summary>Class implements an interface (dashed, hollow triangle).</summary>
+    Implements,
+    /// <summary>A plain directed association.</summary>
+    Association,
+    /// <summary>Whole–part where the part outlives the whole (hollow diamond at the whole).</summary>
+    Aggregation,
+    /// <summary>Whole–part where the part's lifetime is owned (filled diamond at the whole).</summary>
+    Composition,
+    /// <summary>A usage dependency (dashed, open arrowhead).</summary>
+    Dependency,
+}
+
 internal static class Tokens
 {
     public static string Of(Direction d) => d.ToString();
@@ -187,6 +204,7 @@ internal static class Tokens
     public static string Of(AccentToken a) => a.ToString().ToLowerInvariant();
     public static string Of(Side s) => s.ToString().ToLowerInvariant();
     public static string Of(ArrowEnds a) => a.ToString().ToLowerInvariant();
+    public static string Of(RelationKind r) => r.ToString().ToLowerInvariant();
 
     public static string Of(EdgeCurve c) => c switch
     {

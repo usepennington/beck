@@ -1,3 +1,4 @@
+type: architecture
 meta: { title: Web Platform, direction: TB }
 nodes:
   - { id: web, title: Web App, kind: user }

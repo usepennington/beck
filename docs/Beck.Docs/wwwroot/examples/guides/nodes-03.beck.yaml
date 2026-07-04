@@ -1,3 +1,4 @@
+type: architecture
 nodes:
   - id: custom
     title: Custom mark

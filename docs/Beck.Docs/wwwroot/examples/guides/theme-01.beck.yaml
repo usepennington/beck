@@ -1,3 +1,4 @@
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: themed, title: Themed, subtitle: accent primary, accent: primary }

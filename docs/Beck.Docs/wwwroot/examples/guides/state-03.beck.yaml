@@ -1,0 +1,8 @@
+type: state
+meta: { direction: LR }
+states:
+  - { id: open, title: Open, accent: primary }
+transitions:
+  - { from: "[*]", to: open }
+  - { from: open, to: open, label: retry }
+  - { from: open, to: closed, label: resolve }

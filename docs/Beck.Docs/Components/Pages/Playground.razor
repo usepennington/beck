@@ -16,6 +16,9 @@
             <option data-src="/examples/incident-response.beck.yaml">Incident response</option>
             <option data-src="/examples/cicd.beck.yaml">Deploy pipeline</option>
             <option data-src="/examples/nested-groups.beck.yaml">Nested groups</option>
+            <option data-src="/examples/checkout-sequence.beck.yaml">Sequence · checkout</option>
+            <option data-src="/examples/order-lifecycle.beck.yaml">State · order lifecycle</option>
+            <option data-src="/examples/domain-model.beck.yaml">Class · domain model</option>
         </select>
     </div>
 
@@ -23,7 +26,8 @@
         <div class="flex flex-col min-h-0 border-r border-base-200 dark:border-base-800">
             <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-base-50 dark:bg-base-900">system.beck.yaml</div>
             <div id="pg-editor-host"></div>
-            <textarea id="pg-initial" hidden>meta:
+            <textarea id="pg-initial" hidden>type: architecture
+meta:
   title: Checkout flow
   direction: TB
 nodes:

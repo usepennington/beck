@@ -25,6 +25,7 @@ includes the engine script, every such block is hydrated into a live diagram —
 
 ````markdown
 ```beck
+type: architecture
 meta: { title: Web platform, direction: LR }
 nodes:
   - { id: user, title: Client, kind: user }
@@ -42,15 +43,22 @@ That is a complete diagram. With no `flow:` block, Beck derives a packet animati
 
 ## The document shape
 
-A Beck document is a YAML mapping with up to four top-level keys, plus an optional `flow`:
+A Beck document is a YAML mapping that **always opens with a root `type:`** — one of
+`architecture`, `sequence`, `state`, or `class`. The type picks the top-level keys; `meta` and
+`flow` are shared by all four. For `type: architecture`:
 
 ```yaml
+type: architecture # REQUIRED first — architecture | sequence | state | class
 meta:    { ... }   # optional — title, direction, theme, fit, spacing
 nodes:   [ ... ]   # the boxes — each needs a unique id
 groups:  [ ... ]   # optional — labelled boundaries around nodes
 edges:   [ ... ]   # optional — connections (from/to)
 flow:    { ... }   # optional — scripted animation; omit and one is derived
 ```
+
+The other types swap the middle keys: `type: sequence` uses `participants` + `messages`,
+`type: state` uses `states` + `transitions`, `type: class` uses `classes` + `relations` (+
+`groups`). Their cheat-sheets are [below](#the-other-diagram-types-sequence-state-class).
 
 Inline (`{ }` / `[ ]`) and block YAML are both fine. Use whichever is clearer.
 
@@ -140,6 +148,83 @@ For anything else, pass raw inline `<svg>…</svg>` using `fill="currentColor"`/
 and a `0 0 24 24` viewBox so it inherits the node's accent and theme. Full live catalogue:
 [Icons reference](/docs/reference/icons).
 
+## The other diagram types: sequence, state, class
+
+All three share `meta`, `flow`, colours, and theming with architecture diagrams. Only the middle
+keys differ. Full tables: [YAML schema](/docs/reference/yaml); guides:
+[sequence](/docs/guides/sequence) · [state](/docs/guides/state) · [class](/docs/guides/class).
+
+### `type: sequence` — participants + messages
+
+Participants are columns (declared order); messages are rows (authored order). Participant fields =
+node fields (`id`, `title`, `kind`, `icon`, `accent`, …). Message fields: `from`, `to` (required;
+equal ids = self-message loop), `label`, `reply` (bool — dashed return, closes the receiver's
+activation bar), `kind` (same four edge kinds; `async` = dashed + open arrow), `style`, `color`,
+`activate` (bool — force/suppress the receiver's activation bar). A list entry `- section: <label>`
+inserts a full-width band. Activation bars pair automatically: request in, `reply: true` back out.
+With no `flow:`, one packet rides each message in order — the message order IS the story.
+
+```beck
+type: sequence
+participants:
+  - { id: web, title: Web App, kind: user }
+  - { id: api, title: API }
+  - { id: db, title: Postgres, kind: db }
+messages:
+  - { from: web, to: api, label: POST /orders }
+  - { from: api, to: api, label: validate }
+  - { from: api, to: db, label: INSERT }
+  - { from: db, to: api, label: ok, reply: true }
+  - { from: api, to: web, label: 201, reply: true }
+```
+
+### `type: state` — states + transitions
+
+States are pills; `states:` is optional refinement (`id`, `title`, `subtitle`, `accent`, `width`,
+`rank`, `order`) — ids used only in `transitions` are auto-created. `"[*]"` (quoted!) is the UML
+entry/exit pseudo-state: `from: "[*]"` draws the entry dot, `to: "[*]"` the exit bullseye.
+Transition fields: `from`, `to`, `label`, `style`, `color`. Same-pair opposite transitions
+(submit/reject) route side by side automatically; self-transitions draw a loop. `direction: LR`
+usually reads best.
+
+```beck
+type: state
+meta: { direction: LR }
+states:
+  - { id: review, title: In Review, accent: warn }
+transitions:
+  - { from: "[*]", to: draft }
+  - { from: draft, to: review, label: submit }
+  - { from: review, to: draft, label: reject }
+  - { from: review, to: published, label: approve }
+  - { from: published, to: "[*]" }
+```
+
+### `type: class` — classes + relations (+ groups)
+
+Class fields: `id` (required), `name` (= `id`; alias `title`), `stereotype` (rendered
+`«stereotype»`), `fields` / `methods` (lists of plain strings — quote ones containing `:`),
+`accent`, `href`, `group`, `width`, `rank`, `order`. Relation fields: `from`, `to`, `kind`,
+`label`, `fromCard`/`toCard` (multiplicities), `color`. Relation kinds and their authored
+directions — say it aloud and write it that way:
+
+- `inherits` child→parent (hollow triangle at parent) · `implements` class→interface (dashed)
+- `aggregation` / `composition` whole→part (hollow / filled diamond at the whole)
+- `association` source→target (plain arrow) · `dependency` source→target (dashed open arrow)
+
+Parents automatically rank above children. `groups` = namespace boxes.
+
+```beck
+type: class
+classes:
+  - { id: entity, name: Entity, stereotype: abstract, accent: neutral, fields: ["Id: Guid"] }
+  - { id: order, name: Order, fields: ["Total: Money"], methods: ["Submit()"] }
+  - { id: line, name: OrderLine, fields: ["Sku: string"] }
+relations:
+  - { from: order, to: entity, kind: inherits }
+  - { from: order, to: line, kind: composition, fromCard: "1", toCard: "*" }
+```
+
 ## Flow (animation)
 
 A `flow` is an ordered list of single-key step mappings the engine compiles into a timeline and
@@ -177,6 +262,7 @@ animation reference](/docs/reference/flow) and the [Animate the flow guide](/doc
 ## A complete worked example
 
 ```beck
+type: architecture
 meta:
   title: Order service
   direction: LR
@@ -232,12 +318,20 @@ string fence = new DiagramBuilder("Order service")
     .ToFence();   // ```beck … ``` ready for Markdown; use .ToYaml() for the raw YAML
 ```
 
+Each diagram type has its own builder: `DiagramBuilder` (architecture),
+`SequenceDiagramBuilder` (`Participant`/`Message`/`Reply`/`Section`), `StateDiagramBuilder`
+(`State`/`Transition`/`Initial`/`Final`), and `ClassDiagramBuilder`
+(`Class`/`Inherits`/`Composition`/…, plus **`ClassDiagramBuilder.FromTypes(typeof(…), …)`**, which
+reflects real CLR types into an always-current class diagram — base types become `inherits`,
+interfaces `implements`, property types labelled associations).
+
 C# enums map to schema tokens (lowercased), with one special case: `EdgeCurve.StepRound` →
 `step-round`. `Direction` stays uppercase. Enums available: `Direction`, `NodeKind`, `NodeVariant`,
-`EdgeStyle`, `EdgeCurve`, `EdgeKind`, `PacketEase`, `PacketShape`, `ThemeMode`, `FitMode`,
-`AccentToken`, `Side`, `ArrowEnds`. The builder throws if an edge references an undeclared id. Full
-surface: [API reference](/api) · tutorial: [Author a diagram in C#](/docs/tutorials/csharp) ·
-keeping diagrams in sync with your model: [Generate diagrams from your code](/docs/guides/generate).
+`EdgeStyle`, `EdgeCurve`, `EdgeKind`, `RelationKind`, `PacketEase`, `PacketShape`, `ThemeMode`,
+`FitMode`, `AccentToken`, `Side`, `ArrowEnds`. The builders throw if an edge/message/relation
+references an undeclared id. Full surface: [API reference](/api) · tutorial: [Author a diagram in
+C#](/docs/tutorials/csharp) · keeping diagrams in sync with your model: [Generate diagrams from
+your code](/docs/guides/generate).
 
 ## Embedding a diagram in a page
 
@@ -268,7 +362,9 @@ or [Add Beck to a Pennington site](/docs/guides/pennington).
 
 ## Rules and gotchas
 
-- **Only node `id`s are required.** Lean on defaults; override deliberately.
+- **Always declare the root `type:`** (`architecture` | `sequence` | `state` | `class`). A typeless
+  document still renders as architecture but is deprecated and logs a console warning.
+- **Only ids are required.** Lean on defaults; override deliberately.
 - **Edge endpoints must exist.** `from`/`to` must name a declared node or group id (group ids are
   valid endpoints).
 - **`kind` is a bundle** of icon + accent + variant defaults — set it first, then override pieces.

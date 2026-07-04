@@ -1,3 +1,9 @@
+/* Generate the structural utility classes the engine's DOM uses (px-*, flex, …).
+   Real hosts produce these themselves (Pennington's MonorailCSS scans the shipped
+   bundle); the playground is its own host, so it runs Tailwind over src/. The lib
+   build (vite.config.lib.ts) has no Tailwind plugin — nothing here ships. */
+@import 'tailwindcss';
+
 /* Demo host palette — proves diagrams adopt the page's --color-* tokens.
    The violet primary shows through on service nodes/accents. */
 :root {

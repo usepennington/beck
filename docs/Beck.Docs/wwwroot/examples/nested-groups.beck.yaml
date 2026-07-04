@@ -1,3 +1,4 @@
+type: architecture
 meta:
   title: Cloud Topology
   subtitle: Nested boundaries via recursive compound layout

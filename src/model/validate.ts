@@ -9,9 +9,23 @@ import {
   PACKET_SHAPES,
   deriveFlow,
 } from './defaults'
+import {
+  asArray,
+  asObject,
+  asString,
+  oneOf,
+  optBool,
+  optColor,
+  optNumber,
+  optString,
+} from './coerce'
+import { buildSequenceModel } from './sequence'
+import { buildStateModel } from './state'
+import { buildClassModel } from './classes'
 import type {
   DiagramMeta,
   DiagramModel,
+  DiagramType,
   EdgeModel,
   FlowModel,
   FlowStep,
@@ -34,66 +48,14 @@ const KIND_LIST = [
 ] as const
 const EDGE_KIND_LIST = ['data', 'control', 'async', 'dependency'] as const
 const SIDES = ['top', 'bottom', 'left', 'right'] as const
+const TYPE_LIST = ['architecture', 'sequence', 'state', 'class'] as const
 
-// ---- low-level coercion helpers (friendly errors) ----
+// ---- builders shared across diagram types ----
 
-function asObject(v: unknown, field: string): Record<string, unknown> {
-  if (v == null) return {}
-  if (typeof v !== 'object' || Array.isArray(v)) throw new BeckError(`\`${field}\` must be a mapping`)
-  return v as Record<string, unknown>
-}
-
-function asArray(v: unknown, field: string): unknown[] {
-  if (v == null) return []
-  if (!Array.isArray(v)) throw new BeckError(`\`${field}\` must be a list`)
-  return v
-}
-
-function asString(v: unknown, field: string): string {
-  if (typeof v === 'string') return v
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
-  throw new BeckError(`\`${field}\` must be a string`)
-}
-
-function optString(v: unknown): string | undefined {
-  if (v == null) return undefined
-  if (typeof v === 'string') return v
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v)
-  return undefined
-}
-
-function optColor(v: unknown): string | undefined {
-  const s = optString(v)
-  return s == null ? undefined : accentToCss(s, 'primary')
-}
-
-function optNumber(v: unknown, field: string): number | undefined {
-  if (v == null) return undefined
-  if (typeof v === 'number') return v
-  if (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))) return Number(v)
-  throw new BeckError(`\`${field}\` must be a number`)
-}
-
-function optBool(v: unknown, field: string, dflt: boolean): boolean {
-  if (v == null) return dflt
-  if (typeof v === 'boolean') return v
-  if (v === 'true') return true
-  if (v === 'false') return false
-  throw new BeckError(`\`${field}\` must be true or false`)
-}
-
-function oneOf<T extends string>(v: unknown, allowed: readonly T[], field: string, dflt: T): T {
-  if (v == null) return dflt
-  const s = String(v)
-  if ((allowed as readonly string[]).includes(s)) return s as T
-  throw new BeckError(`\`${field}\` must be one of: ${allowed.join(', ')} (got "${s}")`)
-}
-
-// ---- builders ----
-
-function buildMeta(m: Record<string, unknown>): DiagramMeta {
+export function buildMeta(m: Record<string, unknown>, type: DiagramType): DiagramMeta {
   const sp = asObject(m.spacing, 'meta.spacing')
   return {
+    type,
     title: optString(m.title),
     subtitle: optString(m.subtitle),
     direction: oneOf(m.direction, ['TB', 'BT', 'LR', 'RL'] as const, 'meta.direction', 'TB'),
@@ -110,7 +72,7 @@ function buildMeta(m: Record<string, unknown>): DiagramMeta {
   }
 }
 
-function buildNode(n: Record<string, unknown>): NodeModel {
+export function buildNode(n: Record<string, unknown>): NodeModel {
   const id = asString(n.id, 'node.id')
   const kind = oneOf(n.kind, KIND_LIST, `node "${id}" kind`, 'service') as NodeKind
   const kd = KIND_DEFAULTS[kind]
@@ -134,10 +96,13 @@ function buildNode(n: Record<string, unknown>): NodeModel {
     rank: optNumber(n.rank, `node "${id}" rank`),
     order: optNumber(n.order, `node "${id}" order`),
     group: optString(n.group),
+    shape: 'card',
+    fields: [],
+    methods: [],
   }
 }
 
-function buildGroups(
+export function buildGroups(
   rawGroups: unknown[],
   nodes: NodeModel[],
   nodeIds: Set<string>,
@@ -242,6 +207,7 @@ function buildEdges(rawEdges: unknown[], validTargets: Set<string>): EdgeModel[]
       arrow: arrowEnds(e.arrow),
       fromSide: e.fromSide != null ? (oneOf(e.fromSide, SIDES, 'edge.fromSide', 'bottom') as Side) : undefined,
       toSide: e.toSide != null ? (oneOf(e.toSide, SIDES, 'edge.toSide', 'top') as Side) : undefined,
+      reply: false,
     }
   })
 }
@@ -280,6 +246,7 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
       from: endpoint(asString(p.from, 'packet.from'), 'packet'),
       to: endpoint(asString(p.to, 'packet.to'), 'packet'),
       via: via.length ? via : undefined,
+      edge: optString(p.edge),
       color: optColor(p.color),
       label: optString(p.label),
       ...packetKnobs(p),
@@ -376,7 +343,7 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
   )
 }
 
-function buildFlow(f: Record<string, unknown>, nodeIds: Set<string>, groupIds: Set<string>): FlowModel {
+export function buildFlow(f: Record<string, unknown>, nodeIds: Set<string>, groupIds: Set<string>): FlowModel {
   const steps = asArray(f.steps, 'flow.steps').map((s) => parseStep(asObject(s, 'flow step'), nodeIds, groupIds))
   return {
     repeat: optNumber(f.repeat, 'flow.repeat') ?? -1,
@@ -386,11 +353,10 @@ function buildFlow(f: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
   }
 }
 
-/** Validate and normalize a raw (parsed-YAML) object into a full DiagramModel. */
-export function buildModel(raw: unknown): DiagramModel {
-  const root = asObject(raw, 'document')
+// ---- the architecture builder (the original Beck diagram type) ----
 
-  const meta = buildMeta(asObject(root.meta, 'meta'))
+function buildArchitectureModel(root: Record<string, unknown>): DiagramModel {
+  const meta = buildMeta(asObject(root.meta, 'meta'), 'architecture')
 
   const rawNodes = asArray(root.nodes, 'nodes')
   if (rawNodes.length === 0) throw new BeckError('A diagram needs at least one node under `nodes`')
@@ -416,5 +382,39 @@ export function buildModel(raw: unknown): DiagramModel {
   // (an explicit flow.repeat otherwise wins; the default is infinite).
   if (!meta.loop) flow.repeat = 0
 
-  return { meta, nodes, groups, edges, flow }
+  return { meta, nodes, groups, edges, flow, sections: [] }
+}
+
+let warnedUntyped = false
+
+/** Validate and normalize a raw (parsed-YAML) object into a full DiagramModel. */
+export function buildModel(raw: unknown): DiagramModel {
+  const root = asObject(raw, 'document')
+
+  let type: DiagramType
+  if (root.type == null) {
+    // Legacy untyped documents render as architecture diagrams, but the explicit
+    // root `type:` is the only documented syntax — nudge (once per page load).
+    type = 'architecture'
+    if (!warnedUntyped && typeof console !== 'undefined') {
+      warnedUntyped = true
+      console.warn(
+        'Beck: document has no root `type:` — rendering as `type: architecture`. ' +
+          'Untyped documents are deprecated; declare `type: architecture` (or sequence / state / class).',
+      )
+    }
+  } else {
+    type = oneOf(root.type, TYPE_LIST, 'type', 'architecture')
+  }
+
+  switch (type) {
+    case 'sequence':
+      return buildSequenceModel(root)
+    case 'state':
+      return buildStateModel(root)
+    case 'class':
+      return buildClassModel(root)
+    default:
+      return buildArchitectureModel(root)
+  }
 }

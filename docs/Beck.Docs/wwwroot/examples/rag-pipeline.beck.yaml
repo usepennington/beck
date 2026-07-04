@@ -1,3 +1,4 @@
+type: architecture
 meta:
   title: RAG Answer Pipeline
   subtitle: A question is embedded, retrieved against, and answered

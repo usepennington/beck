@@ -18,6 +18,9 @@
         <button type="button" class="syntax-chip" data-filter="style">Style</button>
         <button type="button" class="syntax-chip" data-filter="layout">Layout</button>
         <button type="button" class="syntax-chip" data-filter="flow">Flow</button>
+        <button type="button" class="syntax-chip" data-filter="sequence">Sequence</button>
+        <button type="button" class="syntax-chip" data-filter="state">State</button>
+        <button type="button" class="syntax-chip" data-filter="class">Class</button>
     </div>
 
     <div id="syntax-grid" class="grid grid-cols-[repeat(auto-fill,minmax(460px,1fr))] gap-5">
@@ -30,19 +33,20 @@
                 </div>
                 <div class="px-4 pt-[5px] pb-[13px] text-[13.5px] leading-snug text-base-600 dark:text-base-400">@c.Desc</div>
                 <div class="px-4 py-[14px] font-mono text-[13px] leading-[1.75] whitespace-pre bg-base-50 dark:bg-base-900 border-t border-base-200 dark:border-base-800 overflow-x-auto text-base-900 dark:text-base-50">@c.Code</div>
-                <div class="syntax-canvas dot-grid flex flex-1 items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto"><pre><code class="language-beck">@c.Render</code></pre></div>
+                <div class="syntax-canvas dot-grid flex flex-1 items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto"><pre><code class="language-beck">@($"type: {c.Type}\n{c.Render}")</code></pre></div>
             </div>
         }
     </div>
 </div>
 
 @code {
-    private sealed record Cheat(string Title, string Tag, string Cat, string Desc, string Code, string Render);
+    private sealed record Cheat(string Title, string Tag, string Cat, string Desc, string Code, string Render, string Type = "architecture");
 
     // Each Render YAML is emitted as a ```beck fence (`<code class="language-beck">`); the Beck
     // client auto-hydrates it into a light-DOM diagram, so the host's MonorailCSS utilities style
-    // it. Razor HTML-encodes @c.Render inside the <code> (newlines preserved in <pre>), so the
-    // whitespace-significant YAML reaches the DOM intact without a MarkupString.
+    // it. Razor HTML-encodes the render string inside the <code> (newlines preserved in <pre>), so
+    // the whitespace-significant YAML reaches the DOM intact without a MarkupString. The root
+    // `type:` line is prepended from Cheat.Type, so every hydrated document is explicitly typed.
 
     private static readonly Cheat[] Cheats =
     [
@@ -236,5 +240,50 @@
             "parallel runs its child steps at the same time — fan a request out to several targets at once.",
             "flow:\n  steps:\n    - parallel:\n        - packet: { from: a, to: b }\n        - packet: { from: a, to: c }",
             "meta: { direction: LR }\nnodes: [ { id: a, title: API, kind: gateway }, { id: b, title: DB, kind: db }, { id: c, title: Cache, kind: cache } ]\nedges: [ { from: a, to: b }, { from: a, to: c } ]\nflow:\n  steps:\n    - parallel:\n        - packet: { from: a, to: b }\n        - packet: { from: a, to: c }\n    - wait: 0.8\n    - reset: true"),
+
+        // ---- Sequence diagrams ----
+        new("Sequence diagram", "type: sequence", "sequence",
+            "participants are columns; messages are rows, in authored order. The message order is the animation.",
+            "type: sequence\nparticipants:\n  - { id: web, kind: user }\n  - { id: api }\nmessages:\n  - { from: web, to: api,\n      label: POST /orders }",
+            "participants: [ { id: web, title: Web, kind: user }, { id: api, title: API } ]\nmessages:\n  - { from: web, to: api, label: POST /orders }\n  - { from: api, to: web, label: 201, reply: true }",
+            "sequence"),
+
+        new("Reply & activation", "messages", "sequence",
+            "reply: true draws a dashed return with an open arrowhead and closes the receiver's activation bar.",
+            "messages:\n  - { from: api, to: db,\n      label: INSERT }\n  - { from: db, to: api,\n      label: ok, reply: true }",
+            "participants: [ { id: api, title: API }, { id: db, title: Postgres, kind: db } ]\nmessages:\n  - { from: api, to: db, label: INSERT }\n  - { from: db, to: api, label: ok, reply: true }",
+            "sequence"),
+
+        new("Self-message & section", "messages", "sequence",
+            "A message to yourself draws a loop; a - section: entry inserts a labelled band.",
+            "messages:\n  - { from: api, to: api,\n      label: validate }\n  - section: Payment",
+            "participants: [ { id: api, title: API }, { id: pay, title: Payments, icon: lock, accent: info } ]\nmessages:\n  - { from: api, to: api, label: validate }\n  - section: Payment\n  - { from: api, to: pay, label: capture }\n  - { from: pay, to: api, label: ok, reply: true }",
+            "sequence"),
+
+        // ---- State diagrams ----
+        new("State diagram", "type: state", "state",
+            "transitions auto-create their states; \"[*]\" is the entry dot / exit bullseye.",
+            "type: state\ntransitions:\n  - { from: \"[*]\", to: draft }\n  - { from: draft, to: live,\n      label: publish }",
+            "meta: { direction: LR }\ntransitions:\n  - { from: \"[*]\", to: draft }\n  - { from: draft, to: live, label: publish }\n  - { from: live, to: \"[*]\" }",
+            "state"),
+
+        new("Refined states", "states", "state",
+            "Declare a state only to refine it — a title, an accent, a subtitle.",
+            "states:\n  - { id: review,\n      title: In Review,\n      accent: warn }",
+            "meta: { direction: LR }\nstates:\n  - { id: review, title: In Review, accent: warn }\ntransitions:\n  - { from: \"[*]\", to: draft }\n  - { from: draft, to: review, label: submit }\n  - { from: review, to: draft, label: reject }",
+            "state"),
+
+        // ---- Class diagrams ----
+        new("Class diagram", "type: class", "class",
+            "Classes are cards with «stereotype», fields, and methods compartments.",
+            "type: class\nclasses:\n  - id: order\n    name: Order\n    fields: [\"Total: Money\"]\n    methods: [\"Submit()\"]",
+            "classes:\n  - { id: order, name: Order, stereotype: aggregate, fields: [\"Status: OrderStatus\", \"Total: Money\"], methods: [\"Submit()\"] }",
+            "class"),
+
+        new("Inheritance & composition", "relations", "class",
+            "inherits draws a hollow triangle at the parent; composition a filled diamond at the whole.",
+            "relations:\n  - { from: order, to: entity,\n      kind: inherits }\n  - { from: order, to: line,\n      kind: composition,\n      fromCard: \"1\", toCard: \"*\" }",
+            "classes:\n  - { id: entity, name: Entity, stereotype: abstract, accent: neutral, fields: [\"Id: Guid\"] }\n  - { id: order, name: Order, fields: [\"Total: Money\"] }\n  - { id: line, name: OrderLine, fields: [\"Sku: string\"] }\nrelations:\n  - { from: order, to: entity, kind: inherits }\n  - { from: order, to: line, kind: composition, fromCard: \"1\", toCard: \"*\" }",
+            "class"),
     ];
 }

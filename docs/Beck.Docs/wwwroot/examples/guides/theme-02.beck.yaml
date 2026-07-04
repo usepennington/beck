@@ -1,3 +1,4 @@
+type: architecture
 meta: { title: Always dark, theme: dark, direction: LR }
 nodes:
   - { id: app, title: App, kind: user }

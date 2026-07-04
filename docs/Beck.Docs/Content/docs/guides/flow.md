@@ -1,7 +1,7 @@
 ---
 title: Animate the flow
 description: Script packets, bursts, status pills, and effects to tell a story with motion.
-order: 27
+order: 30
 sectionLabel: How-to guides
 uid: docs.guide.flow
 ---

@@ -1,6 +1,7 @@
 # Beck
 
-Declarative, animated architecture diagrams from YAML — for .NET docs and apps.
+Declarative, animated diagrams from YAML — architecture, sequence, state, and class — for .NET
+docs and apps.
 
 This single package ships two things:
 
@@ -28,6 +29,7 @@ palette and dark mode automatically — no Markdig extension or server-side step
 
 ````markdown
 ```beck
+type: architecture
 meta: { title: Request Path }
 nodes:
   - { id: client, title: Browser, kind: user }
@@ -38,6 +40,10 @@ edges:
   - { from: api, to: db, label: query }
 ```
 ````
+
+The root `type:` picks the diagram kind — `architecture`, `sequence` (participants + messages),
+`state` (states + transitions), or `class` (classes + relations) — all sharing the same theming,
+animation, and integrations.
 
 ## Authoring from code
 
@@ -60,5 +66,16 @@ string fence = new DiagramBuilder("Web Platform")
 Use `.ToYaml()` for the raw YAML, or `.ToFence()` for a Markdown code block. Because the emitter is
 free of any framework or diagram dependency, the natural pattern is to walk *any* source — an Aspire
 app graph, an EF model, a service registry — into a `DiagramBuilder` and let the client render it.
+
+Each diagram type has its own builder — `SequenceDiagramBuilder`, `StateDiagramBuilder`, and
+`ClassDiagramBuilder` — and the class builder can reflect an always-current domain model straight
+from your types:
+
+```csharp
+string fence = ClassDiagramBuilder
+    .FromTypes(typeof(Order), typeof(OrderLine), typeof(Customer))
+    .Title("Order Model")
+    .ToFence();
+```
 
 See the project README for the full YAML schema.
