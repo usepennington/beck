@@ -16,10 +16,12 @@ export interface RouteRequest {
   /** Canvas extent; detour lanes are clamped inside it so edges never escape. */
   bounds?: { width: number; height: number }
   /**
-   * Perpendicular anchor shift (px) for A⇄B edge pairs: each direction gets an
-   * opposite sign so the two lines run side by side instead of overlapping.
+   * Anchor shifts (px) along the source/target face. The caller spreads the
+   * edges that share a node face across it (see `anchorShifts` in route/svg.ts)
+   * so lines get breathing room instead of stacking on the face's center point.
    */
-  pairOffset?: number
+  fromShift?: number
+  toShift?: number
 }
 
 export interface RoutedPath {
@@ -58,7 +60,7 @@ const SAME_RANK_EPS = 6
  * through intervening nodes. Same-rank edges (no primary separation) route
  * across the secondary axis.
  */
-function autoSides(from: Rect, to: Rect, primaryHorizontal: boolean): { fromSide: Side; toSide: Side } {
+export function autoSides(from: Rect, to: Rect, primaryHorizontal: boolean): { fromSide: Side; toSide: Side } {
   const f = center(from)
   const t = center(to)
   const dx = t.x - f.x
@@ -161,16 +163,13 @@ function shiftAnchor(p: Point, side: Side, off: number): Point {
 }
 
 function orthogonalPolyline(
-  from: Rect,
-  to: Rect,
+  a: Point,
+  b: Point,
   fromSide: Side,
   toSide: Side,
   obstacles: Rect[],
   bounds?: { width: number; height: number },
-  pairOffset = 0,
 ): Point[] {
-  const a = shiftAnchor(anchor(from, fromSide), fromSide, pairOffset)
-  const b = shiftAnchor(anchor(to, toSide), toSide, pairOffset)
   const vert = isVertical(fromSide) && isVertical(toSide)
   const horz = !isVertical(fromSide) && !isVertical(toSide)
 
@@ -226,9 +225,8 @@ export function routeEdge(req: RouteRequest): RoutedPath {
   const auto = autoSides(req.from, req.to, req.primaryHorizontal ?? false)
   const fromSide = req.fromSide ?? auto.fromSide
   const toSide = req.toSide ?? auto.toSide
-  const off = req.pairOffset ?? 0
-  const a = shiftAnchor(anchor(req.from, fromSide), fromSide, off)
-  const b = shiftAnchor(anchor(req.to, toSide), toSide, off)
+  const a = shiftAnchor(anchor(req.from, fromSide), fromSide, req.fromShift ?? 0)
+  const b = shiftAnchor(anchor(req.to, toSide), toSide, req.toShift ?? 0)
 
   if (req.curve === 'straight') {
     return { d: `M ${a.x} ${a.y} L ${b.x} ${b.y}`, points: [a, b] }
@@ -236,6 +234,6 @@ export function routeEdge(req: RouteRequest): RoutedPath {
   if (req.curve === 's') {
     return { d: sCurve(a, b, fromSide), points: [a, b] }
   }
-  const poly = orthogonalPolyline(req.from, req.to, fromSide, toSide, req.obstacles, req.bounds, off)
+  const poly = orthogonalPolyline(a, b, fromSide, toSide, req.obstacles, req.bounds)
   return { d: roundedPath(poly, req.radius), points: poly }
 }

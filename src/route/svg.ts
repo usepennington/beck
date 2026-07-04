@@ -1,6 +1,6 @@
-import type { DiagramModel, EdgeModel, MarkerShape } from '../model/schema'
+import type { DiagramModel, EdgeModel, MarkerShape, Side } from '../model/schema'
 import type { LayoutResult, Point, Rect } from '../layout/types'
-import { routeEdge } from './orthogonal'
+import { autoSides, routeEdge } from './orthogonal'
 
 const SVGNS = 'http://www.w3.org/2000/svg'
 
@@ -146,7 +146,7 @@ function polylineMidpoint(points: Point[]): Point {
   return points[points.length - 1] ?? { x: 0, y: 0 }
 }
 
-const LABEL_GAP = 6 // clear space between the label box and the edge line
+const LABEL_GAP = 8 // clear space between the label box and the edge line
 const LABEL_PAD_X = 4 // breathing room added around the measured glyph box
 const LABEL_PAD_Y = 2
 const LABEL_MARGIN = 4 // keep the label this far inside the canvas
@@ -169,9 +169,66 @@ function boxGap(box: LabelBox, r: Rect): number {
   return Math.hypot(ix > 0 ? 0 : -ix, iy > 0 ? 0 : -iy)
 }
 
-function clearance(box: LabelBox, obstacles: Rect[]): number {
+/** Signed gap between a label box and a line segment: ≥0 when clear, <0 when crossing. */
+function segGap(box: LabelBox, a: Point, b: Point): number {
+  const x1 = box.cx - box.hw
+  const y1 = box.cy - box.hh
+  const x2 = box.cx + box.hw
+  const y2 = box.cy + box.hh
+  // Clamp the segment against the box via the slab method (Liang–Barsky).
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  let t0 = 0
+  let t1 = 1
+  let inside = true
+  for (const [p, q] of [
+    [-dx, a.x - x1],
+    [dx, x2 - a.x],
+    [-dy, a.y - y1],
+    [dy, y2 - a.y],
+  ] as const) {
+    if (p === 0) {
+      if (q < 0) {
+        inside = false
+        break
+      }
+    } else {
+      const r = q / p
+      if (p < 0) t0 = Math.max(t0, r)
+      else t1 = Math.min(t1, r)
+      if (t0 > t1) {
+        inside = false
+        break
+      }
+    }
+  }
+  if (inside) return -4 // crossing; flat penalty (lines are thin — depth is meaningless)
+  // Separated: min distance from the box corners to the segment.
+  const len2 = dx * dx + dy * dy || 1
+  let min = Infinity
+  for (const [px, py] of [
+    [x1, y1],
+    [x2, y1],
+    [x1, y2],
+    [x2, y2],
+  ] as const) {
+    const t = Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / len2))
+    min = Math.min(min, Math.hypot(px - (a.x + dx * t), py - (a.y + dy * t)))
+  }
+  return min
+}
+
+/**
+ * Worst signed clearance of a box against node cards AND every other edge's
+ * polyline — this is what lets labels breathe: a spot on the empty side of a
+ * line scores higher than one crossing a neighbouring edge.
+ */
+function clearance(box: LabelBox, obstacles: Rect[], lines: Point[][]): number {
   let min = Infinity
   for (const o of obstacles) min = Math.min(min, boxGap(box, o))
+  for (const poly of lines) {
+    for (let i = 0; i < poly.length - 1; i++) min = Math.min(min, segGap(box, poly[i], poly[i + 1]))
+  }
   return min
 }
 
@@ -188,6 +245,7 @@ function chooseLabelBox(
   hw: number,
   hh: number,
   obstacles: Rect[],
+  lines: Point[][],
   bounds: { width: number; height: number },
   mid: Point,
 ): LabelBox {
@@ -199,10 +257,17 @@ function chooseLabelBox(
   let best: LabelBox | null = null
   let bestClear = -Infinity
   let bestDist = Infinity
-  const consider = (cx0: number, cy0: number, anchor: LabelAnchor) => {
+  const consider = (cx0: number, cy0: number, anchor: LabelAnchor, segIdx: number) => {
     const c = clampCenter(cx0, cy0)
     const box: LabelBox = { cx: c.cx, cy: c.cy, hw, hh, anchor }
-    const clear = clearance(box, obstacles)
+    let clear = clearance(box, obstacles, lines)
+    // The label's own polyline counts too — except the segment it is anchored
+    // to (it deliberately sits LABEL_GAP off that one). This keeps labels from
+    // straddling their own line's next bend.
+    for (let j = 0; j < points.length - 1; j++) {
+      if (j === segIdx) continue
+      clear = Math.min(clear, segGap(box, points[j], points[j + 1]))
+    }
     const dist = Math.hypot(c.cx - mid.x, c.cy - mid.y)
     const tie = clear === bestClear || Math.abs(clear - bestClear) <= 6
     if (best === null || clear > bestClear + 6 || (tie && dist < bestDist)) {
@@ -227,12 +292,12 @@ function chooseLabelBox(
       const py = a.y + dy * tt
       if (Math.abs(dy) >= Math.abs(dx)) {
         // vertical-ish: park the text to the clearer side of the line
-        consider(px - LABEL_GAP - hw, py, 'end')
-        consider(px + LABEL_GAP + hw, py, 'start')
+        consider(px - LABEL_GAP - hw, py, 'end', i)
+        consider(px + LABEL_GAP + hw, py, 'start', i)
       } else {
         // horizontal-ish: above or below the line
-        consider(px, py - LABEL_GAP - hh, 'middle')
-        consider(px, py + LABEL_GAP + hh, 'middle')
+        consider(px, py - LABEL_GAP - hh, 'middle', i)
+        consider(px, py + LABEL_GAP + hh, 'middle', i)
       }
     }
   }
@@ -249,6 +314,7 @@ function drawLabel(
   points: Point[],
   text: string,
   obstacles: Rect[],
+  lines: Point[][],
   bounds: { width: number; height: number },
   placed: Rect[],
 ): void {
@@ -273,9 +339,9 @@ function drawLabel(
   const hw = w / 2 + LABEL_PAD_X
   const hh = h / 2 + LABEL_PAD_Y
 
-  // Avoid both node cards and already-placed labels, so labels never stack.
+  // Avoid node cards, already-placed labels, and every other edge's line.
   const all = placed.length ? obstacles.concat(placed) : obstacles
-  const box = chooseLabelBox(points, hw, hh, all, bounds, polylineMidpoint(points))
+  const box = chooseLabelBox(points, hw, hh, all, lines, bounds, polylineMidpoint(points))
   // Derive the text x from the box + anchor (dominant-baseline centers it on cy).
   const tx = box.anchor === 'start' ? box.cx - w / 2 : box.anchor === 'end' ? box.cx + w / 2 : box.cx
   t.setAttribute('x', String(Math.round(tx)))
@@ -286,16 +352,17 @@ function drawLabel(
 }
 
 /** A small end annotation (UML multiplicity like "1"/"*"), parked just off the
- *  path near its start or end, on the side away from the line. */
-function drawEndLabel(svg: SVGSVGElement, points: Point[], text: string, atStart: boolean): void {
+ *  path near its start or end, on the side away from the line. Its box is
+ *  pushed onto `placed` so mid-labels won't sit on top of it. */
+function drawEndLabel(svg: SVGSVGElement, points: Point[], text: string, atStart: boolean, placed: Rect[]): void {
   if (points.length < 2) return
   const a = atStart ? points[0] : points[points.length - 1]
   const b = atStart ? points[1] : points[points.length - 2]
   const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
   const dir = { x: (b.x - a.x) / len, y: (b.y - a.y) / len }
-  // 16px in from the endpoint (past the marker), 9px perpendicular off the line.
-  const px = a.x + dir.x * 16 - dir.y * 9
-  const py = a.y + dir.y * 16 + dir.x * 9
+  // 18px in from the endpoint (past the marker), 10px perpendicular off the line.
+  const px = a.x + dir.x * 18 - dir.y * 10
+  const py = a.y + dir.y * 18 + dir.x * 10
   const t = document.createElementNS(SVGNS, 'text')
   t.classList.add('beck-edge-label')
   t.textContent = text
@@ -304,6 +371,8 @@ function drawEndLabel(svg: SVGSVGElement, points: Point[], text: string, atStart
   t.setAttribute('text-anchor', 'middle')
   t.setAttribute('dominant-baseline', 'central')
   svg.appendChild(t)
+  const hw = text.length * 3.5 + 3
+  placed.push({ x: px - hw, y: py - 7, w: hw * 2, h: 14 })
 }
 
 /** Route + draw every edge in the model. Returns the visible paths for animation. */
@@ -334,17 +403,17 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
   const labelBounds = { width: layout.width, height: layout.height }
   const placedLabels: Rect[] = []
 
-  // A ⇄ B pairs (edges in both directions) get opposite perpendicular anchor
-  // shifts so the two lines run side by side instead of on top of each other.
-  const dirs = new Set(model.edges.map((e) => `${e.from} ${e.to}`))
-  const pairOffsetOf = (e: EdgeModel): number =>
-    e.from !== e.to && dirs.has(`${e.to} ${e.from}`) ? (e.from < e.to ? -6 : 6) : 0
+  const shifts = anchorShifts(model.edges, rectOf, primaryHorizontal)
 
+  // Pass 1 - route and draw every path. Labels wait for pass 2, when every
+  // polyline is known, so each label can dodge ALL the lines, not just the
+  // ones routed before it.
   const out: RoutedEdge[] = []
-  for (const edge of model.edges) {
+  const routed: Array<{ edge: EdgeModel; points: Point[] }> = []
+  model.edges.forEach((edge, i) => {
     const from = rectOf(edge.from)
     const to = rectOf(edge.to)
-    if (!from || !to) continue
+    if (!from || !to) return
     const exclude = new Set<Rect>([from, to, ...memberRects(edge.from), ...memberRects(edge.to)])
     const obstacles = [...layout.nodes.values()].filter((r) => !exclude.has(r))
     const { d, points } = routeEdge({
@@ -357,13 +426,88 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
       radius,
       primaryHorizontal,
       bounds: { width: layout.width, height: layout.height },
-      pairOffset: pairOffsetOf(edge),
+      fromShift: shifts[i].from,
+      toShift: shifts[i].to,
     })
     const path = drawEdge(svg, d, edge)
-    if (edge.label) drawLabel(svg, points, edge.label, labelObstacles, labelBounds, placedLabels)
-    if (edge.fromLabel) drawEndLabel(svg, points, edge.fromLabel, true)
-    if (edge.toLabel) drawEndLabel(svg, points, edge.toLabel, false)
     out.push({ edge, path })
-  }
+    routed.push({ edge, points })
+  })
+
+  // Pass 2 - end annotations first (multiplicities hug fixed spots), then the
+  // mid labels, each avoiding nodes, other lines, and everything already placed.
+  routed.forEach((r) => {
+    if (r.edge.fromLabel) drawEndLabel(svg, r.points, r.edge.fromLabel, true, placedLabels)
+    if (r.edge.toLabel) drawEndLabel(svg, r.points, r.edge.toLabel, false, placedLabels)
+  })
+  routed.forEach((r, i) => {
+    if (!r.edge.label) return
+    const otherLines = routed.filter((_, j) => j !== i).map((o) => o.points)
+    drawLabel(svg, r.points, r.edge.label, labelObstacles, otherLines, labelBounds, placedLabels)
+  })
   return out
+}
+
+/**
+ * Spread the anchors of edges that share a node face along that face, ordered
+ * by their far endpoints (so the spread lines never cross each other). One
+ * edge per face keeps the center; opposite-direction pairs between the same
+ * two nodes naturally land side by side (both faces sort the pair with the
+ * same tie-break, keeping the two lines parallel). Self-loops keep their
+ * dedicated right-face routing.
+ */
+function anchorShifts(
+  edges: EdgeModel[],
+  rectOf: (id: string) => Rect | undefined,
+  primaryHorizontal: boolean,
+): Array<{ from: number; to: number }> {
+  const shifts = edges.map(() => ({ from: 0, to: 0 }))
+  const groups = new Map<string, Array<{ idx: number; end: 'from' | 'to' }>>()
+  const add = (nodeId: string, side: Side, idx: number, end: 'from' | 'to') => {
+    const key = `${nodeId} ${side}`
+    let g = groups.get(key)
+    if (!g) groups.set(key, (g = []))
+    g.push({ idx, end })
+  }
+
+  edges.forEach((e, i) => {
+    if (e.from === e.to) return
+    const from = rectOf(e.from)
+    const to = rectOf(e.to)
+    if (!from || !to) return
+    const auto = autoSides(from, to, primaryHorizontal)
+    add(e.from, e.fromSide ?? auto.fromSide, i, 'from')
+    add(e.to, e.toSide ?? auto.toSide, i, 'to')
+  })
+
+  for (const [key, refs] of groups) {
+    if (refs.length < 2) continue
+    const sep = key.lastIndexOf(' ')
+    const nodeId = key.slice(0, sep)
+    const side = key.slice(sep + 1) as Side
+    const rect = rectOf(nodeId)!
+    const alongY = side === 'left' || side === 'right'
+    const faceLen = alongY ? rect.h : rect.w
+    // Fill at most 70% of the face; cap the pitch at 20px so a two-edge face
+    // reads as two clearly separate lines without hugging the corners.
+    const step = Math.min(20, (faceLen * 0.7) / (refs.length - 1))
+    const farCenter = (r: { idx: number; end: 'from' | 'to' }): number => {
+      const e = edges[r.idx]
+      const other = rectOf(r.end === 'from' ? e.to : e.from)!
+      return alongY ? other.y + other.h / 2 : other.x + other.w / 2
+    }
+    refs.sort((r1, r2) => {
+      const d = farCenter(r1) - farCenter(r2)
+      if (Math.abs(d) > 0.5) return d
+      // Same far endpoint (an A<->B pair): a direction-stable tie-break keeps
+      // the two lines parallel - both faces sort the pair identically.
+      return edges[r1.idx].id < edges[r2.idx].id ? -1 : 1
+    })
+    refs.forEach((r, i) => {
+      const off = (i - (refs.length - 1) / 2) * step
+      if (r.end === 'from') shifts[r.idx].from = off
+      else shifts[r.idx].to = off
+    })
+  }
+  return shifts
 }
