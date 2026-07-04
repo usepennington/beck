@@ -8,6 +8,9 @@ const CANVAS_PAD = 16
 // route/orthogonal.ts) and the gap+margin reserved around a label parked in the gutter.
 const LANE_RESERVE = 22
 const LABEL_RESERVE_GAP = 10
+// How far a self-loop's apex sits off its node's face (mirrors SELF_LOOP_EXTENT
+// in route/orthogonal.ts): bottom face in LR/RL, right face in TB/BT.
+const SELF_LOOP_RESERVE = 30
 
 /**
  * Width (TB/BT) or height (LR/RL) to reserve on each secondary-axis side when an
@@ -25,6 +28,12 @@ function backEdgeGutter(model: DiagramModel, nodes: Map<string, Rect>): number {
     const f = nodes.get(e.from)
     const t = nodes.get(e.to)
     if (!f || !t) continue
+    if (e.from === e.to) {
+      // A self-loop hangs off the secondary-axis face with its label just beyond.
+      const loopLabel = e.label ? (horizontalSecondary ? e.label.length * 7 + 8 : 14) : 0
+      need = Math.max(need, SELF_LOOP_RESERVE + (loopLabel ? LABEL_RESERVE_GAP + loopLabel : 0))
+      continue
+    }
     const against =
       dir === 'TB'
         ? t.y + t.h <= f.y
