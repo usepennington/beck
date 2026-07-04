@@ -1,3 +1,4 @@
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: api, title: API, subtitle: us-east-1 }

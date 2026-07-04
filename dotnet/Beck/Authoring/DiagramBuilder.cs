@@ -28,51 +28,42 @@ public sealed class DiagramBuilder
     private readonly List<NodeBuilder> _nodes = new();
     private readonly List<GroupBuilder> _groups = new();
     private readonly List<EdgeBuilder> _edges = new();
-    private string? _title;
-    private string? _subtitle;
-    private Direction? _direction;
-    private ThemeMode? _theme;
-    private bool? _animate;
-    private bool? _loop;
-    private FitMode? _fit;
-    private int? _spacingRank;
-    private int? _spacingNode;
-    private int? _spacingCornerRadius;
+    private readonly MetaOptions _meta = new();
     private FlowBuilder? _flow;
 
     /// <summary>Create an empty diagram.</summary>
     public DiagramBuilder() { }
 
     /// <summary>Create a diagram with a title.</summary>
-    public DiagramBuilder(string title) => _title = title;
+    public DiagramBuilder(string title) => _meta.Title = title;
 
     /// <summary>Set the diagram title.</summary>
-    public DiagramBuilder Title(string title) { _title = title; return this; }
+    public DiagramBuilder Title(string title) { _meta.Title = title; return this; }
 
     /// <summary>Set the diagram subtitle.</summary>
-    public DiagramBuilder Subtitle(string subtitle) { _subtitle = subtitle; return this; }
+    public DiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
 
     /// <summary>Set the layout direction.</summary>
-    public DiagramBuilder Direction(Direction direction) { _direction = direction; return this; }
+    public DiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
     /// <summary>Set the theme mode.</summary>
-    public DiagramBuilder Theme(ThemeMode theme) { _theme = theme; return this; }
+    public DiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
 
     /// <summary>Enable or disable animation.</summary>
-    public DiagramBuilder Animate(bool animate) { _animate = animate; return this; }
+    public DiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
 
     /// <summary>Enable or disable looping.</summary>
-    public DiagramBuilder Loop(bool loop) { _loop = loop; return this; }
+    public DiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container: <see cref="FitMode.Shrink"/> scales it down to fit (default); <see cref="FitMode.Scroll"/> keeps natural size and scrolls horizontally.</summary>
-    public DiagramBuilder Fit(FitMode fit) { _fit = fit; return this; }
+    public DiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
 
     /// <summary>Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius (px).</summary>
     public DiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
-        if (rank is { } r) _spacingRank = r;
-        if (node is { } n) _spacingNode = n;
-        if (cornerRadius is { } c) _spacingCornerRadius = c;
+        if (rank is { } r) _meta.SpacingRank = r;
+        if (node is { } n) _meta.SpacingNode = n;
+        if (cornerRadius is { } c) _meta.SpacingCornerRadius = c;
         return this;
     }
 
@@ -131,28 +122,8 @@ public sealed class DiagramBuilder
         ValidateEdgeEndpoints();
 
         var sb = new StringBuilder();
-
-        var hasSpacing = _spacingRank != null || _spacingNode != null || _spacingCornerRadius != null;
-        var hasMeta = _title != null || _subtitle != null || _direction != null ||
-                      _theme != null || _animate != null || _loop != null || _fit != null || hasSpacing;
-        if (hasMeta)
-        {
-            sb.Append("meta:\n");
-            if (_title != null) sb.Append("  title: ").Append(YamlWriter.Scalar(_title)).Append('\n');
-            if (_subtitle != null) sb.Append("  subtitle: ").Append(YamlWriter.Scalar(_subtitle)).Append('\n');
-            if (_direction is { } d) sb.Append("  direction: ").Append(Tokens.Of(d)).Append('\n');
-            if (_theme is { } t) sb.Append("  theme: ").Append(Tokens.Of(t)).Append('\n');
-            if (_animate is { } a) sb.Append("  animate: ").Append(a ? "true" : "false").Append('\n');
-            if (_loop is { } l) sb.Append("  loop: ").Append(l ? "true" : "false").Append('\n');
-            if (_fit is { } f) sb.Append("  fit: ").Append(Tokens.Of(f)).Append('\n');
-            if (hasSpacing)
-            {
-                sb.Append("  spacing:\n");
-                if (_spacingRank is { } sr) sb.Append("    rank: ").Append(sr.ToString(CultureInfo.InvariantCulture)).Append('\n');
-                if (_spacingNode is { } sn) sb.Append("    node: ").Append(sn.ToString(CultureInfo.InvariantCulture)).Append('\n');
-                if (_spacingCornerRadius is { } sc) sb.Append("    cornerRadius: ").Append(sc.ToString(CultureInfo.InvariantCulture)).Append('\n');
-            }
-        }
+        sb.Append("type: architecture\n");
+        _meta.AppendYaml(sb);
 
         sb.Append("nodes:\n");
         foreach (var node in _nodes)

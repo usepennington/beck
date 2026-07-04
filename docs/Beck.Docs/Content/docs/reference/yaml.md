@@ -1,29 +1,43 @@
 ---
 title: YAML schema
-description: Every key, value, and default in a Beck document — meta, nodes, groups, and edges.
+description: Every key, value, and default in a Beck document — all four diagram types.
 order: 40
 sectionLabel: Reference
 uid: docs.reference.yaml
 ---
 
-A Beck document is a YAML mapping with up to four top-level keys — `meta`, `nodes`, `groups`, and
-`edges` — plus an optional `flow`. Only node `id`s are required; every other field has a default,
-filled in before the diagram is laid out.
+A Beck document is a YAML mapping that opens with a root `type:` declaring what kind of diagram it
+is. The type picks the layout engine and the top-level keys; everything else — theming, animation,
+fenced-block hydration — is shared. Only ids are required; every other field has a default, filled
+in before the diagram is laid out.
+
+| `type` | what it draws | top-level keys |
+|---|---|---|
+| `architecture` | the layered boxes-and-lines system diagram | `meta` `nodes` `groups` `edges` `flow` |
+| `sequence` | participants, lifelines, and ordered messages | `meta` `participants` `messages` `flow` |
+| `state` | a state machine of pills and transitions | `meta` `states` `transitions` `flow` |
+| `class` | UML class cards and relations | `meta` `classes` `relations` `groups` `flow` |
 
 The `flow` block has its own page: [Flow & animation](/docs/reference/flow). For a visual tour of
 these constructs, see the [syntax cheatsheet](/syntax).
 
 ```yaml
-meta:    { ... }   # optional — title, direction, theme, fit, spacing
-nodes:   [ ... ]   # required — the boxes
-groups:  [ ... ]   # optional — labelled boundaries
-edges:   [ ... ]   # optional — the connections
-flow:    { ... }   # optional — scripted animation (see the flow reference)
+type: architecture   # architecture | sequence | state | class
+meta:    { ... }     # optional — title, direction, theme, fit, spacing
+nodes:   [ ... ]     # the boxes
+groups:  [ ... ]     # optional — labelled boundaries
+edges:   [ ... ]     # optional — the connections
+flow:    { ... }     # optional — scripted animation (see the flow reference)
 ```
+
+> [!NOTE]
+> A document without a `type:` still renders as an architecture diagram, but that form is
+> deprecated — the engine logs a console warning. Always declare the type.
 
 ## meta
 
-All keys are optional.
+Shared by every diagram type; all keys are optional. (`direction` and `spacing.rank` only affect
+the layered types — architecture, state, class.)
 
 | key | type | default | description |
 |---|---|---|---|
@@ -44,7 +58,7 @@ All keys are optional.
 | `node` | number (px) | `32` | Gap between nodes within a rank, across the flow. |
 | `cornerRadius` | number (px) | `16` | Corner radius on cards and edge bends. |
 
-## nodes
+## nodes (`type: architecture`)
 
 A list of nodes. Each needs a unique `id`; everything else is optional.
 
@@ -82,9 +96,9 @@ A list of nodes. Each needs a unique `id`; everything else is optional.
 | `user` | `success` | `user` | `solid` |
 | `ghost` | `neutral` | `service` | `ghost` |
 
-## groups
+## groups (`architecture` and `class`)
 
-A list of labelled boxes drawn around member nodes.
+A list of labelled boxes drawn around member nodes (namespace boxes, in a class diagram).
 
 | key | type | default | description |
 |---|---|---|---|
@@ -97,7 +111,7 @@ Membership is a tree: every node or group belongs to at most one parent, and a g
 inside itself. A node can also join a group inline with its own `group` key. An edge's `from`/`to`
 may target a group id.
 
-## edges
+## edges (`type: architecture`)
 
 A list of connections. `from` and `to` are required and must resolve to a declared node or group.
 
@@ -125,6 +139,105 @@ A list of connections. `from` and `to` are required and must resolve to a declar
 
 The packet-motion column describes the default animation along an edge of that kind; see [Flow &
 animation](/docs/reference/flow) for the exact values and how to override them.
+
+## participants and messages (`type: sequence`)
+
+A sequence diagram lays `participants` out as columns (in declared order) and draws `messages` as
+rows, in authored order. Without a `flow:`, the message order **is** the animation — one packet per
+message. See the [sequence diagrams guide](/docs/guides/sequence).
+
+`participants` entries take the same fields as architecture [nodes](#nodes-type-architecture)
+(`id`, `title`, `subtitle`, `kind`, `icon`, `accent`, …); layout keys (`rank`, `order`, `group`)
+are ignored.
+
+`messages` entries:
+
+| key | type | default | description |
+|---|---|---|---|
+| `from`, `to` | participant id | — | **Required.** Equal ids draw a self-message loop. |
+| `label` | string | — | Drawn above the arrow. |
+| `reply` | bool | `false` | A return message: dashed, open arrowhead, closes the receiver's activation bar. |
+| `kind` | `data` `control` `async` `dependency` | `data` (`control` for replies) | Semantic kind; `async` renders dashed with an open arrowhead. |
+| `style` | `solid` `dashed` | per kind | Line style override. |
+| `color` | token or CSS colour | per kind | Stroke colour. |
+| `activate` | bool | auto | Force (`true`) or suppress (`false`) an activation bar on the receiver. |
+
+A list entry of the form `- section: <label>` (instead of a message) inserts a full-width labelled
+band before the next message, and becomes a `phase` seek point in the derived animation.
+
+**Activation bars** are automatic: a non-reply message starts a bar on its receiver when a later
+`reply: true` from that receiver back to the sender closes it. Nested request/reply pairs nest the
+bars.
+
+## states and transitions (`type: state`)
+
+A state machine on the layered engine — states are pills, transitions are labelled edges. States
+referenced only by transitions are auto-created, so a terse machine needs nothing but
+`transitions:`. The token `"[*]"` (quote it — YAML) is the UML entry/exit pseudo-state: use it as a
+`from` for the initial dot, as a `to` for the final bullseye. See the [state diagrams
+guide](/docs/guides/state).
+
+`states` entries (all optional refinements):
+
+| key | type | default | description |
+|---|---|---|---|
+| `id` | string | — | **Required.** |
+| `title` | string | = `id` | Pill text. |
+| `subtitle` | string | — | Muted second line. |
+| `accent` | token or CSS colour | `neutral` | Pill accent. |
+| `width`, `rank`, `order` | number | auto | Same as architecture nodes. |
+
+`transitions` entries:
+
+| key | type | default | description |
+|---|---|---|---|
+| `from`, `to` | state id or `"[*]"` | — | **Required.** Equal ids draw a self-loop. |
+| `label` | string | — | Drawn on the line. |
+| `style` | `solid` `dashed` | `solid` | Line style. |
+| `color` | token or CSS colour | edge | Stroke colour. |
+
+## classes and relations (`type: class`)
+
+UML class cards — a «stereotype» + name header and field/method compartments — joined by relations
+with the classic end markers. `groups` (namespace boxes) work exactly as in architecture diagrams.
+See the [class diagrams guide](/docs/guides/class).
+
+`classes` entries:
+
+| key | type | default | description |
+|---|---|---|---|
+| `id` | string | — | **Required.** |
+| `name` | string | = `id` | Class name (alias: `title`). |
+| `stereotype` | string | — | Rendered as `«stereotype»` above the name (e.g. `interface`, `abstract`). |
+| `fields` | list of strings | — | Field compartment lines, e.g. `"Id: Guid"`. |
+| `methods` | list of strings | — | Method compartment lines, e.g. `"Submit()"`. |
+| `accent` | token or CSS colour | `primary` | Header tint. |
+| `href`, `target` | string | — | Link the card (e.g. to API docs). |
+| `group` | string | — | Namespace-box membership. |
+| `width`, `rank`, `order` | number | auto | Same as architecture nodes. |
+
+`relations` entries — note the direction conventions:
+
+| key | type | default | description |
+|---|---|---|---|
+| `from`, `to` | class id | — | **Required.** |
+| `kind` | see below | `association` | Relation kind; picks the markers, style, and layout direction. |
+| `label` | string | — | Drawn on the line. |
+| `fromCard`, `toCard` | string | — | Multiplicities near the ends, e.g. `"1"`, `"*"`. |
+| `color` | token or CSS colour | per kind | Stroke colour. |
+
+| `kind` | authored direction | rendering |
+|---|---|---|
+| `inherits` | child → parent | solid, hollow triangle at the parent |
+| `implements` | class → interface | dashed, hollow triangle at the interface |
+| `association` | source → target | solid, arrowhead at the target |
+| `aggregation` | whole → part | solid, hollow diamond at the whole |
+| `composition` | whole → part | solid, filled diamond at the whole |
+| `dependency` | source → target | dashed, open arrowhead at the target |
+
+Parents rank above children automatically (`inherits`/`implements` are flipped internally so the
+hierarchy reads top-down). Without a `flow:`, the derived animation lights each inheritance level
+in turn.
 
 ## Icons
 

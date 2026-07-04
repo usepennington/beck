@@ -1,0 +1,24 @@
+type: class
+classes:
+  - id: entity
+    name: Entity
+    stereotype: abstract
+    accent: neutral
+    fields: ["Id: Guid"]
+  - id: order
+    name: Order
+    fields: ["Total: Money"]
+  - id: customer
+    name: Customer
+    accent: info
+    fields: ["Name: string"]
+  - id: notifier
+    name: IOrderNotifier
+    stereotype: interface
+    accent: info
+    methods: ["OrderPlaced(order)"]
+relations:
+  - { from: order, to: entity, kind: inherits }
+  - { from: customer, to: entity, kind: inherits }
+  - { from: order, to: customer, kind: association, label: placed by, toCard: "1" }
+  - { from: order, to: notifier, kind: dependency, label: raises }

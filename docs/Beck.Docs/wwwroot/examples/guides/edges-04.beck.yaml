@@ -1,3 +1,4 @@
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: lb, title: Load Balancer, icon: lb }

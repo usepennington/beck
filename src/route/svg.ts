@@ -1,4 +1,4 @@
-import type { DiagramModel, EdgeModel } from '../model/schema'
+import type { DiagramModel, EdgeModel, MarkerShape } from '../model/schema'
 import type { LayoutResult, Point, Rect } from '../layout/types'
 import { routeEdge } from './orthogonal'
 
@@ -23,34 +23,82 @@ export function createOverlay(width: number, height: number): SVGSVGElement {
 const markerCache = new WeakMap<SVGSVGElement, Map<string, string>>()
 let markerSeq = 0
 
-/** Create (or reuse) an arrowhead marker tinted to a color value. */
-export function ensureMarker(svg: SVGSVGElement, color: string): string {
+/** Marker geometry: every shape points +x with its tip at `refX`, so the same
+ *  def works at either end — `orient: auto-start-reverse` flips it 180° for
+ *  `marker-start`, which is exactly what a UML triangle-at-the-parent or
+ *  diamond-at-the-whole needs. Hollow shapes fill with the surface var so the
+ *  edge line doesn't show through them. */
+function markerBody(shape: MarkerShape, color: string): { el: SVGElement; viewBox: string; refX: number; w: number; h: number } {
+  const make = (tag: string) => document.createElementNS(SVGNS, tag)
+  switch (shape) {
+    case 'arrow-open': {
+      const p = make('polyline')
+      p.setAttribute('points', '2,1.5 9,5 2,8.5')
+      p.setAttribute('fill', 'none')
+      p.setAttribute('stroke', color)
+      p.setAttribute('stroke-width', '1.8')
+      p.setAttribute('stroke-linecap', 'round')
+      p.setAttribute('stroke-linejoin', 'round')
+      return { el: p, viewBox: '0 0 10 10', refX: 8, w: 7, h: 7 }
+    }
+    case 'triangle': {
+      const p = make('path')
+      p.setAttribute('d', 'M 1 1.5 L 11 6 L 1 10.5 Z')
+      p.setAttribute('fill', 'var(--beck-surface)')
+      p.setAttribute('stroke', color)
+      p.setAttribute('stroke-width', '1.3')
+      p.setAttribute('stroke-linejoin', 'round')
+      return { el: p, viewBox: '0 0 12 12', refX: 10.5, w: 10, h: 10 }
+    }
+    case 'diamond':
+    case 'diamond-open': {
+      const p = make('path')
+      p.setAttribute('d', 'M 1 5 L 7 1.2 L 13 5 L 7 8.8 Z')
+      if (shape === 'diamond') p.setAttribute('fill', color)
+      else {
+        p.setAttribute('fill', 'var(--beck-surface)')
+        p.setAttribute('stroke', color)
+        p.setAttribute('stroke-width', '1.3')
+        p.setAttribute('stroke-linejoin', 'round')
+      }
+      return { el: p, viewBox: '0 0 14 10', refX: 12.5, w: 11, h: 8 }
+    }
+    default: {
+      const p = make('polygon')
+      p.setAttribute('points', '0,1 10,5 0,9')
+      p.setAttribute('fill', color)
+      return { el: p, viewBox: '0 0 10 10', refX: 8, w: 6, h: 6 }
+    }
+  }
+}
+
+/** Create (or reuse) an end marker of a given shape tinted to a color value. */
+export function ensureMarker(svg: SVGSVGElement, color: string, shape: MarkerShape = 'arrow'): string {
   let cache = markerCache.get(svg)
   if (!cache) {
     cache = new Map()
     markerCache.set(svg, cache)
   }
-  const hit = cache.get(color)
+  const key = `${shape}|${color}`
+  const hit = cache.get(key)
   if (hit) return hit
   const id = `beck-arrow-${markerSeq++}`
+  const body = markerBody(shape, color)
   const marker = document.createElementNS(SVGNS, 'marker')
   marker.setAttribute('id', id)
-  marker.setAttribute('viewBox', '0 0 10 10')
-  marker.setAttribute('refX', '8')
-  marker.setAttribute('refY', '5')
-  marker.setAttribute('markerWidth', '6')
-  marker.setAttribute('markerHeight', '6')
+  marker.setAttribute('viewBox', body.viewBox)
+  marker.setAttribute('refX', String(body.refX))
+  marker.setAttribute('refY', body.viewBox.split(' ')[3] === '12' ? '6' : '5')
+  marker.setAttribute('markerWidth', String(body.w))
+  marker.setAttribute('markerHeight', String(body.h))
   marker.setAttribute('orient', 'auto-start-reverse')
-  const poly = document.createElementNS(SVGNS, 'polygon')
-  poly.setAttribute('points', '0,1 10,5 0,9')
-  poly.setAttribute('fill', color)
-  marker.appendChild(poly)
+  marker.appendChild(body.el)
   svg.querySelector('defs')!.appendChild(marker)
-  cache.set(color, id)
+  cache.set(key, id)
   return id
 }
 
-function drawEdge(svg: SVGSVGElement, d: string, edge: EdgeModel): SVGPathElement {
+export function drawEdge(svg: SVGSVGElement, d: string, edge: EdgeModel): SVGPathElement {
   const path = document.createElementNS(SVGNS, 'path')
   path.setAttribute('d', d)
   path.setAttribute('fill', 'none')
@@ -60,11 +108,11 @@ function drawEdge(svg: SVGSVGElement, d: string, edge: EdgeModel): SVGPathElemen
   path.setAttribute('stroke-linejoin', 'round')
   if (edge.style === 'dashed') path.setAttribute('stroke-dasharray', '7 5')
   // The marker uses orient="auto-start-reverse", so the same def points the
-  // right way at either end.
-  if (edge.arrow === 'end' || edge.arrow === 'both')
-    path.setAttribute('marker-end', `url(#${ensureMarker(svg, edge.color)})`)
-  if (edge.arrow === 'start' || edge.arrow === 'both')
-    path.setAttribute('marker-start', `url(#${ensureMarker(svg, edge.color)})`)
+  // right way at either end. Explicit UML markers win over the plain arrow ends.
+  const endShape = edge.markerEnd ?? (edge.arrow === 'end' || edge.arrow === 'both' ? 'arrow' : null)
+  const startShape = edge.markerStart ?? (edge.arrow === 'start' || edge.arrow === 'both' ? 'arrow' : null)
+  if (endShape) path.setAttribute('marker-end', `url(#${ensureMarker(svg, edge.color, endShape)})`)
+  if (startShape) path.setAttribute('marker-start', `url(#${ensureMarker(svg, edge.color, startShape)})`)
   path.dataset.from = edge.from
   path.dataset.to = edge.to
   path.dataset.edge = edge.id
@@ -237,6 +285,27 @@ function drawLabel(
   placed.push({ x: box.cx - box.hw, y: box.cy - box.hh, w: box.hw * 2, h: box.hh * 2 })
 }
 
+/** A small end annotation (UML multiplicity like "1"/"*"), parked just off the
+ *  path near its start or end, on the side away from the line. */
+function drawEndLabel(svg: SVGSVGElement, points: Point[], text: string, atStart: boolean): void {
+  if (points.length < 2) return
+  const a = atStart ? points[0] : points[points.length - 1]
+  const b = atStart ? points[1] : points[points.length - 2]
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
+  const dir = { x: (b.x - a.x) / len, y: (b.y - a.y) / len }
+  // 16px in from the endpoint (past the marker), 9px perpendicular off the line.
+  const px = a.x + dir.x * 16 - dir.y * 9
+  const py = a.y + dir.y * 16 + dir.x * 9
+  const t = document.createElementNS(SVGNS, 'text')
+  t.classList.add('beck-edge-label')
+  t.textContent = text
+  t.setAttribute('x', String(Math.round(px)))
+  t.setAttribute('y', String(Math.round(py)))
+  t.setAttribute('text-anchor', 'middle')
+  t.setAttribute('dominant-baseline', 'central')
+  svg.appendChild(t)
+}
+
 /** Route + draw every edge in the model. Returns the visible paths for animation. */
 export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: LayoutResult): RoutedEdge[] {
   const radius = model.meta.spacing.cornerRadius
@@ -265,6 +334,12 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
   const labelBounds = { width: layout.width, height: layout.height }
   const placedLabels: Rect[] = []
 
+  // A ⇄ B pairs (edges in both directions) get opposite perpendicular anchor
+  // shifts so the two lines run side by side instead of on top of each other.
+  const dirs = new Set(model.edges.map((e) => `${e.from} ${e.to}`))
+  const pairOffsetOf = (e: EdgeModel): number =>
+    e.from !== e.to && dirs.has(`${e.to} ${e.from}`) ? (e.from < e.to ? -6 : 6) : 0
+
   const out: RoutedEdge[] = []
   for (const edge of model.edges) {
     const from = rectOf(edge.from)
@@ -282,9 +357,12 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
       radius,
       primaryHorizontal,
       bounds: { width: layout.width, height: layout.height },
+      pairOffset: pairOffsetOf(edge),
     })
     const path = drawEdge(svg, d, edge)
     if (edge.label) drawLabel(svg, points, edge.label, labelObstacles, labelBounds, placedLabels)
+    if (edge.fromLabel) drawEndLabel(svg, points, edge.fromLabel, true)
+    if (edge.toLabel) drawEndLabel(svg, points, edge.toLabel, false)
     out.push({ edge, path })
   }
   return out

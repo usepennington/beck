@@ -1,0 +1,9 @@
+type: sequence
+participants:
+  - { id: api, title: Orders API }
+  - { id: bus, title: Events, kind: queue }
+  - { id: mail, title: Mailer, icon: mail }
+messages:
+  - { from: api, to: bus, label: OrderPlaced, kind: async }
+  - { from: bus, to: mail, label: deliver, kind: async }
+  - { from: mail, to: mail, label: render template }

@@ -3,10 +3,20 @@ import { renderDiagram, type DiagramHandle } from '../src'
 import simple from './samples/simple.yaml?raw'
 import grouped from './samples/grouped.yaml?raw'
 import flow from './samples/flow.yaml?raw'
+import sequence from './samples/sequence.yaml?raw'
+import state from './samples/state.yaml?raw'
+import classes from './samples/class.yaml?raw'
 
 type ThemeMode = 'light' | 'dark'
 
-const samples: Record<string, string> = { Simple: simple, Grouped: grouped, Flow: flow }
+const samples: Record<string, string> = {
+  Simple: simple,
+  Grouped: grouped,
+  Flow: flow,
+  Sequence: sequence,
+  State: state,
+  Class: classes,
+}
 
 let theme: ThemeMode = 'light'
 let handle: DiagramHandle | null = null

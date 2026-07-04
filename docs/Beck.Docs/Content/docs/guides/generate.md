@@ -1,7 +1,7 @@
 ---
 title: Generate diagrams from your code
 description: Build diagrams with the C# DiagramBuilder so they regenerate from your real model.
-order: 28
+order: 31
 sectionLabel: How-to guides
 uid: docs.guide.generate
 ---
@@ -75,6 +75,36 @@ wwwroot/examples/guides/generate-01.beck.yaml
 
 <beck-diagram src="/examples/guides/generate-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
 
+## The other diagram types
+
+Every diagram type has a builder. `SequenceDiagramBuilder` scripts an interaction
+(`Participant` / `Message` / `Reply` / `Section`), `StateDiagramBuilder` a machine
+(`State` / `Transition` / `Initial` / `Final`), and `ClassDiagramBuilder` a UML model:
+
+```csharp
+string fence = new SequenceDiagramBuilder("Checkout")
+    .Participant("web", "Web App", NodeKind.User)
+    .Participant("api", "Orders API")
+    .Message("web", "api", "POST /orders")
+    .Reply("api", "web", "201 Created")
+    .ToFence();
+```
+
+The class builder has the strongest generation story of all: **`ClassDiagramBuilder.FromTypes`**
+reflects real CLR types into cards and infers the relations among them — base types become
+`inherits`, interfaces `implements`, property types labelled associations (collections get a `*`
+multiplicity), enums «enum» cards. A domain-model diagram that literally cannot drift:
+
+```csharp
+string fence = ClassDiagramBuilder
+    .FromTypes(typeof(Entity), typeof(Order), typeof(OrderLine), typeof(Customer), typeof(OrderStatus))
+    .Title("Order Model")
+    .ToFence();
+```
+
+Only the types you pass are drawn — references to anything outside the set are ignored, so the
+diagram stays scoped on purpose. See [Draw a class diagram](/docs/guides/class) for the output.
+
 ## Regenerate in CI
 
 To keep the committed diagram honest, regenerate it on every build and fail when it drifts. Put the generation in a small console target (or a test) that writes the file, then guard with `git diff --exit-code` — a non-empty diff means someone changed the model without committing the new diagram.
@@ -90,7 +120,7 @@ git diff --exit-code wwwroot/diagrams/generated.beck.yaml
 If you'd rather assert inside the test suite, write the file in a test and run `dotnet test`, then keep the same `git diff --exit-code` guard as the final CI step. The contributor's fix is the same in both cases: rerun the generator and commit the regenerated YAML.
 
 > [!TIP]
-> `Beck.Sample` is a runnable end-to-end example of generating a diagram from code. Run `dotnet run --project dotnet/Beck.Sample -c Release` to print one to stdout and see the full builder in use.
+> `Beck.Sample` is a runnable end-to-end example of generating diagrams from code. Run `dotnet run --project dotnet/Beck.Sample -c Release` to print one to stdout — pass `sequence`, `state`, `class`, or `reflection` to see the other builders in use.
 
 ## Next steps
 

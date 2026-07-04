@@ -56,7 +56,14 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   const pathOf = (
     from: string,
     to: string,
+    edgeId?: string,
   ): { path: SVGPathElement; reversed: boolean; kind: EdgeKind } | null => {
+    // An explicit edge id wins — sequence flows use it because many messages
+    // share the same from/to pair and "first match" would ride the wrong row.
+    if (edgeId) {
+      const hit = ctx.edges.find((e) => e.edge.id === edgeId)
+      if (hit) return { path: hit.path, reversed: false, kind: hit.edge.kind }
+    }
     const direct = ctx.edges.find((e) => e.edge.from === from && e.edge.to === to)
     if (direct) return { path: direct.path, reversed: false, kind: direct.edge.kind }
     const rev = ctx.edges.find((e) => e.edge.from === to && e.edge.to === from)
@@ -89,11 +96,12 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
     color: string,
     label: string | undefined,
     startAt: number | undefined,
+    edgeId?: string,
   ): number | undefined => {
     let at = startAt
     for (let i = 0; i < chain.length - 1; i++) {
       const nextId = chain[i + 1]
-      const found = pathOf(chain[i], nextId)
+      const found = pathOf(chain[i], nextId, chain.length === 2 ? edgeId : undefined)
       if (!found) continue
       const target = nodeEl(nextId) ?? undefined
       const hopLabel = i === chain.length - 2 ? label : undefined
@@ -109,7 +117,7 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   }
 
   const execPacket = (step: Extract<FlowStep, { type: 'packet' }>, position?: number) => {
-    emitDot([step.from, ...(step.via ?? []), step.to], step, resolve(step.color), step.label, position)
+    emitDot([step.from, ...(step.via ?? []), step.to], step, resolve(step.color), step.label, position, step.edge)
   }
 
   // A burst fans `count` dots down each target edge, staggered. Every dot is

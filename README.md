@@ -1,9 +1,12 @@
 # Beck
 
-Declarative, animated architecture diagrams from YAML — "Mermaid, but sexy."
+Declarative, animated diagrams from YAML — "Mermaid, but sexy."
 
 Write a diagram as structured YAML and Beck auto-lays it out, auto-routes the edges, themes it
-from your site's CSS variables, and animates packets flowing through it. The engine ships as a
+from your site's CSS variables, and animates packets flowing through it. Four diagram types share
+one document format and one engine — **architecture** (layered boxes and lines), **sequence**
+(lifelines and messages that play the conversation), **state** (a machine that walks its own
+transitions), and **class** (UML cards, generatable from real C# types). The engine ships as a
 prebuilt bundle with **no build step for authors** and loads GSAP from a CDN at runtime, so nothing
 animation-related is bundled.
 
@@ -16,7 +19,11 @@ BECK_FORMAT=esm npm run build:lib   # optional ESM build to dist-lib/beck.js
 
 ## A diagram in YAML
 
+Every document opens with a root `type:` — `architecture`, `sequence`, `state`, or `class`.
+(An untyped document still renders as an architecture diagram, with a deprecation warning.)
+
 ```yaml
+type: architecture
 meta:
   title: Web Platform
   direction: TB        # TB (default) | BT | LR | RL
@@ -35,6 +42,14 @@ edges:
 
 Only node `id`s are required. With no `flow:` block, a packet animation is auto-derived from the
 edges. Validation errors are reported with friendly messages (and a line number for YAML syntax).
+
+The other types swap the middle keys for their own vocabulary:
+
+```yaml
+type: sequence                 # participants: + messages: (reply/section/activation bars)
+type: state                    # states: + transitions: ("[*]" = entry/exit pseudo-state)
+type: class                    # classes: + relations: (inherits/implements/composition/…)
+```
 
 ### Schema reference
 
@@ -59,6 +74,15 @@ edges. Validation errors are reported with friendly messages (and a line number 
   `idle`/`reset`), `idle` (`{node}`), `fail` (`{node, text?, color?}` — red shake + flash),
   `phase` (label, for seeking), `wait` (seconds), `parallel` (`[steps…]`), `reset`. Set
   `meta.loop: false` to play the flow once instead of looping.
+- **`type: sequence`** — `participants[]` (same fields as nodes) and `messages[]` (`from`, `to`,
+  `label`, `reply`, `kind`, `style`, `color`, `activate`; `- section: <label>` inserts a band).
+  Request/reply pairs grow activation bars; the derived flow plays the messages in order.
+- **`type: state`** — optional `states[]` (`id`, `title`, `subtitle`, `accent`, …) and
+  `transitions[]` (`from`, `to`, `label`, `style`, `color`); `"[*]"` is the entry/exit
+  pseudo-state and undeclared ids auto-create pill states.
+- **`type: class`** — `classes[]` (`id`, `name`, `stereotype`, `fields[]`, `methods[]`, `accent`,
+  …) and `relations[]` (`from`, `to`, `kind` = `inherits` `implements` `association` `aggregation`
+  `composition` `dependency`, `label`, `fromCard`/`toCard`), plus `groups[]` as namespaces.
 
 ## Usage
 
@@ -77,6 +101,7 @@ inline YAML, a child `<script type="application/yaml">`, or a `src` URL:
 <script src="/path/to/beck.global.js" defer></script>
 <beck-diagram mode="auto">
   <script type="application/yaml">
+    type: architecture
     meta: { title: Hello }
     nodes: [{ id: a, title: A }, { id: b, title: B }]
     edges: [{ from: a, to: b }]
@@ -103,13 +128,18 @@ the variables. There is no per-theme JavaScript and no hardcoded colors in the r
 ## How it works
 
 ```
-YAML → parse → validate(+defaults) → model
+YAML → parse → validate(+defaults, per diagram type) → model
      → measure (render cards off-flow, read sizes)
-     → layout (Sugiyama-lite: rank → order → coords; groups = recursive compound sub-layout)
-     → route  (auto orthogonal step-round edges with obstacle avoidance)
+     → layout (per type: Sugiyama-lite layered engine, or the fixed sequence grid)
+     → route  (orthogonal step-round edges with obstacle avoidance / sequence rows)
      → render (position DOM, group boxes, SVG overlay)
      → animate (compile flow → GSAP timeline; play on scroll-into-view)
 ```
+
+State and class diagrams compile onto the same layered engine (pills, pseudo-states, and
+compartment cards are node shapes; UML markers are edge decorations). Sequence diagrams get their
+own fixed-grid layout and router, but every message is still one continuous SVG path, so the
+shared packet animation rides it unchanged.
 
 `prefers-reduced-motion` (or `animate: false`) renders the static frame and never loads GSAP.
 
@@ -121,8 +151,10 @@ package and no CDN to configure. The package contains both halves:
 - **The client**, as a static web asset served at `_content/Beck/beck.global.js`. It auto-registers
   `<beck-diagram>` and **hydrates fenced `` ```beck `` code blocks** (the Mermaid-style integration),
   so in a Pennington (or any ASP.NET Core) site you just include the script once and write fences.
-- **`Beck.Authoring`**, a dependency-free C# API (`DiagramBuilder`) for emitting Beck YAML from code,
-  so any program can turn its own model into a diagram.
+- **`Beck.Authoring`**, a dependency-free C# API for emitting Beck YAML from code — one builder per
+  diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
+  `ClassDiagramBuilder`), including `ClassDiagramBuilder.FromTypes(...)`, which reflects real CLR
+  types into an always-current class diagram.
 
 The TypeScript engine is built with `npm run build:lib`, which writes the committed
 `dotnet/Beck/wwwroot/beck.global.js`. That committed asset is what the package ships, so

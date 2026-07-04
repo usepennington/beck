@@ -1,3 +1,4 @@
+type: architecture
 meta: { title: Custom icon, direction: LR, animate: false }
 nodes:
   - { id: svc, title: Service, kind: service }

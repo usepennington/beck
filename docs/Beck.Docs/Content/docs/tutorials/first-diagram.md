@@ -15,9 +15,11 @@ along; after each step, the diagram below shows what you should see.
 
 ## Step 1 — Add a node
 
-A diagram starts with `nodes`. Each node needs an `id`. Type this:
+A document starts by declaring what it is — `type: architecture` — followed by `nodes`. Each node
+needs an `id`. Type this:
 
 ```yaml
+type: architecture
 nodes:
   - { id: web, title: Web App }
 ```
@@ -25,6 +27,7 @@ nodes:
 You should see a single box labelled **Web App**:
 
 ```beck
+type: architecture
 nodes:
   - { id: web, title: Web App }
 ```
@@ -36,6 +39,7 @@ The `title` is what's drawn; the `id` is the short name we'll use to refer to th
 Now add two more nodes, then an `edges` list to connect them. An edge is a `from`/`to` pair of ids:
 
 ```yaml
+type: architecture
 nodes:
   - { id: web, title: Web App }
   - { id: api, title: API }
@@ -48,6 +52,7 @@ edges:
 Beck routes the lines and places the arrowheads for you:
 
 ```beck
+type: architecture
 meta: { animate: false }
 nodes:
   - { id: web, title: Web App }
@@ -78,6 +83,7 @@ edges:
 Notice the icons and the colours — you didn't set any of them by hand:
 
 ```beck
+type: architecture
 meta: { animate: false }
 nodes:
   - { id: web, title: Web App, kind: user }
@@ -103,6 +109,7 @@ groups:
 The box is drawn around its members automatically:
 
 ```beck
+type: architecture
 meta: { animate: false }
 nodes:
   - { id: web, title: Web App, kind: user }
@@ -132,6 +139,7 @@ That's the whole diagram. Drop the `animate: false` we've been using and Beck an
 a packet traces each edge in order, then the diagram resets and loops:
 
 ```beck
+type: architecture
 meta:
   title: My first system
   direction: LR

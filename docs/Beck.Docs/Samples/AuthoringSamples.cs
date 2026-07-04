@@ -38,6 +38,52 @@ public static class AuthoringSamples
             .Edge("api", "db", e => e.Label("query"))
             .ToFence();
 
+    /// <summary>A request/reply interaction — the sequence-diagram builder.</summary>
+    public static string CheckoutSequence() =>
+        new SequenceDiagramBuilder("Checkout")
+            .Participant("web", "Web App", NodeKind.User)
+            .Participant("api", "Orders API")
+            .Participant("db", p => p.Title("Postgres").Kind(NodeKind.Db))
+            .Message("web", "api", "POST /orders")
+            .Message("api", "api", "validate cart")
+            .Message("api", "db", "INSERT order")
+            .Reply("db", "api", "ok")
+            .Reply("api", "web", "201 Created")
+            .ToFence();
+
+    /// <summary>A publish lifecycle — the state-diagram builder.</summary>
+    public static string PublishLifecycle() =>
+        new StateDiagramBuilder("Publish Lifecycle")
+            .Direction(Direction.LR)
+            .State("review", "In Review", AccentToken.Warn)
+            .State("published", "Published", AccentToken.Success)
+            .Initial("draft")
+            .Transition("draft", "review", "submit")
+            .Transition("review", "draft", "reject")
+            .Transition("review", "published", "approve")
+            .Final("published")
+            .ToFence();
+
+    /// <summary>A hand-built domain model — the class-diagram builder.</summary>
+    public static string OrderModel() =>
+        new ClassDiagramBuilder("Order Model")
+            .Class("entity", c => c.Name("Entity").Stereotype("abstract").Accent(AccentToken.Neutral)
+                .Fields("Id: Guid", "CreatedAt: DateTimeOffset"))
+            .Class("order", c => c.Name("Order").Stereotype("aggregate")
+                .Fields("Status: OrderStatus", "Total: Money")
+                .Methods("AddLine(sku, qty)", "Submit()"))
+            .Class("line", c => c.Name("OrderLine").Fields("Sku: string", "Qty: int"))
+            .Inherits("order", "entity")
+            .Composition("order", "line", fromCard: "1", toCard: "*")
+            .ToFence();
+
+    /// <summary>An always-current domain model, reflected from real CLR types.</summary>
+    public static string ReflectedModel() =>
+        ClassDiagramBuilder
+            .FromTypes(typeof(DiagramBuilder), typeof(SequenceDiagramBuilder), typeof(StateDiagramBuilder), typeof(ClassDiagramBuilder))
+            .Title("Beck.Authoring builders")
+            .ToFence();
+
     /// <summary>A cache-aside read path with a scripted animation flow.</summary>
     public static string ReadPath() =>
         new DiagramBuilder("Read Path")

@@ -1,7 +1,7 @@
 ---
 title: Match your theme and colours
 description: How diagrams adopt your palette, choosing a theme mode, and overriding tokens.
-order: 26
+order: 29
 sectionLabel: How-to guides
 uid: docs.guide.theme
 ---

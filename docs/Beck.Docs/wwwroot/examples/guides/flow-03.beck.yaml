@@ -1,3 +1,4 @@
+type: architecture
 meta: { title: Shaped packet, direction: LR }
 nodes:
   - { id: ingest, title: Ingest, kind: gateway }

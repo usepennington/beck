@@ -1,3 +1,4 @@
+type: architecture
 meta: { title: Read path, direction: LR }
 nodes:
   - { id: client, title: Client, kind: user }

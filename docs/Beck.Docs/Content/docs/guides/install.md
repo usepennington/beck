@@ -45,6 +45,7 @@ you write:
 
 ````markdown
 ```beck
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: web, title: Web App, kind: user }
@@ -59,6 +60,7 @@ edges:
 And here it is rendered live:
 
 ```beck
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: web, title: Web App, kind: user }

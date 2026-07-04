@@ -1,0 +1,7 @@
+type: state
+meta: { direction: LR }
+transitions:
+  - { from: "[*]", to: draft }
+  - { from: draft, to: review, label: submit }
+  - { from: review, to: published, label: approve }
+  - { from: published, to: "[*]" }

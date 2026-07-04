@@ -1,3 +1,4 @@
+type: architecture
 meta: { title: CI run, direction: LR }
 nodes:
   - { id: build, title: Build, icon: code }

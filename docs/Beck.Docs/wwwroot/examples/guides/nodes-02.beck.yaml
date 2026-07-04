@@ -1,3 +1,4 @@
+type: architecture
 meta: { direction: LR }
 nodes:
   - { id: edge, title: Edge, kind: gateway, icon: cdn }
