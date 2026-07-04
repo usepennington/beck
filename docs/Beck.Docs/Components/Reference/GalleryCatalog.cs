@@ -24,6 +24,7 @@ internal static class GalleryCatalog
         "edge-curves" => Items<EdgeCurve>(EdgeCurveYaml),
         "edge-styles" => Items<EdgeStyle>(EdgeStyleYaml),
         "arrowheads" => Items<ArrowEnds>(ArrowYaml),
+        "relation-kinds" => Items<RelationKind>(RelationKindYaml),
         "directions" => Items<Direction>(DirectionYaml),
         "packet-shapes" => Items<PacketShape>(PacketShapeYaml),
         "eases" => Items<PacketEase>(EaseYaml),
@@ -78,6 +79,26 @@ internal static class GalleryCatalog
         "meta: { animate: false, direction: LR }\n" +
         "nodes: [ { id: a, title: A }, { id: b, title: B } ]\n" +
         $"edges: [ {{ from: a, to: b, arrow: {token} }} ]";
+
+    // Class-diagram documents must carry their `type:` (the other templates rely on the
+    // architecture default). Each kind gets endpoint names that read the way the relation is
+    // written — Order inherits Entity, Order is composed of OrderLines.
+    private static string RelationKindYaml(string token, string name)
+    {
+        var (from, to) = token switch
+        {
+            "inherits" => ("{ id: a, name: Order }", "{ id: b, name: Entity }"),
+            "implements" => ("{ id: a, name: Order }", "{ id: b, name: IAuditable, stereotype: interface }"),
+            "association" => ("{ id: a, name: Order }", "{ id: b, name: Customer }"),
+            "aggregation" => ("{ id: a, name: Team }", "{ id: b, name: Player }"),
+            "composition" => ("{ id: a, name: Order }", "{ id: b, name: OrderLine }"),
+            "dependency" => ("{ id: a, name: Order }", "{ id: b, name: INotifier, stereotype: interface }"),
+            _ => ("{ id: a, name: A }", "{ id: b, name: B }"),
+        };
+        return "type: class\nmeta: { animate: false }\n" +
+               $"classes: [ {from}, {to} ]\n" +
+               $"relations: [ {{ from: a, to: b, kind: {token} }} ]";
+    }
 
     private static string DirectionYaml(string token, string name) =>
         $"meta: {{ animate: false, direction: {token} }}\n" +

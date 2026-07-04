@@ -1,0 +1,31 @@
+type: class
+meta:
+  title: Payment Gateways
+classes:
+  - id: processor
+    name: PaymentProcessor
+    fields: ["Gateways: IReadOnlyList<IGateway>"]
+    methods: ["Charge(order)", "Refund(payment)"]
+  - id: gateway
+    name: IGateway
+    stereotype: interface
+    accent: info
+    methods: ["Authorize(amount)", "Capture(auth)"]
+  - id: stripe
+    name: StripeGateway
+    fields: ["ApiKey: string"]
+  - id: adyen
+    name: AdyenGateway
+    fields: ["MerchantId: string"]
+  - id: result
+    name: PaymentResult
+    stereotype: enum
+    accent: neutral
+    fields: [Authorized, Captured, Declined]
+groups:
+  - { id: gateways, label: Gateways, members: [stripe, adyen], accent: primary }
+relations:
+  - { from: processor, to: gateway, kind: aggregation, label: routes to, fromCard: "1", toCard: "*" }
+  - { from: stripe, to: gateway, kind: implements }
+  - { from: adyen, to: gateway, kind: implements }
+  - { from: processor, to: result, kind: dependency, label: returns }

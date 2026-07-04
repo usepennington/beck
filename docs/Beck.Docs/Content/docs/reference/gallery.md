@@ -1,6 +1,6 @@
 ---
 title: Visual reference
-description: Every node kind, edge kind, accent, curve, and direction — pulled from the source and shown live.
+description: Every node kind, edge kind, accent, curve, relation kind, and direction — pulled from the source and shown live.
 order: 42
 sectionLabel: Reference
 uid: docs.reference.gallery
@@ -57,6 +57,14 @@ motion — size, speed, glow, and easing — reads at a glance.
 `arrow` chooses which ends of an edge carry an arrowhead.
 
 <BeckGallery Of="arrowheads" />
+
+## Class relation kinds
+
+`kind` on a `type: class` relation picks the UML line and end markers. Write each one the way you'd
+say it aloud — *Order inherits Entity*, *Order is composed of OrderLines* — and see [Draw a class
+diagram](/docs/guides/class) for the direction conventions.
+
+<BeckGallery Of="relation-kinds" />
 
 ## Layout directions
 

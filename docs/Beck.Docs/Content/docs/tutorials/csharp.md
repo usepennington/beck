@@ -156,6 +156,9 @@ From here:
 
 - Walk your real model into a builder and keep diagrams in sync in CI with [Generate diagrams from
   your code](/docs/guides/generate).
+- Every diagram type has a builder: `SequenceDiagramBuilder` scripts an
+  [interaction](/docs/guides/sequence), `StateDiagramBuilder` a [machine](/docs/guides/state), and
+  `ClassDiagramBuilder` reflects your real types into a [UML model](/docs/guides/class).
 - Reach for the full builder surface in the [API reference](/api).
 - Script richer animations with [Animate the flow](/docs/guides/flow) and the [flow
   reference](/docs/reference/flow).
