@@ -43,8 +43,9 @@ on the diagram type:
   first time each node (or state) sends, a `packet` along every edge (or transition) in order, then
   a wait and a `reset`, looping forever.
 - **sequence** — the authored message order *is* the story: one `packet` per message, in order,
-  with each `- section:` band emitted as a seekable `phase`. Reply packets land green with a
-  decelerating ease, so request/response pairs read at a glance.
+  with each `- section:` band emitted as a seekable `phase`. Packets ride their message's colour
+  (replies with a decelerating ease), and the scenery starts dimmed — each row, bar, and band
+  lights up as the story reaches it, then everything fades back down before the loop.
 - **class** — a quiet structural cascade rather than a packet story: each inheritance level lights
   up in turn, top to bottom, with the relations into that level recolouring as it does.
 

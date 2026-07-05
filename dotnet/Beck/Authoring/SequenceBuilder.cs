@@ -93,10 +93,14 @@ public sealed class SequenceDiagramBuilder
     public SequenceDiagramBuilder Reply(string from, string to, string? label = null, Action<MessageBuilder>? configure = null)
         => Add(from, to, label, reply: true, configure);
 
-    /// <summary>Insert a labelled full-width section band before the next message.</summary>
-    public SequenceDiagramBuilder Section(string label)
+    /// <summary>Insert a labelled full-width section band before the next message.
+    /// The band runs until the next section (or the last message); the optional
+    /// <paramref name="accent"/> tints its border, fill, and label.</summary>
+    public SequenceDiagramBuilder Section(string label, AccentToken? accent = null)
     {
-        _messages.Add(YamlWriter.FlowMap(new[] { ("section", YamlWriter.Scalar(label)) }));
+        var pairs = new List<(string, string)> { ("section", YamlWriter.Scalar(label)) };
+        if (accent is { } a) pairs.Add(("accent", Tokens.Of(a)));
+        _messages.Add(YamlWriter.FlowMap(pairs));
         return this;
     }
 

@@ -26,6 +26,7 @@ export class Snapshot {
   private nodes: NodeSnapshot[] = []
   private svgs: SVGSVGElement[] = []
   private trailStates: TrailState[] = []
+  private opacities: Array<{ el: SVGElement | HTMLElement; opacity: string }> = []
 
   capturePills(container: HTMLElement): this {
     for (const el of container.querySelectorAll('.beck-status, .beck-status-inline')) {
@@ -68,6 +69,14 @@ export class Snapshot {
     return this
   }
 
+  /** Capture the CURRENT inline opacity of elements a choreography dims at
+   *  compile time (call after the dim is applied), so reset returns them to
+   *  their dimmed start rather than wherever a reveal tween left them. */
+  captureOpacity(els: Iterable<SVGElement | HTMLElement>): this {
+    for (const el of els) this.opacities.push({ el, opacity: el.style.opacity })
+    return this
+  }
+
   /** Immediately restore everything to its captured initial state. */
   restoreNow(): void {
     for (const s of this.pills) {
@@ -94,6 +103,7 @@ export class Snapshot {
         .querySelectorAll('circle[data-beck-packet], text[data-beck-packet]')
         .forEach((el) => el.setAttribute('opacity', '0'))
     }
+    for (const s of this.opacities) s.el.style.opacity = s.opacity
     for (const state of this.trailStates) {
       for (const o of state.overlays) o.style.strokeDashoffset = o.style.strokeDasharray
       // Hide (don't remove) streams so the same overlay replays on the next loop.

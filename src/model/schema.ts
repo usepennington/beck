@@ -202,6 +202,8 @@ export interface FlowModel {
 export interface SectionMark {
   label: string
   at: number
+  /** Band tint + label color (already a CSS value; defaults to the neutral accent). */
+  accent: string
 }
 
 export interface DiagramModel {

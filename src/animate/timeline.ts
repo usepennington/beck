@@ -7,6 +7,7 @@ import { resolveColor } from '../util/color'
 import { createTrailState, packetWithTrail, streamEdge } from './trail'
 import { statusPill } from './status'
 import { highlight, pulse, working, clearWorking, fail, colorLine } from './effects'
+import { setupSequenceChoreo } from './sequence'
 import { Snapshot, createSnapshot } from './snapshot'
 
 export interface FlowContext {
@@ -46,7 +47,11 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   const flow = ctx.model.flow
   const tl = g.timeline({ paused: true, repeat: flow.repeat, repeatDelay: flow.repeatDelay })
   const trail = createTrailState()
+  // The choreography dims the sequence scenery NOW, so the snapshot below
+  // captures the dimmed state as the reset frame (clean loop restarts).
+  const choreo = setupSequenceChoreo(ctx.svg, ctx.model)
   const snapshot = createSnapshot().captureAll(ctx.canvas).trackSvg(ctx.svg).trackTrails(trail)
+  if (choreo) snapshot.captureOpacity(choreo.dimmed)
 
   const resolve = (c?: string) => resolveColor(ctx.root, c ?? 'var(--beck-packet)')
   const nodeEl = (id: string) => ctx.nodes.get(id) ?? null
@@ -117,7 +122,9 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   }
 
   const execPacket = (step: Extract<FlowStep, { type: 'packet' }>, position?: number) => {
-    emitDot([step.from, ...(step.via ?? []), step.to], step, resolve(step.color), step.label, position, step.edge)
+    const at = position ?? tl.duration()
+    const arrival = emitDot([step.from, ...(step.via ?? []), step.to], step, resolve(step.color), step.label, at, step.edge)
+    if (choreo && step.edge) choreo.onPacket(step.edge, tl, at, arrival ?? at)
   }
 
   // A burst fans `count` dots down each target edge, staggered. Every dot is
@@ -192,9 +199,12 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
         }
         break
       }
-      case 'phase':
-        tl.addLabel(step.label, position ?? tl.duration())
+      case 'phase': {
+        const at = position ?? tl.duration()
+        tl.addLabel(step.label, at)
+        choreo?.onPhase(tl, at)
         break
+      }
       case 'wait':
         tl.to({}, { duration: step.seconds }, position)
         break
@@ -210,6 +220,10 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   }
 
   for (const step of flow.steps) execStep(step)
+
+  // A looping derived sequence flow ends with wait + reset; fade the story back
+  // down inside that wait so the restart doesn't pop.
+  if (choreo && flow.steps[flow.steps.length - 1]?.type === 'reset') choreo.finale(tl)
 
   // Guarantee a clean loop restart when looping and not already reset last.
   if (flow.repeat !== 0 && flow.steps[flow.steps.length - 1]?.type !== 'reset') {

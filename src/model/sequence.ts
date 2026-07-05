@@ -29,12 +29,17 @@ export function buildSequenceModel(root: Record<string, unknown>): DiagramModel 
     nodes.push(n)
   }
 
+  const accentOf = new Map(nodes.map((n) => [n.id, n.accent]))
   const edges: EdgeModel[] = []
   const sections: SectionMark[] = []
   for (const rm of asArray(root.messages, 'messages')) {
     const m = asObject(rm, 'message')
     if ('section' in m) {
-      sections.push({ label: asString(m.section, 'message section'), at: edges.length })
+      sections.push({
+        label: asString(m.section, 'message section'),
+        at: edges.length,
+        accent: optColor(m.accent) ?? 'var(--beck-neutral)',
+      })
       continue
     }
     const from = asString(m.from, 'message.from')
@@ -45,6 +50,9 @@ export function buildSequenceModel(root: Record<string, unknown>): DiagramModel 
     const kind = oneOf(m.kind, MESSAGE_KINDS, 'message.kind', reply ? 'control' : 'data')
     // Replies and async sends read as "lighter": dashed line, open arrowhead.
     const dashed = reply || kind === 'async'
+    // A message is tinted by the participant doing the work — the receiver of a
+    // call, the sender of a reply — so each request/reply pair shares one hue.
+    const worker = reply ? from : to
     edges.push({
       id: `msg${edges.length}`,
       from,
@@ -53,7 +61,7 @@ export function buildSequenceModel(root: Record<string, unknown>): DiagramModel 
       style: oneOf(m.style, ['solid', 'dashed'] as const, 'message.style', dashed ? 'dashed' : 'solid'),
       curve: 'straight',
       kind,
-      color: optColor(m.color) ?? EDGE_KIND_DEFAULTS[kind].color,
+      color: optColor(m.color) ?? accentOf.get(worker) ?? EDGE_KIND_DEFAULTS[kind].color,
       arrow: 'end',
       markerEnd: dashed ? 'arrow-open' : 'arrow',
       reply,
@@ -65,7 +73,7 @@ export function buildSequenceModel(root: Record<string, unknown>): DiagramModel 
   const flow =
     root.flow != null
       ? buildFlow(asObject(root.flow, 'flow'), ids, new Set())
-      : deriveSequenceFlow(edges, sections)
+      : deriveSequenceFlow(edges, sections, meta.loop)
   if (!meta.loop) flow.repeat = 0
 
   return { meta, nodes, groups: [], edges, flow, sections }
@@ -73,10 +81,11 @@ export function buildSequenceModel(root: Record<string, unknown>): DiagramModel 
 
 /**
  * The authored message order IS the story: one packet per message, in order,
- * with section labels as phases. Replies land green so request/response pairs
- * read at a glance.
+ * with section labels as phases. Packets ride their message's color so each
+ * request/reply pair reads as one exchange. A non-looping flow skips the
+ * trailing reset — it should end on the fully-revealed frame, not snap back.
  */
-function deriveSequenceFlow(edges: EdgeModel[], sections: SectionMark[]): FlowModel {
+function deriveSequenceFlow(edges: EdgeModel[], sections: SectionMark[], loop: boolean): FlowModel {
   const steps: FlowStep[] = []
   edges.forEach((e, i) => {
     for (const s of sections) if (s.at === i) steps.push({ type: 'phase', label: s.label })
@@ -85,11 +94,15 @@ function deriveSequenceFlow(edges: EdgeModel[], sections: SectionMark[]): FlowMo
       from: e.from,
       to: e.to,
       edge: e.id,
-      color: e.reply ? 'var(--beck-success)' : undefined,
+      color: e.color,
       ease: e.reply ? 'decelerate' : undefined,
     })
   })
-  steps.push({ type: 'wait', seconds: 1.2 })
-  steps.push({ type: 'reset' })
+  // Trailing sections (after the last message) still get their phase beat.
+  for (const s of sections) if (s.at >= edges.length) steps.push({ type: 'phase', label: s.label })
+  if (loop) {
+    steps.push({ type: 'wait', seconds: 1.2 })
+    steps.push({ type: 'reset' })
+  }
   return { repeat: -1, repeatDelay: 2, steps, derived: true }
 }

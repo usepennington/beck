@@ -3,25 +3,34 @@ import type { LayoutResult, Rect, SizeMap } from './types'
 
 const FALLBACK = { w: 160, h: 56 }
 const CANVAS_PAD = 16
-/** Gap between the participant cards and the first message row. */
-const HEAD_GAP = 44
-/** Vertical pitch per message row (label rides in the top half of the row). */
-const ROW = 40
-/** Extra height a self-message loop needs. */
-const SELF_EXTRA = 16
-/** Height of a `- section:` band row. */
-const SECTION_ROW = 36
-/** Lifeline tail below the last row. */
-const TAIL = 30
+/** Extra air between the participant cards and the first message row (the row's
+ *  own LABEL_ROOM is added on top of this). */
+const HEAD_GAP = 20
+/** Headroom above each message line for its pill label. */
+const LABEL_ROOM = 40
+/** How far a message row's ink (line + arrowhead) extends below its y. */
+const ROW_TAIL = 4
+/** Extra height a self-message loop needs (the loop's drop below its row.y). */
+export const SELF_H = 22
+/** Band top border → the band's first message row. */
+const BAND_TOP_PAD = 6
+/** Last row's ink → the band's bottom border. */
+const BAND_BOTTOM_PAD = 16
+/** Air between a band border and whatever precedes/follows it. */
+const BAND_GAP = 20
+/** Bands span the canvas minus this inset per side. */
+const BAND_INSET = 20
+/** Lifeline tail below the last row (the fade-out runs through it). */
+const TAIL = 40
 /** Half-width of an activation bar; nested bars step out by LEVEL_STEP. */
-export const BAR_HALF = 4
-export const LEVEL_STEP = 3
+export const BAR_HALF = 5
+export const LEVEL_STEP = 4
 /** How far a self-message loops out from the lifeline. */
-export const SELF_LOOP = 30
+export const SELF_LOOP = 32
 
-/** Estimated rendered width of a message label (labels aren't measured — the
- *  SVG doesn't exist yet at layout time). Slightly generous on purpose. */
-const labelEst = (label?: string) => (label ? label.length * 6.4 + 28 : 0)
+/** Estimated rendered width of a message label pill (labels aren't measured —
+ *  the SVG doesn't exist yet at layout time). Slightly generous on purpose. */
+const labelEst = (label?: string) => (label ? label.length * 6.8 + 40 : 0)
 
 export interface MessageRow {
   /** Index into model.edges (message order). */
@@ -31,9 +40,14 @@ export interface MessageRow {
   self: boolean
 }
 
-export interface SectionRow {
+export interface SectionBand {
   label: string
+  /** CSS color value tinting the band + its label pill. */
+  accent: string
+  x: number
   y: number
+  w: number
+  h: number
 }
 
 export interface ActivationBar {
@@ -43,13 +57,16 @@ export interface ActivationBar {
   y1: number
   y2: number
   accent: string
+  /** Edge ids of the messages that open/close this bar (for the choreography). */
+  startEdge: string
+  endEdge: string
 }
 
 export interface SequenceLayout extends LayoutResult {
   /** participant id → lifeline x (the column center). */
   centers: Map<string, number>
   rows: MessageRow[]
-  sectionRows: SectionRow[]
+  bands: SectionBand[]
   activations: ActivationBar[]
   /** Lifelines run from each card's bottom to this y. */
   lifelineBottom: number
@@ -60,7 +77,8 @@ export interface SequenceLayout extends LayoutResult {
  * messages are rows (in authored order). No ranking or crossing minimization —
  * the author's order IS the layout. Column pitch stretches to fit the widest
  * label between adjacent lifelines; activation bars come from request/reply
- * pairing (see `computeActivations`).
+ * pairing (see `computeActivations`); `- section:` marks open a band that runs
+ * until the next mark (or the last message).
  */
 export function sequenceLayout(model: DiagramModel, sizes: SizeMap): SequenceLayout {
   const parts = model.nodes
@@ -98,30 +116,42 @@ export function sequenceLayout(model: DiagramModel, sizes: SizeMap): SequenceLay
     centers.set(p.id, x)
   })
 
-  // ---- rows (messages + section bands, in authored order) ----
+  // ---- rows + bands (messages and section marks, in authored order) ----
   const maxCardH = Math.max(...parts.map((p) => size(p.id).h), FALLBACK.h)
   const rows: MessageRow[] = []
-  const sectionRows: SectionRow[] = []
-  let cursor = CANVAS_PAD + maxCardH + HEAD_GAP
+  const bands: SectionBand[] = []
+  // `bottom` tracks the lowest ink so far; each row line sits LABEL_ROOM below it.
+  let bottom = CANVAS_PAD + maxCardH + HEAD_GAP
+  let open: { label: string; accent: string; top: number } | null = null
+  const closeBand = () => {
+    if (!open) return
+    bottom += BAND_BOTTOM_PAD
+    bands.push({ label: open.label, accent: open.accent, x: 0, y: open.top, w: 0, h: bottom - open.top })
+    open = null
+  }
   model.edges.forEach((e, i) => {
     for (const s of model.sections) {
       if (s.at === i) {
-        sectionRows.push({ label: s.label, y: cursor })
-        cursor += SECTION_ROW
+        closeBand()
+        open = { label: s.label, accent: s.accent, top: bottom + BAND_GAP }
+        bottom = open.top + BAND_TOP_PAD
       }
     }
     const self = e.from === e.to
-    rows.push({ index: i, y: cursor, self })
-    cursor += ROW + (self ? SELF_EXTRA : 0)
+    const y = bottom + LABEL_ROOM
+    rows.push({ index: i, y, self })
+    bottom = y + (self ? SELF_H : ROW_TAIL)
   })
-  // Trailing sections (at === edges.length) still render.
+  // Trailing sections (at === edges.length) still render as a slim empty band.
   for (const s of model.sections) {
     if (s.at >= model.edges.length) {
-      sectionRows.push({ label: s.label, y: cursor })
-      cursor += SECTION_ROW
+      closeBand()
+      open = { label: s.label, accent: s.accent, top: bottom + BAND_GAP }
+      bottom = open.top + LABEL_ROOM
     }
   }
-  const lifelineBottom = cursor - ROW / 2 + TAIL
+  closeBand()
+  const lifelineBottom = bottom + TAIL
 
   // ---- activations ----
   const accentOf = new Map(parts.map((p) => [p.id, p.accent]))
@@ -148,6 +178,12 @@ export function sequenceLayout(model: DiagramModel, sizes: SizeMap): SequenceLay
   width = Math.ceil(width + CANVAS_PAD)
   const height = Math.ceil(lifelineBottom + CANVAS_PAD)
 
+  // Bands span the canvas now that the width is known.
+  for (const b of bands) {
+    b.x = BAND_INSET
+    b.w = width - BAND_INSET * 2
+  }
+
   return {
     nodes,
     groups: new Map(),
@@ -155,7 +191,7 @@ export function sequenceLayout(model: DiagramModel, sizes: SizeMap): SequenceLay
     height,
     centers,
     rows,
-    sectionRows,
+    bands,
     activations,
     lifelineBottom,
   }
@@ -211,9 +247,11 @@ function computeActivations(
     bars.push({
       participant: b.participant,
       level: b.level,
-      y1: rowY(b.start) - 5,
-      y2: rowY(b.end) + 5,
+      y1: rowY(b.start) - 8,
+      y2: rowY(b.end) + 8,
       accent: accentOf.get(b.participant) ?? 'var(--beck-neutral)',
+      startEdge: edges[b.start].id,
+      endEdge: edges[b.end].id,
     })
   }
   return bars

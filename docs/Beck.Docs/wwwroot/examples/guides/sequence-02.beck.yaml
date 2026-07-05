@@ -6,7 +6,7 @@ participants:
 messages:
   - { from: web, to: api, label: POST /orders }
   - { from: api, to: api, label: validate cart }
-  - section: Payment
+  - { section: Payment, accent: info }
   - { from: api, to: pay, label: capture }
   - { from: pay, to: api, label: captured, reply: true }
   - { from: api, to: web, label: 201 Created, reply: true }

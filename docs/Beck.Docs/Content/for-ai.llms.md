@@ -160,9 +160,12 @@ Participants are columns (declared order); messages are rows (authored order). P
 node fields (`id`, `title`, `kind`, `icon`, `accent`, …). Message fields: `from`, `to` (required;
 equal ids = self-message loop), `label`, `reply` (bool — dashed return, closes the receiver's
 activation bar), `kind` (same four edge kinds; `async` = dashed + open arrow), `style`, `color`,
-`activate` (bool — force/suppress the receiver's activation bar). A list entry `- section: <label>`
-inserts a full-width band. Activation bars pair automatically: request in, `reply: true` back out.
-With no `flow:`, one packet rides each message in order — the message order IS the story.
+`activate` (bool — force/suppress the receiver's activation bar). Message `color` defaults to the
+accent of the participant doing the work (call receiver / reply sender), so request/reply pairs
+share a hue. A list entry `- section: <label>` (optional `accent`) opens a tinted band around every
+message until the next section. Activation bars pair automatically: request in, `reply: true` back
+out. With no `flow:`, one packet rides each message in order — the message order IS the story, and
+the diagram dims then reveals each row as its packet fires.
 
 ```beck
 type: sequence

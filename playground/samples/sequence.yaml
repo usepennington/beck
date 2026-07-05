@@ -7,13 +7,15 @@ participants:
   - { id: api, title: Orders API, icon: api }
   - { id: pay, title: Payments, icon: lock, accent: info }
   - { id: db, title: Postgres, kind: db }
+  - { id: bus, title: Events, kind: queue }
 messages:
   - { from: web, to: api, label: POST /orders }
   - { from: api, to: api, label: validate cart }
-  - section: Payment
+  - { section: Payment, accent: info }
   - { from: api, to: pay, label: capture }
   - { from: pay, to: api, label: captured, reply: true }
-  - section: Persist
+  - { section: Persist & publish, accent: primary }
   - { from: api, to: db, label: INSERT order }
   - { from: db, to: api, label: ok, reply: true }
+  - { from: api, to: bus, label: OrderPlaced, kind: async }
   - { from: api, to: web, label: 201 Created, reply: true }
