@@ -2,11 +2,14 @@
 title: Connect and route edges
 description: Labels, semantic kinds, line style, curves, arrowheads, colour, and pinned sides.
 order: 23
-sectionLabel: How-to guides
+sectionLabel: Architecture diagrams
 uid: docs.guide.edges
 ---
 
 This guide shows you how to connect nodes and control exactly how the lines between them look and route — their meaning, style, curve, arrowheads, colour, and where they attach.
+
+> [!NOTE]
+> This guide covers **architecture** edges. The other diagram types connect their boxes with their own constructs — [sequence messages](/docs/guides/sequence), [state transitions](/docs/guides/state), and [class relations](/docs/guides/class) — and edge kinds, curves, arrowheads, and pinned sides are architecture-only.
 
 ## Connect two nodes
 

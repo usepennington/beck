@@ -2,7 +2,7 @@
 title: Draw a state diagram
 description: States, transitions, the [*] entry and exit pseudo-states, and a machine that animates its own lifecycle.
 order: 27
-sectionLabel: How-to guides
+sectionLabel: Other diagram types
 uid: docs.guide.state
 ---
 

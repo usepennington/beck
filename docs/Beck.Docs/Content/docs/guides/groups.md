@@ -2,11 +2,14 @@
 title: Group related nodes
 description: Draw labelled boundaries, assign membership, and nest groups to any depth.
 order: 25
-sectionLabel: How-to guides
+sectionLabel: Architecture diagrams
 uid: docs.guide.groups
 ---
 
 This guide shows you how to draw labelled boundaries around related nodes — assigning membership, nesting groups to any depth, and routing edges to a whole box.
+
+> [!NOTE]
+> Groups apply to **architecture** and **[class](/docs/guides/class)** diagrams — in a class diagram the box reads as a namespace (see [Namespace boxes](#namespace-boxes-class-diagrams) below). Sequence and state diagrams don't use groups.
 
 ## Add a group
 
@@ -56,6 +59,25 @@ wwwroot/examples/guides/groups-04.beck.yaml
 
 > [!NOTE]
 > Membership is a tree: each node or group has at most one parent. A node cannot belong to two groups, a group cannot contain itself, and there are no cycles.
+
+## Namespace boxes (class diagrams)
+
+Groups work in a [class diagram](/docs/guides/class) too, where the box reads as a namespace or module around its classes. Membership is identical — list `members` on the group, or set `group:` on each class:
+
+```beck
+type: class
+meta: { animate: false }
+classes:
+  - { id: Order, name: Order, group: sales }
+  - { id: OrderLine, name: OrderLine, group: sales }
+  - { id: Customer, name: Customer, group: crm }
+groups:
+  - { id: sales, label: Sales }
+  - { id: crm, label: CRM }
+relations:
+  - { from: Order, to: OrderLine, kind: composition, fromCard: "1", toCard: "*" }
+  - { from: Order, to: Customer, kind: association }
+```
 
 For the full list of group fields, see the [YAML schema reference](/docs/reference/yaml).
 

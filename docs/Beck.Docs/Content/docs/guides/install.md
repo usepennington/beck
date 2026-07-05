@@ -2,7 +2,7 @@
 title: Add Beck to your site
 description: Install the package, include the engine, and wire your palette so diagrams match your site.
 order: 20
-sectionLabel: How-to guides
+sectionLabel: Setup
 uid: docs.guide.install
 ---
 

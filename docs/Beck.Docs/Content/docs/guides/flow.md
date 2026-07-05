@@ -2,17 +2,19 @@
 title: Animate the flow
 description: Script packets, bursts, status pills, and effects to tell a story with motion.
 order: 30
-sectionLabel: How-to guides
+sectionLabel: Cross-cutting
 uid: docs.guide.flow
 ---
 
 This guide shows you how to choreograph a diagram's animation — packets, bursts, status pills, and persistent effects — so the motion tells a story rather than just decorating the page.
 
-You already know how to declare nodes and edges. Here you learn to drive what moves along them and when. Each recipe below is a small live diagram; for the exhaustive list of steps and knobs, see the [flow & animation reference](/docs/reference/flow).
+Flow works the same across every diagram type. A `packet` rides a connector; a step like `status` or `fail` marks a box. Wherever a step below takes a `node`, that means any box — an architecture node, a state, a sequence participant, or a class card — and wherever a step takes a connector's `from`/`to`, that connector may be an edge, a message, a transition, or a relation. Only ids matter, so a state id or participant id works anywhere a node id does. The examples here happen to be architecture diagrams; the vocabulary carries over unchanged.
+
+Each recipe below is a small live diagram; for the exhaustive list of steps and knobs, see the [flow & animation reference](/docs/reference/flow).
 
 ## Let Beck derive a flow
 
-If you write no `flow` block at all, Beck animates anyway: a packet traverses each edge in topological order — roots to leaves — then waits, resets, and loops. Nodes and edges alone are enough to get motion.
+If you write no `flow` block at all, Beck animates anyway — and what it derives fits the diagram type: architecture and state diagrams get a topological packet-walk from roots to leaves; a sequence plays its messages in authored order; a class diagram lights each inheritance level in turn. Declaring the boxes and connectors is enough to get motion — see [derived flow](/docs/reference/flow#derived-flow) for the exact behaviour per type.
 
 ```yaml:symbol
 wwwroot/examples/guides/flow-01.beck.yaml
@@ -63,7 +65,7 @@ Each wave broadcasts a dot to every target in the list, so `count: 4` over three
 
 ## Mark nodes
 
-State changes carry as much story as movement. Several steps annotate a node directly:
+State changes carry as much story as movement. Several steps annotate a box directly — a node, state, participant, or class card:
 
 - `status` sets a persisting pill on the node.
 - `working` leaves a node breathing (busy) until you clear it with `idle` or `reset`.
@@ -80,7 +82,7 @@ wwwroot/examples/guides/flow-05.beck.yaml
 
 ## Persistent edge effects
 
-Two steps change an edge until you `reset`, which is ideal for showing an established connection rather than a one-off message:
+Two steps change a connector — an edge, message, transition, or relation — until you `reset`, which is ideal for showing an established connection rather than a one-off message:
 
 - `activate` recolours a path and keeps it lit.
 - `stream` runs continuous flowing dashes along a path for ongoing traffic.
@@ -113,6 +115,7 @@ When a visitor has `prefers-reduced-motion` set, or you author `meta.animate: fa
 ## Next steps
 
 - The [flow & animation reference](/docs/reference/flow) is the complete vocabulary: every step type, every packet knob, and the per-edge-kind motion defaults.
+- Each diagram type's guide has a short note on flow for that type — [sequence](/docs/guides/sequence#scripting-the-animation), [state](/docs/guides/state#scripting-the-animation), and [class](/docs/guides/class#animation).
 - To script a flow from C# instead of YAML, see [generate diagrams from your code](/docs/guides/generate) and the [Beck.Authoring API](/api).
 - Try a sequence live in the [playground](/playground).
 
