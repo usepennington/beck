@@ -128,6 +128,13 @@ A list of connections. `from` and `to` are required and must resolve to a declar
 | `fromSide` | `top` `bottom` `left` `right` | auto | Pin the side the line leaves the source. |
 | `toSide` | `top` `bottom` `left` `right` | auto | Pin the side the line enters the target. |
 
+A **feedback edge** — one that runs back against the flow and would have to jump over the nodes
+between its endpoints — automatically loops out on a clear face (over the top for `LR`/`RL`, out the
+left for `TB`/`BT`) instead of jogging through the forward chain, so the forward edges stay straight.
+An adjacent back-and-forth pair (two nodes wired both ways, with nothing between them) is left inline
+as two parallel lines. Pin `fromSide`/`toSide` to force a specific loop face — e.g. both `bottom` to
+route the return under the row — or set `curve: straight` for a direct line.
+
 ### Edge kinds
 
 | kind | style | colour | packet motion |

@@ -1,5 +1,6 @@
 import type { DiagramModel, Direction } from '../model/schema'
 import type { LayoutResult, Point, Rect, SizeMap } from './types'
+import { againstFlow } from './types'
 
 const FALLBACK = { w: 180, h: 64 }
 const GROUP_PAD = { top: 28, side: 16, bottom: 16 }
@@ -34,15 +35,7 @@ function backEdgeGutter(model: DiagramModel, nodes: Map<string, Rect>): number {
       need = Math.max(need, SELF_LOOP_RESERVE + (loopLabel ? LABEL_RESERVE_GAP + loopLabel : 0))
       continue
     }
-    const against =
-      dir === 'TB'
-        ? t.y + t.h <= f.y
-        : dir === 'BT'
-          ? t.y >= f.y + f.h
-          : dir === 'LR'
-            ? t.x + t.w <= f.x
-            : t.x >= f.x + f.w
-    if (!against) continue
+    if (!againstFlow(f, t, dir)) continue
     // Label extends along the secondary axis (its width for TB/BT, ~line-height for LR/RL).
     const labelExtent = e.label ? (horizontalSecondary ? e.label.length * 7 + 8 : 14) : 0
     const want = LANE_RESERVE + (labelExtent ? LABEL_RESERVE_GAP + labelExtent : LANE_RESERVE)
