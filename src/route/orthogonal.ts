@@ -1,5 +1,6 @@
-import type { EdgeCurve, Side } from '../model/schema'
+import type { EdgeCurve, Side, Direction } from '../model/schema'
 import type { Point, Rect } from '../layout/types'
+import { againstFlow } from '../layout/types'
 import { roundedPath } from './step-round'
 
 export interface RouteRequest {
@@ -78,6 +79,64 @@ export function autoSides(from: Rect, to: Rect, primaryHorizontal: boolean): { f
     return dy >= 0 ? { fromSide: 'bottom', toSide: 'top' } : { fromSide: 'top', toSide: 'bottom' }
   }
   return dx >= 0 ? { fromSide: 'right', toSide: 'left' } : { fromSide: 'left', toSide: 'right' }
+}
+
+/**
+ * Is a node parked in the primary-axis gap between `from` and `to`? This tells a
+ * feedback edge apart from an adjacent back-and-forth pair: an edge that jumps
+ * *over* nodes wants a clean secondary-face loop, while an adjacent reciprocal
+ * pair looks best left inline as two parallel lines.
+ */
+function spansObstacle(from: Rect, to: Rect, obstacles: Rect[], primaryHorizontal: boolean): boolean {
+  const aLo = primaryHorizontal ? from.x : from.y
+  const aHi = primaryHorizontal ? from.x + from.w : from.y + from.h
+  const bLo = primaryHorizontal ? to.x : to.y
+  const bHi = primaryHorizontal ? to.x + to.w : to.y + to.h
+  const gapLo = Math.min(aHi, bHi)
+  const gapHi = Math.max(aLo, bLo)
+  if (gapHi <= gapLo) return false // nodes are adjacent/overlapping — nothing between them
+  for (const o of obstacles) {
+    const oLo = primaryHorizontal ? o.x : o.y
+    const oHi = primaryHorizontal ? o.x + o.w : o.y + o.h
+    if (oHi > gapLo && oLo < gapHi) return true
+  }
+  return false
+}
+
+/**
+ * Resolve the exit/entry faces for an edge. Explicit `fromSide`/`toSide` always
+ * win. Otherwise a feedback edge (`againstFlow`) that jumps over intervening
+ * nodes is diverted onto the secondary face opposite the self-loop face (top for
+ * LR/RL, left for TB/BT); routed there it loops clear of the forward chain, which
+ * keeps the forward edges straight instead of jogging them via a shared face.
+ * Everything else falls back to `autoSides`. Diversion is limited to step-round
+ * edges — a `straight`/`s` edge is an explicit request for a direct line.
+ *
+ * Callers must feed the SAME result to both the anchor spread and the route so
+ * the two agree on which face each edge sits on.
+ */
+export function sidesFor(
+  from: Rect,
+  to: Rect,
+  dir: Direction,
+  curve: EdgeCurve,
+  obstacles: Rect[],
+  explicitFrom?: Side,
+  explicitTo?: Side,
+): { fromSide: Side; toSide: Side } {
+  const primaryHorizontal = dir === 'LR' || dir === 'RL'
+  if (
+    curve === 'step-round' &&
+    !explicitFrom &&
+    !explicitTo &&
+    againstFlow(from, to, dir) &&
+    spansObstacle(from, to, obstacles, primaryHorizontal)
+  ) {
+    const face: Side = primaryHorizontal ? 'top' : 'left'
+    return { fromSide: face, toSide: face }
+  }
+  const auto = autoSides(from, to, primaryHorizontal)
+  return { fromSide: explicitFrom ?? auto.fromSide, toSide: explicitTo ?? auto.toSide }
 }
 
 /** Axis-aligned segment vs rect, with a small inset so edge-touching doesn't count. */
@@ -165,6 +224,43 @@ function shiftAnchor(p: Point, side: Side, off: number): Point {
   return isVertical(side) ? { x: p.x + off, y: p.y } : { x: p.x, y: p.y + off }
 }
 
+/**
+ * Route a feedback edge that exits and re-enters the SAME secondary face: out
+ * into the reserved gutter lane, across, and back — a clean U. The lane clears
+ * only the nodes the edge actually spans, so a short loop doesn't arc over the
+ * whole diagram. One continuous polyline (two right angles, rounded downstream).
+ */
+function sameFaceLoop(
+  a: Point,
+  b: Point,
+  side: Side,
+  obstacles: Rect[],
+  bounds?: { width: number; height: number },
+): Point[] {
+  if (isVertical(side)) {
+    const lo = Math.min(a.x, b.x)
+    const hi = Math.max(a.x, b.x)
+    const spanned = obstacles.filter((o) => o.x < hi && o.x + o.w > lo)
+    const laneY = clampLane(
+      side === 'top'
+        ? Math.min(a.y, b.y, ...spanned.map((o) => o.y)) - LANE_PAD
+        : Math.max(a.y, b.y, ...spanned.map((o) => o.y + o.h)) + LANE_PAD,
+      bounds?.height,
+    )
+    return [a, { x: a.x, y: laneY }, { x: b.x, y: laneY }, b]
+  }
+  const lo = Math.min(a.y, b.y)
+  const hi = Math.max(a.y, b.y)
+  const spanned = obstacles.filter((o) => o.y < hi && o.y + o.h > lo)
+  const laneX = clampLane(
+    side === 'left'
+      ? Math.min(a.x, b.x, ...spanned.map((o) => o.x)) - LANE_PAD
+      : Math.max(a.x, b.x, ...spanned.map((o) => o.x + o.w)) + LANE_PAD,
+    bounds?.width,
+  )
+  return [a, { x: laneX, y: a.y }, { x: laneX, y: b.y }, b]
+}
+
 function orthogonalPolyline(
   a: Point,
   b: Point,
@@ -173,6 +269,9 @@ function orthogonalPolyline(
   obstacles: Rect[],
   bounds?: { width: number; height: number },
 ): Point[] {
+  // Feedback edge diverted onto one secondary face (see sidesFor): loop out and back.
+  if (fromSide === toSide) return sameFaceLoop(a, b, fromSide, obstacles, bounds)
+
   const vert = isVertical(fromSide) && isVertical(toSide)
   const horz = !isVertical(fromSide) && !isVertical(toSide)
 

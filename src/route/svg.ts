@@ -1,6 +1,6 @@
 import type { DiagramModel, EdgeModel, MarkerShape, Side } from '../model/schema'
 import type { LayoutResult, Point, Rect } from '../layout/types'
-import { autoSides, routeEdge } from './orthogonal'
+import { routeEdge, sidesFor } from './orthogonal'
 
 const SVGNS = 'http://www.w3.org/2000/svg'
 
@@ -397,6 +397,15 @@ function drawEndLabel(svg: SVGSVGElement, points: Point[], text: string, atStart
   placed.push({ x: px - hw, y: py - 7, w: hw * 2, h: 14 })
 }
 
+/** Per-edge routing context resolved once, up front (indices line up with model.edges). */
+interface EdgePrep {
+  from: Rect
+  to: Rect
+  obstacles: Rect[]
+  fromSide: Side
+  toSide: Side
+}
+
 /** Route + draw every edge in the model. Returns the visible paths for animation. */
 export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: LayoutResult): RoutedEdge[] {
   const radius = model.meta.spacing.cornerRadius
@@ -425,7 +434,23 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
   const labelBounds = { width: layout.width, height: layout.height }
   const placedLabels: Rect[] = []
 
-  const shifts = anchorShifts(model.edges, rectOf, primaryHorizontal)
+  // Resolve each edge's obstacles and faces ONCE, up front: the anchor spread and
+  // the route must agree on which face every edge sits on (a feedback edge diverted
+  // to a loop face must be spread — and drawn — on that face, not the shared forward
+  // face). Indices line up with model.edges; unresolvable endpoints become null.
+  const dir = model.meta.direction
+  const allRects = [...layout.nodes.values()]
+  const prep: Array<EdgePrep | null> = model.edges.map((edge) => {
+    const from = rectOf(edge.from)
+    const to = rectOf(edge.to)
+    if (!from || !to) return null
+    const exclude = new Set<Rect>([from, to, ...memberRects(edge.from), ...memberRects(edge.to)])
+    const obstacles = allRects.filter((r) => !exclude.has(r))
+    const { fromSide, toSide } = sidesFor(from, to, dir, edge.curve, obstacles, edge.fromSide, edge.toSide)
+    return { from, to, obstacles, fromSide, toSide }
+  })
+
+  const shifts = anchorShifts(model.edges, prep)
 
   // Pass 1 - route and draw every path. Labels wait for pass 2, when every
   // polyline is known, so each label can dodge ALL the lines, not just the
@@ -433,18 +458,15 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
   const out: RoutedEdge[] = []
   const routed: Array<{ edge: EdgeModel; points: Point[] }> = []
   model.edges.forEach((edge, i) => {
-    const from = rectOf(edge.from)
-    const to = rectOf(edge.to)
-    if (!from || !to) return
-    const exclude = new Set<Rect>([from, to, ...memberRects(edge.from), ...memberRects(edge.to)])
-    const obstacles = [...layout.nodes.values()].filter((r) => !exclude.has(r))
+    const p = prep[i]
+    if (!p) return
     const { d, points } = routeEdge({
-      from,
-      to,
-      fromSide: edge.fromSide,
-      toSide: edge.toSide,
+      from: p.from,
+      to: p.to,
+      fromSide: p.fromSide,
+      toSide: p.toSide,
       curve: edge.curve,
-      obstacles,
+      obstacles: p.obstacles,
       radius,
       primaryHorizontal,
       bounds: { width: layout.width, height: layout.height },
@@ -478,11 +500,7 @@ export function routeEdges(svg: SVGSVGElement, model: DiagramModel, layout: Layo
  * same tie-break, keeping the two lines parallel). Self-loops keep their
  * dedicated off-axis face routing (bottom in LR/RL, right in TB/BT).
  */
-function anchorShifts(
-  edges: EdgeModel[],
-  rectOf: (id: string) => Rect | undefined,
-  primaryHorizontal: boolean,
-): Array<{ from: number; to: number }> {
+function anchorShifts(edges: EdgeModel[], prep: Array<EdgePrep | null>): Array<{ from: number; to: number }> {
   const shifts = edges.map(() => ({ from: 0, to: 0 }))
   const groups = new Map<string, Array<{ idx: number; end: 'from' | 'to' }>>()
   const add = (nodeId: string, side: Side, idx: number, end: 'from' | 'to') => {
@@ -492,30 +510,37 @@ function anchorShifts(
     g.push({ idx, end })
   }
 
+  // Bucket by the RESOLVED face (from sidesFor): a diverted feedback edge is
+  // spread on its loop face, never on the forward chain's face.
   edges.forEach((e, i) => {
     if (e.from === e.to) return
-    const from = rectOf(e.from)
-    const to = rectOf(e.to)
-    if (!from || !to) return
-    const auto = autoSides(from, to, primaryHorizontal)
-    add(e.from, e.fromSide ?? auto.fromSide, i, 'from')
-    add(e.to, e.toSide ?? auto.toSide, i, 'to')
+    const p = prep[i]
+    if (!p) return
+    add(e.from, p.fromSide, i, 'from')
+    add(e.to, p.toSide, i, 'to')
   })
+
+  const faceRect = (r: { idx: number; end: 'from' | 'to' }): Rect => {
+    const p = prep[r.idx]!
+    return r.end === 'from' ? p.from : p.to
+  }
+  const farRect = (r: { idx: number; end: 'from' | 'to' }): Rect => {
+    const p = prep[r.idx]!
+    return r.end === 'from' ? p.to : p.from
+  }
 
   for (const [key, refs] of groups) {
     if (refs.length < 2) continue
     const sep = key.lastIndexOf(' ')
-    const nodeId = key.slice(0, sep)
     const side = key.slice(sep + 1) as Side
-    const rect = rectOf(nodeId)!
+    const rect = faceRect(refs[0])
     const alongY = side === 'left' || side === 'right'
     const faceLen = alongY ? rect.h : rect.w
     // Fill at most 70% of the face; cap the pitch at 20px so a two-edge face
     // reads as two clearly separate lines without hugging the corners.
     const step = Math.min(20, (faceLen * 0.7) / (refs.length - 1))
     const farCenter = (r: { idx: number; end: 'from' | 'to' }): number => {
-      const e = edges[r.idx]
-      const other = rectOf(r.end === 'from' ? e.to : e.from)!
+      const other = farRect(r)
       return alongY ? other.y + other.h / 2 : other.x + other.w / 2
     }
     refs.sort((r1, r2) => {
