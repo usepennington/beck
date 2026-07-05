@@ -2,7 +2,7 @@
 title: Draw a class diagram
 description: UML class cards with stereotypes, fields, and methods; inheritance, composition, and dependencies — or generate the whole thing from your C# types.
 order: 28
-sectionLabel: How-to guides
+sectionLabel: Other diagram types
 uid: docs.guide.class
 ---
 

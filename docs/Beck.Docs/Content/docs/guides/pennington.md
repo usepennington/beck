@@ -2,7 +2,7 @@
 title: Add Beck to a Pennington site
 description: Wire the engine into a Pennington DocSite or bare host, and adopt your MonorailCSS palette.
 order: 21
-sectionLabel: How-to guides
+sectionLabel: Setup
 uid: docs.guide.pennington
 ---
 

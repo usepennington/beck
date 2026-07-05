@@ -2,13 +2,16 @@
 title: Style your nodes
 description: Kinds, icons, accents, variants, links, and one-off colour overrides.
 order: 22
-sectionLabel: How-to guides
+sectionLabel: Architecture diagrams
 uid: docs.guide.nodes
 ---
 
 This guide shows you how to make a node look exactly the way you want — picking its shape, icon, colour, weight, secondary text, link target, and, when you must, a hardened one-off palette.
 
 Every recipe below is a small static illustration (`animate: false`). For the full node field table see [the YAML schema](/docs/reference/yaml); for site-wide colour see [Match your theme and colours](/docs/guides/theme).
+
+> [!NOTE]
+> This guide covers **architecture** diagrams. [Sequence participants](/docs/guides/sequence) share these card fields (`kind`, `icon`, `accent`, `subtitle`), but [state](/docs/guides/state) and [class](/docs/guides/class) cards are styled differently — they take `accent` and their own header options, not `kind`/`icon`/`variant`.
 
 ## Pick a kind
 

@@ -2,7 +2,7 @@
 title: Draw a sequence diagram
 description: Participants, messages, replies, activation bars, self-messages, and section bands — with the message order as the animation.
 order: 26
-sectionLabel: How-to guides
+sectionLabel: Other diagram types
 uid: docs.guide.sequence
 ---
 
@@ -23,20 +23,29 @@ wwwroot/examples/guides/sequence-01.beck.yaml
 
 <beck-diagram src="/examples/guides/sequence-01.beck.yaml" mode="auto"></beck-diagram>
 
-Two things happened automatically there:
+A few things happened automatically there:
 
-- **Replies** (`reply: true`) render dashed with an open arrowhead, and their packets land green in
-  the derived animation, so request/response pairs read at a glance.
+- **Message colors** came from the participants: each message tints itself with the accent of the
+  participant doing the work — the receiver of a call, the sender of a reply — so every
+  request/response pair shares one hue. An explicit `color:` on a message wins.
+- **Replies** (`reply: true`) render dashed with an open arrowhead and a quieter label, so
+  request/response pairs read at a glance.
 - **Activation bars** grew on the receivers: a message starts a bar when a later reply from that
   receiver back to the sender closes it. Nested request/reply pairs nest their bars. Set
   `activate: false` on a message to suppress its bar, or `activate: true` to force one without a
   matching reply.
+- **The story dims and reveals.** With the derived animation, everything starts faded; each message
+  row lights up as its packet fires, activation bars brighten while their participant works, and
+  the whole conversation fades back down before the loop restarts. A hand-written `flow:` (or
+  `animate: false`) renders everything at full strength instead.
 
 ## Self-messages and sections
 
 A message from a participant to itself draws a small loop. A list entry of `- section: <label>`
-inserts a full-width band — use it to chapter a long interaction (each section also becomes a
-`phase` the animation can [seek to](/docs/reference/flow)):
+opens a tinted, dashed band around every message until the next section (or the end) — use it to
+chapter a long interaction. Give it an `accent` to color the band and its floating label
+(`- { section: Payment, accent: info }`); each section also becomes a `phase` the animation can
+[seek to](/docs/reference/flow) and lights up as its chapter begins:
 
 ```yaml:symbol
 wwwroot/examples/guides/sequence-02.beck.yaml

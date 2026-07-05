@@ -2,11 +2,14 @@
 title: Control the layout
 description: Direction, spacing, and pinning a node's rank or order when you need to.
 order: 24
-sectionLabel: How-to guides
+sectionLabel: Architecture diagrams
 uid: docs.guide.layout
 ---
 
 This guide shows you how to steer Beck's automatic layout when the default arrangement isn't quite what you want.
+
+> [!NOTE]
+> `direction`, `rank`/`order` pinning, and `spacing.rank` steer the **layered** engine — architecture, [state](/docs/guides/state), and [class](/docs/guides/class). A [sequence](/docs/guides/sequence) uses a fixed grid and ignores them; there, only `fit` and `spacing.node` apply.
 
 Beck lays diagrams out for you, Sugiyama-style: it ranks nodes along the flow, orders them within each rank to minimise edge crossings, then routes edges orthogonally around the cards. You rarely place anything by hand. The recipes below adjust that machinery — set the axis, loosen or tighten the spacing, and, when the auto-layout still puts a node in the wrong place, pin it.
 
