@@ -607,6 +607,73 @@
     });
   }
 
+  // ---- generic dropdown ---------------------------------------------------
+  // Progressive-enhancement popover for the SSR markup in Playground.razor: a
+  // [data-dd] root holds a [data-dd-trigger] button, a [data-dd-panel], and any
+  // number of [data-dd-item] buttons. onSelect(item) fires with the chosen item.
+  // Handles open/close, click-outside, Escape, arrow-key roving, and syncs the
+  // trigger's label ([data-dd-value]) + optional swatch to the selection.
+  function wireDropdown(root, onSelect) {
+    if (!root) return null;
+    var trigger = root.querySelector('[data-dd-trigger]');
+    var panel = root.querySelector('[data-dd-panel]');
+    var valueEl = root.querySelector('[data-dd-value]');
+    if (!trigger || !panel) return null;
+    var items = [].slice.call(panel.querySelectorAll('[data-dd-item]'));
+    var open = false, activeIdx = -1;
+
+    function clearActive() { items.forEach(function (it) { it.classList.remove('is-active'); }); }
+    function setActive(i) {
+      if (!items.length) return;
+      activeIdx = (i + items.length) % items.length;
+      clearActive();
+      var el = items[activeIdx];
+      el.classList.add('is-active');
+      el.scrollIntoView({ block: 'nearest' });
+    }
+    function onOutside(e) { if (!root.contains(e.target)) setOpen(false); }
+    function onKey(e) {
+      if (e.key === 'Escape') { setOpen(false); trigger.focus(); e.preventDefault(); }
+      else if (e.key === 'ArrowDown') { setActive(activeIdx + 1); e.preventDefault(); }
+      else if (e.key === 'ArrowUp') { setActive(activeIdx - 1); e.preventDefault(); }
+      else if ((e.key === 'Enter' || e.key === ' ') && activeIdx >= 0) { choose(items[activeIdx]); e.preventDefault(); }
+    }
+    function setOpen(v) {
+      if (v === open) return;
+      open = v;
+      panel.hidden = !v;
+      root.classList.toggle('is-open', v);
+      trigger.setAttribute('aria-expanded', v ? 'true' : 'false');
+      if (v) {
+        activeIdx = -1;
+        document.addEventListener('mousedown', onOutside, true);
+        document.addEventListener('keydown', onKey, true);
+      } else {
+        document.removeEventListener('mousedown', onOutside, true);
+        document.removeEventListener('keydown', onKey, true);
+        clearActive();
+      }
+    }
+    function choose(item) {
+      var label = item.getAttribute('data-label');
+      if (valueEl && label) valueEl.textContent = label;
+      var scheme = item.getAttribute('data-scheme');
+      var swatch = trigger.querySelector('.pg-swatch');
+      if (scheme && swatch) swatch.setAttribute('data-scheme', scheme);
+      items.forEach(function (it) { it.setAttribute('aria-selected', it === item ? 'true' : 'false'); });
+      setOpen(false);
+      trigger.focus();
+      if (onSelect) onSelect(item);
+    }
+
+    trigger.addEventListener('click', function (e) { e.preventDefault(); setOpen(!open); });
+    items.forEach(function (it, i) {
+      it.addEventListener('click', function (e) { e.preventDefault(); choose(it); });
+      it.addEventListener('mousemove', function () { if (activeIdx !== i) setActive(i); });
+    });
+    return { setOpen: setOpen };
+  }
+
   // ---- playground ---------------------------------------------------------
   function initPlayground() {
     var mount = document.getElementById('pg-editor-host');
@@ -618,7 +685,6 @@
     var statusEl = document.getElementById('pg-status');
     var nodesEl = document.getElementById('pg-nodes');
     var edgesEl = document.getElementById('pg-edges');
-    var examples = document.getElementById('pg-examples');
     var handle = null, timer = null, editor = null, fallbackTa = null;
 
     function getYaml() { return editor ? editor.getValue() : (fallbackTa ? fallbackTa.value : initial); }
@@ -683,14 +749,20 @@
       whenBeck(render);
     });
 
-    if (examples) {
-      examples.addEventListener('change', function () {
-        var opt = examples.options[examples.selectedIndex];
-        var src = opt && opt.getAttribute('data-src');
-        if (!src) return;
-        fetch(withBase(src)).then(function (r) { return r.text(); }).then(function (txt) { setYaml(txt); render(); });
-      });
-    }
+    // Example picker: fetch the chosen sample's YAML into the editor and render.
+    wireDropdown(document.getElementById('pg-examples'), function (item) {
+      var src = item.getAttribute('data-src');
+      if (!src) return;
+      fetch(withBase(src)).then(function (r) { return r.text(); }).then(function (txt) { setYaml(txt); render(); });
+    });
+    // Colour scheme: the palette is pure CSS (--beck-* overrides keyed off
+    // #pg-host[data-scheme]), so switching only needs the attribute set. Re-render
+    // so the GSAP packet colours (resolved from the computed palette at build time)
+    // pick up the new scheme too.
+    wireDropdown(document.getElementById('pg-scheme'), function (item) {
+      host.setAttribute('data-scheme', item.getAttribute('data-scheme') || 'default');
+      render();
+    });
     window.addEventListener('beck:themechange', function (e) {
       if (window.monaco && window.monaco.editor) applyBeckTheme(window.monaco);
       if (handle && handle.setTheme) handle.setTheme(e.detail.theme);
