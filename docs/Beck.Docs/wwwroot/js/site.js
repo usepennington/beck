@@ -625,6 +625,11 @@
     function setYaml(v) { if (editor) editor.setValue(v); else if (fallbackTa) fallbackTa.value = v; }
 
     function render() {
+      // An explicit render supersedes a pending debounced one — the example
+      // picker's programmatic setValue fires Monaco's change event, which would
+      // otherwise schedule a second, identical render 220ms later (restarting
+      // the animation mid-flight: double-flashed highlights, redrawn edges).
+      clearTimeout(timer);
       var yaml = getYaml();
       var counts = countYaml(yaml);
       if (nodesEl) nodesEl.textContent = counts.nodes + ' nodes';
