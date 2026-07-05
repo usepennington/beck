@@ -159,11 +159,13 @@ are ignored.
 | `reply` | bool | `false` | A return message: dashed, open arrowhead, closes the receiver's activation bar. |
 | `kind` | `data` `control` `async` `dependency` | `data` (`control` for replies) | Semantic kind; `async` renders dashed with an open arrowhead. |
 | `style` | `solid` `dashed` | per kind | Line style override. |
-| `color` | token or CSS colour | per kind | Stroke colour. |
+| `color` | token or CSS colour | worker's accent | Stroke colour. Defaults to the accent of the participant doing the work — the receiver of a call, the sender of a reply — so request/reply pairs share a hue. |
 | `activate` | bool | auto | Force (`true`) or suppress (`false`) an activation bar on the receiver. |
 
-A list entry of the form `- section: <label>` (instead of a message) inserts a full-width labelled
-band before the next message, and becomes a `phase` seek point in the derived animation.
+A list entry of the form `- section: <label>` (instead of a message) opens a tinted, dashed band
+around every message until the next section (or the end), and becomes a `phase` seek point in the
+derived animation. It takes an optional `accent` (token or CSS colour, default `neutral`) that
+colours the band's border, fill, and floating label.
 
 **Activation bars** are automatic: a non-reply message starts a bar on its receiver when a later
 `reply: true` from that receiver back to the sender closes it. Nested request/reply pairs nest the

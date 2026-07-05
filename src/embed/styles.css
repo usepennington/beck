@@ -46,6 +46,7 @@
   --beck-accent: var(--beck-primary);
 
   --beck-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --beck-font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, monospace;
 }
 
 .beck-root[data-theme='dark'],
@@ -244,32 +245,61 @@ a.beck-node:hover {
 
 /* ---- sequence-diagram scenery ---- */
 
+/* Stroke color is an inline fade-out gradient (see route/sequence.ts); only the
+   dash rhythm lives here. */
 .beck-lifeline {
-  stroke: var(--beck-edge);
-  stroke-width: 1.3;
-  stroke-dasharray: 4 4;
+  stroke-width: 2;
+  stroke-dasharray: 6 7;
 }
+/* Fill is a per-accent vertical gradient (bright → faded); the glow rides the
+   same accent var the router sets inline. */
 .beck-activation {
-  fill: color-mix(in srgb, var(--beck-accent) 16%, var(--beck-surface));
-  stroke: color-mix(in srgb, var(--beck-accent) 45%, transparent);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) 45%, transparent));
+}
+
+/* Message rows: a pill label above each line. The router sets --beck-accent per
+   message (the "worker" participant's accent), so chips tint themselves. */
+.beck-msg-chip {
+  fill: var(--beck-node-bg);
+  stroke: color-mix(in srgb, var(--beck-accent) 40%, transparent);
   stroke-width: 1;
 }
-.beck-seq-rule {
-  stroke: color-mix(in srgb, var(--beck-edge) 60%, transparent);
-  stroke-dasharray: 2 6;
-  stroke-width: 1.2;
-  stroke-linecap: round;
-}
-.beck-seq-section {
+.beck-msg-text {
+  font-family: var(--beck-font-mono);
   font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-weight: 500;
+  fill: color-mix(in srgb, var(--beck-accent) 34%, var(--beck-text));
+}
+/* Replies read lighter: borderless chip, muted text. */
+.beck-msg--reply .beck-msg-chip {
+  stroke: none;
+}
+.beck-msg--reply .beck-msg-text {
   fill: var(--beck-text-muted);
-  paint-order: stroke;
-  stroke: var(--beck-surface);
-  stroke-width: 4px;
-  stroke-linejoin: round;
+}
+/* Self-message labels sit bare beside the loop (no chip). */
+.beck-msg-text--bare {
+  fill: var(--beck-text-muted);
+}
+
+/* Section bands: a dashed, tinted box around a phase with a floating pill label. */
+.beck-band-box {
+  fill: color-mix(in srgb, var(--beck-accent) 5%, transparent);
+  stroke: color-mix(in srgb, var(--beck-accent) 30%, transparent);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+}
+.beck-band-chip {
+  fill: var(--beck-surface);
+  stroke: color-mix(in srgb, var(--beck-accent) 40%, transparent);
+  stroke-width: 1;
+}
+.beck-band-label {
+  font-family: var(--beck-font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  fill: color-mix(in srgb, var(--beck-accent) 70%, var(--beck-text));
 }
 
 /* ---- status pill ---- */
