@@ -9,13 +9,13 @@ participants:
   - { id: db, title: Postgres, kind: db }
   - { id: bus, title: Events, kind: queue }
 messages:
-  - { from: web, to: api, label: POST /orders }
+  - { from: web, to: api, label: POST /orders, note: The shopper submits their cart to the Orders API. }
   - { from: api, to: api, label: validate cart }
   - { section: Payment, accent: info }
-  - { from: api, to: pay, label: capture }
+  - { from: api, to: pay, label: capture, note: The API asks the payment service to capture funds. }
   - { from: pay, to: api, label: captured, reply: true }
   - { section: Persist & publish, accent: primary }
-  - { from: api, to: db, label: INSERT order }
+  - { from: api, to: db, label: INSERT order, note: "With payment secured, the order is written to Postgres." }
   - { from: db, to: api, label: ok, reply: true }
-  - { from: api, to: bus, label: OrderPlaced, kind: async }
+  - { from: api, to: bus, label: OrderPlaced, kind: async, note: An OrderPlaced event fans out to downstream subscribers. }
   - { from: api, to: web, label: 201 Created, reply: true }

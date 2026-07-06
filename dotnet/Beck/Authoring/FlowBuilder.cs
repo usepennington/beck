@@ -171,6 +171,22 @@ public sealed class FlowBuilder
         return Step("fail", NodeMap(node, extra.ToArray()));
     }
 
+    /// <summary>
+    /// Update the narration caption under the diagram and hold long enough to read
+    /// it. <paramref name="hold"/> overrides the length-derived reading time (seconds);
+    /// <paramref name="color"/> tints the caption text. Requires narration to be on
+    /// (the default) — see the builder's <c>Narrate</c> meta setter.
+    /// </summary>
+    public FlowBuilder Narrate(string text, double? hold = null, string? color = null)
+    {
+        if (hold == null && color == null)
+            return Step("narrate", YamlWriter.Scalar(text));
+        var pairs = new List<(string, string)> { ("text", YamlWriter.Scalar(text)) };
+        if (hold is { } h) pairs.Add(("hold", h.ToString(CultureInfo.InvariantCulture)));
+        if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
+        return Step("narrate", YamlWriter.FlowMap(pairs));
+    }
+
     /// <summary>A named seek label (lets the handle's <c>seek(label)</c> jump here).</summary>
     public FlowBuilder Phase(string label) => Step("phase", YamlWriter.Scalar(label));
 

@@ -1,0 +1,23 @@
+type: architecture
+meta: { title: Nightly report, direction: LR }
+nodes:
+  - { id: cron, title: Scheduler, kind: service, icon: clock }
+  - { id: worker, title: Report Worker, kind: service }
+  - { id: db, title: Warehouse, kind: db, icon: warehouse }
+  - { id: mail, title: Email, kind: external, icon: mail }
+edges:
+  - { from: cron, to: worker }
+  - { from: worker, to: db }
+  - { from: worker, to: mail }
+flow:
+  steps:
+    - narrate: At midnight the scheduler wakes the report worker.
+    - packet: { from: cron, to: worker, label: run }
+    - narrate: The worker pulls last night's numbers from the warehouse.
+    - working: { node: db }
+    - packet: { from: worker, to: db, color: info }
+    - packet: { from: db, to: worker, color: success }
+    - idle: { node: db }
+    - narrate: { text: "With the figures in hand, it emails the finished report.", color: success }
+    - packet: { from: worker, to: mail, label: send }
+    - wait: 1.4

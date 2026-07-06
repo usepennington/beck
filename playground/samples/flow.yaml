@@ -17,11 +17,13 @@ flow:
   repeat: -1
   repeatDelay: 2
   steps:
+    - narrate: build.sh needs a secret, so it asks the CLI to fetch one.
     - status: { node: app, text: get_credential(), color: neutral }
-    - wait: 0.3
     - packet: { from: app, to: proxy, via: [cli, sdk] }
+    - narrate: The SDK opens a tunnel and relays the request through the zero-knowledge proxy.
     - phase: requested
     - highlight: { node: bw, color: primary }
     - status: { node: bw, text: Credential requested, color: primary }
+    - narrate: Bitwarden approves and streams the credential back down the same path.
     - packet: { from: proxy, to: app, via: [sdk, cli], color: success }
     - wait: 1.2

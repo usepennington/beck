@@ -20,12 +20,19 @@ internal sealed class MetaOptions
     public int? SpacingRank;
     public int? SpacingNode;
     public int? SpacingCornerRadius;
+    public bool? Narrate;
+    public int? NarrateWpm;
+    public double? NarrateMin;
+    public double? NarratePad;
 
     public void AppendYaml(StringBuilder sb)
     {
         var hasSpacing = SpacingRank != null || SpacingNode != null || SpacingCornerRadius != null;
+        var hasNarrateKnobs = NarrateWpm != null || NarrateMin != null || NarratePad != null;
+        var hasNarrate = Narrate != null || hasNarrateKnobs;
         var hasMeta = Title != null || Subtitle != null || Direction != null ||
-                      Theme != null || Animate != null || Loop != null || Fit != null || hasSpacing;
+                      Theme != null || Animate != null || Loop != null || Fit != null ||
+                      hasSpacing || hasNarrate;
         if (!hasMeta) return;
 
         sb.Append("meta:\n");
@@ -42,6 +49,23 @@ internal sealed class MetaOptions
             if (SpacingRank is { } sr) sb.Append("    rank: ").Append(sr.ToString(CultureInfo.InvariantCulture)).Append('\n');
             if (SpacingNode is { } sn) sb.Append("    node: ").Append(sn.ToString(CultureInfo.InvariantCulture)).Append('\n');
             if (SpacingCornerRadius is { } sc) sb.Append("    cornerRadius: ").Append(sc.ToString(CultureInfo.InvariantCulture)).Append('\n');
+        }
+        if (hasNarrate)
+        {
+            // Bare toggle when no pacing knobs are set; otherwise a mapping (with
+            // `enabled` only when explicitly turned off, matching the parser default).
+            if (!hasNarrateKnobs)
+            {
+                sb.Append("  narrate: ").Append(Narrate!.Value ? "true" : "false").Append('\n');
+            }
+            else
+            {
+                sb.Append("  narrate:\n");
+                if (Narrate is false) sb.Append("    enabled: false\n");
+                if (NarrateWpm is { } w) sb.Append("    wpm: ").Append(w.ToString(CultureInfo.InvariantCulture)).Append('\n');
+                if (NarrateMin is { } mn) sb.Append("    min: ").Append(mn.ToString(CultureInfo.InvariantCulture)).Append('\n');
+                if (NarratePad is { } pd) sb.Append("    pad: ").Append(pd.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            }
         }
     }
 }

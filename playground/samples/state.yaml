@@ -7,8 +7,8 @@ states:
   - { id: published, title: Published, accent: success }
 transitions:
   - { from: "[*]", to: draft }
-  - { from: draft, to: review, label: submit }
-  - { from: review, to: draft, label: reject }
-  - { from: review, to: published, label: approve }
-  - { from: published, to: review, label: retract }
+  - { from: draft, to: review, label: submit, note: An author submits the draft for review. }
+  - { from: review, to: draft, label: reject, note: A reviewer sends it back for changes. }
+  - { from: review, to: published, label: approve, note: Approved — the post goes live. }
+  - { from: published, to: review, label: retract, note: "Retracted for an edit, back to review." }
   - { from: published, to: "[*]" }

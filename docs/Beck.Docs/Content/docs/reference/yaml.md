@@ -49,6 +49,7 @@ the layered types — architecture, state, class.)
 | `loop` | bool | `true` | `false` plays the flow once (forces `flow.repeat: 0`). |
 | `fit` | `shrink` `scroll` | `shrink` | What a diagram wider than its container does: `shrink` scales it down to fit; `scroll` keeps it at natural size and scrolls horizontally. Vertical size is never constrained. |
 | `spacing` | mapping | see below | Layout gaps and corner radius. |
+| `narrate` | bool or mapping | `true` | Narration caption bar: `false` suppresses it; a mapping tunes the reading-time pace. See below. |
 
 `spacing` keys:
 
@@ -57,6 +58,18 @@ the layered types — architecture, state, class.)
 | `rank` | number (px) | `96` | Gap between ranks, along the flow direction. |
 | `node` | number (px) | `32` | Gap between nodes within a rank, across the flow. |
 | `cornerRadius` | number (px) | `16` | Corner radius on cards and edge bends. |
+
+`narrate` keys (a mapping value; a bare boolean just toggles `enabled`):
+
+| key | type | default | description |
+|---|---|---|---|
+| `enabled` | bool | `true` | `false` suppresses the caption bar entirely. |
+| `wpm` | number | `170` | Reading pace, words per minute — drives each caption's auto hold. |
+| `min` | number (s) | `1.4` | Floor on a caption's on-screen time. |
+| `pad` | number (s) | `0.5` | Extra seconds on top of the reading time. |
+
+Captions are supplied by a [`narrate` flow step](/docs/reference/flow#narration) or a connector
+`note:` (see `edges`, `messages`, `transitions` below); `meta.narrate` only paces and toggles them.
 
 ## nodes (`type: architecture`)
 
@@ -125,6 +138,7 @@ A list of connections. `from` and `to` are required and must resolve to a declar
 | `curve` | `step-round` `straight` `s` | `step-round` | Routing shape: orthogonal with rounded corners, a straight line, or a smooth S-curve. |
 | `color` | token or CSS colour | per kind | Stroke colour. |
 | `arrow` | `none` `end` `start` `both` | `end` | Which ends carry an arrowhead. The bool `true`/`false` maps to `end`/`none`. |
+| `note` | string | — | Narration caption for this hop, shown just before its packet in a [derived flow](/docs/reference/flow#derived-flow). Ignored when a `flow:` is authored. |
 | `fromSide` | `top` `bottom` `left` `right` | auto | Pin the side the line leaves the source. |
 | `toSide` | `top` `bottom` `left` `right` | auto | Pin the side the line enters the target. |
 
@@ -167,6 +181,7 @@ are ignored.
 | `kind` | `data` `control` `async` `dependency` | `data` (`control` for replies) | Semantic kind; `async` renders dashed with an open arrowhead. |
 | `style` | `solid` `dashed` | per kind | Line style override. |
 | `color` | token or CSS colour | worker's accent | Stroke colour. Defaults to the accent of the participant doing the work — the receiver of a call, the sender of a reply — so request/reply pairs share a hue. |
+| `note` | string | — | Narration caption for this message, shown just before it fires in the derived flow. See [narration](/docs/reference/flow#narration). |
 | `activate` | bool | auto | Force (`true`) or suppress (`false`) an activation bar on the receiver. |
 
 A list entry of the form `- section: <label>` (instead of a message) opens a tinted, dashed band
@@ -204,6 +219,7 @@ guide](/docs/guides/state).
 | `label` | string | — | Drawn on the line. |
 | `style` | `solid` `dashed` | `solid` | Line style. |
 | `color` | token or CSS colour | edge | Stroke colour. |
+| `note` | string | — | Narration caption for this transition, shown just before its packet in the derived flow. See [narration](/docs/reference/flow#narration). |
 
 ## classes and relations (`type: class`)
 

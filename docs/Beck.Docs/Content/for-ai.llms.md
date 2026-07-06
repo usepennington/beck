@@ -78,6 +78,7 @@ field tables and defaults, see the [YAML schema reference](/docs/reference/yaml)
 | `loop` | bool | `true` (`false` plays once) |
 | `fit` | `shrink` `scroll` | `shrink` |
 | `spacing` | `{ rank, node, cornerRadius }` (px) | `96` / `32` / `16` |
+| `narrate` | bool, or `{ enabled, wpm, min, pad }` | `true` (caption-bar pacing; `false` = off) |
 
 ### nodes — `id` required, rest optional
 
@@ -121,6 +122,7 @@ Both must resolve to a declared node or group id.
 | `curve` | `step-round` `straight` `s` | `step-round` |
 | `arrow` | `none` `end` `start` `both` (or bool → `end`/`none`) | `end` |
 | `color` | token or CSS colour | per kind |
+| `note` | string (narrates the hop in a derived flow) | — |
 | `fromSide` / `toSide` | `top` `bottom` `left` `right` | auto |
 
 Edge `kind` sets a default style and packet motion: `data` (solid, steady), `control` (solid, small
@@ -160,7 +162,8 @@ Participants are columns (declared order); messages are rows (authored order). P
 node fields (`id`, `title`, `kind`, `icon`, `accent`, …). Message fields: `from`, `to` (required;
 equal ids = self-message loop), `label`, `reply` (bool — dashed return, closes the receiver's
 activation bar), `kind` (same four edge kinds; `async` = dashed + open arrow), `style`, `color`,
-`activate` (bool — force/suppress the receiver's activation bar). Message `color` defaults to the
+`note` (narrates the message in the derived flow), `activate` (bool — force/suppress the receiver's
+activation bar). Message `color` defaults to the
 accent of the participant doing the work (call receiver / reply sender), so request/reply pairs
 share a hue. A list entry `- section: <label>` (optional `accent`) opens a tinted band around every
 message until the next section. Activation bars pair automatically: request in, `reply: true` back
@@ -186,9 +189,9 @@ messages:
 States are pills; `states:` is optional refinement (`id`, `title`, `subtitle`, `accent`, `width`,
 `rank`, `order`) — ids used only in `transitions` are auto-created. `"[*]"` (quoted!) is the UML
 entry/exit pseudo-state: `from: "[*]"` draws the entry dot, `to: "[*]"` the exit bullseye.
-Transition fields: `from`, `to`, `label`, `style`, `color`. Same-pair opposite transitions
-(submit/reject) route side by side automatically; self-transitions draw a loop. `direction: LR`
-usually reads best.
+Transition fields: `from`, `to`, `label`, `style`, `color`, `note` (narrates the transition in the
+derived flow). Same-pair opposite transitions (submit/reject) route side by side automatically;
+self-transitions draw a loop. `direction: LR` usually reads best.
 
 ```beck
 type: state
@@ -248,12 +251,13 @@ flow:
 ```
 
 **Step types** (the complete set): `packet`, `burst`, `status`, `highlight`, `pulse`, `activate`,
-`stream`, `working`, `idle`, `fail`, `phase`, `wait`, `reset`, `parallel`.
+`stream`, `working`, `idle`, `fail`, `narrate`, `phase`, `wait`, `reset`, `parallel`.
 
 - `packet` `{ from, to, via?, color?, label? }` — one dot travels an edge (or a multi-hop chain via `via`).
 - `burst` `{ from, to|[to…], count, stagger, … }` — `count` waves broadcast to every target.
 - `status` `{ node, text, color? }`, `working` `{ node, color? }`, `stream`/`activate` `{ from, to, color? }` — **persist** until a later step or `reset`.
 - `highlight` / `pulse` `{ node, color? }`, `fail` `{ node, text?, color? }` — one-shot beats.
+- `narrate: <text>` (or `{ text, hold?, color? }`) — set the caption line under the diagram and hold long enough to read it; hold auto-scales with length. A connector `note:` becomes a `narrate` in a *derived* flow.
 - `idle` `{ node }` clears `working`; `reset` restores the initial state.
 - `phase: <label>` marks a seek point; `wait: <seconds>` pauses; `parallel: [ …steps ]` runs steps together.
 
@@ -314,12 +318,17 @@ string fence = new DiagramBuilder("Order service")
     .Edge("client", "api")
     .Edge("api", "db", e => e.Label("query"))
     .Flow(f => f
+        .Narrate("The client places an order.")
         .Packet("client", "api", label: "POST /orders")
         .Working("db")
         .Packet("api", "db", color: "info")
         .Idle("db"))
     .ToFence();   // ```beck … ``` ready for Markdown; use .ToYaml() for the raw YAML
 ```
+
+Narration has a builder on every type: `.Narrate(enabled, wpm, min, pad)` on the diagram (meta
+toggle + pacing), `.Narrate(text, hold?, color?)` as a flow step, and `.Note(text)` on an edge,
+message, or transition to caption a derived flow.
 
 Each diagram type has its own builder: `DiagramBuilder` (architecture),
 `SequenceDiagramBuilder` (`Participant`/`Message`/`Reply`/`Section`), `StateDiagramBuilder`

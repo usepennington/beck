@@ -64,6 +64,22 @@ wwwroot/examples/guides/sequence-03.beck.yaml
 
 <beck-diagram src="/examples/guides/sequence-03.beck.yaml" mode="auto"></beck-diagram>
 
+## Narrate the exchange
+
+Because the derived animation plays the messages in order, a sequence narrates itself with almost no
+effort: add a `note:` to any message and Beck shows it as a caption under the diagram just before
+that message fires. Caption a few key steps to walk a reader through the conversation:
+
+```yaml:symbol
+wwwroot/examples/guides/sequence-04.beck.yaml
+```
+
+<beck-diagram src="/examples/guides/sequence-04.beck.yaml" mode="auto"></beck-diagram>
+
+Notes only drive the *derived* flow — if you script a `flow:` yourself, narrate it with `narrate`
+steps instead. Pace or disable the captions with `meta.narrate`. See [Narrate the
+story](/docs/guides/flow#narrate-the-story) for the full picture.
+
 ## Scripting the animation
 
 The derived flow (one packet per message, in order) is usually what you want. To take over, add a

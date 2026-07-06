@@ -93,6 +93,48 @@ wwwroot/examples/guides/flow-06.beck.yaml
 
 <beck-diagram src="/examples/guides/flow-06.beck.yaml" mode="auto"></beck-diagram>
 
+## Narrate the story
+
+Motion shows *what* moves; a caption says *why*. A `narrate` step writes a line to a caption bar
+under the diagram and holds it long enough to read before the flow moves on — a teleprompter that
+walks the viewer through the animation in words. Drop a `narrate` between the steps it explains:
+
+```yaml:symbol
+wwwroot/examples/guides/flow-08.beck.yaml
+```
+
+<beck-diagram src="/examples/guides/flow-08.beck.yaml" mode="auto"></beck-diagram>
+
+The shorthand `narrate: <text>` is all you usually need — the caption's hold time is computed from
+its length, so a longer line lingers longer. When you want more control, use the full form and set
+`hold` (seconds, overriding the auto pace) or `color` (an accent token or CSS colour that tints the
+line):
+
+```yaml
+- narrate: The worker pulls last night's numbers from the warehouse.
+- narrate: { text: The rollout failed — reverting., hold: 3, color: danger }
+```
+
+> [!NOTE]
+> Captions are prose, so they often contain commas. The bare `narrate: <text>` shorthand handles
+> them fine, but inside the braced `{ }` form — or any inline `note:` — you must quote text with a
+> comma (`text: "Approved, and live."`), or YAML reads the comma as the end of the value.
+
+You don't have to write a `flow` at all to get narration. When Beck [derives a
+flow](/docs/reference/flow#derived-flow), a `note:` on the connector becomes the caption for that
+hop — a `note` on an architecture edge, a [sequence message](/docs/guides/sequence#narrate-the-exchange),
+or a state transition. It's the quickest way to caption a diagram that already animates itself:
+
+```yaml
+edges:
+  - { from: worker, to: db, note: The worker pulls last night's numbers. }
+```
+
+Tune the reading pace once, for the whole diagram, with `meta.narrate` — a mapping of `wpm`
+(reading speed), `min` (a floor on each caption's time), and `pad` (extra lead-in/out). Set
+`meta.narrate: false` to drop the caption bar entirely. See the [narration
+reference](/docs/reference/flow#narration) for the exact knobs and defaults.
+
 ## Control the sequence
 
 A handful of steps shape timing rather than visuals:

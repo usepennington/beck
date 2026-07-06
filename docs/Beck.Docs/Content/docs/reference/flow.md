@@ -50,6 +50,11 @@ bare document already animates. What it derives depends on the diagram type:
   has no derived flow: with no `flow` block it renders a still frame and never loads the animation
   runtime. Script a `flow:` yourself if you want a guided tour.
 
+A `note:` on a connector (an architecture edge, a sequence message, or a state transition) is
+folded into the derived flow as a [`narrate`](#narration) caption, emitted just before that hop's
+packet. Notes are ignored once you author an explicit `flow:` — narrate the story with `narrate`
+steps there instead.
+
 ## Steps
 
 Each step is a mapping with a single key naming its type. `from`/`to`/`node` values must reference a
@@ -67,6 +72,7 @@ declared node id (or, for edge endpoints, a group id).
 | `working` | `node`, `color?` | Leave a node visibly busy (breathing glow) until `idle` or `reset`. |
 | `idle` | `node` | Clear a node's `working` state. |
 | `fail` | `node`, `text?`, `color?` | A red shake and flash, with optional status text. |
+| `narrate` | `<text>` (string), or `text`, `hold?`, `color?` | Set the caption bar under the diagram and hold long enough to read it. See [narration](#narration). |
 | `phase` | `<label>` (string) | A named label the handle's `seek(label)` can jump to. |
 | `wait` | `<seconds>` (number) | Pause. Default `0.5`. |
 | `reset` | — | Restore the initial state (clears trails, streams, working, recolours, pills). |
@@ -129,6 +135,48 @@ always win. Each card below sends a default packet along an edge of that kind, s
 size, speed, glow, and easing is something you watch rather than read off a table.
 
 <BeckGallery Of="edge-kinds" />
+
+## Narration
+
+A `narrate` step (or a connector `note:` folded into a [derived flow](#derived-flow)) writes a line
+to a caption bar rendered under the diagram body and holds it long enough to read. Captions
+cross-fade as the flow advances and clear on each loop. The bar only appears when the flow actually
+carries caption text and narration is enabled; because it is part of the animation, a diagram
+rendered as a static frame (see [reduced motion](#reduced-motion)) shows no caption bar.
+
+### The `narrate` step
+
+| field | type | default | description |
+|---|---|---|---|
+| `text` | string | — | The caption line. The shorthand `narrate: <text>` sets just this. |
+| `hold` | number (s) | auto | Seconds to hold the caption, overriding the length-derived time below. |
+| `color` | token or CSS colour | theme text | Tints the caption line (and its leading dot). |
+
+With no `hold`, a caption's on-screen time is derived from its length so a longer line lingers
+longer: `max(min, pad + (words / wpm) × 60)` seconds, using the `meta.narrate` knobs.
+
+### `meta.narrate`
+
+Tunes narration for the whole diagram. A bare boolean toggles the caption bar; a mapping tunes the
+reading-time pace. Absent means enabled with the defaults below (captions still only appear once a
+`narrate` step or a connector `note:` supplies text).
+
+| key | type | default | description |
+|---|---|---|---|
+| `enabled` | bool | `true` | `false` (or `narrate: false`) suppresses the caption bar entirely. |
+| `wpm` | number | `170` | Reading pace, words per minute — drives each caption's auto hold. |
+| `min` | number (s) | `1.4` | Floor on a caption's on-screen time. |
+| `pad` | number (s) | `0.5` | Extra seconds added on top of the reading time (lead-in/out). |
+
+```yaml
+meta:
+  narrate: { wpm: 200, min: 2 }   # or `narrate: false` to turn captions off
+flow:
+  steps:
+    - narrate: The request enters the gateway.
+    - packet: { from: client, to: gw }
+    - narrate: { text: Auth rejected the token., hold: 3, color: danger }
+```
 
 ## Reduced motion
 

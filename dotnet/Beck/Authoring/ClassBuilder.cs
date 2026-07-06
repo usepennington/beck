@@ -64,6 +64,18 @@ public sealed class ClassDiagramBuilder
     /// <summary>How the diagram behaves when wider than its container.</summary>
     public ClassDiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
 
+    /// <summary>Toggle + tune the narration caption (drive it with explicit
+    /// <see cref="FlowBuilder.Narrate"/> steps); the knobs pace each caption's
+    /// on-screen time by its length.</summary>
+    public ClassDiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
+    {
+        _meta.Narrate = enabled;
+        if (wpm is { } w) _meta.NarrateWpm = w;
+        if (min is { } m) _meta.NarrateMin = m;
+        if (pad is { } p) _meta.NarratePad = p;
+        return this;
+    }
+
     /// <summary>Tune layout spacing.</summary>
     public ClassDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {

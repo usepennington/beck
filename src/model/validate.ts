@@ -2,6 +2,7 @@ import { BeckError } from '../util/errors'
 import { accentToCss } from '../util/color'
 import { isKnownIcon } from '../render/icons'
 import {
+  DEFAULT_NARRATION,
   DEFAULT_SPACING,
   EDGE_KIND_DEFAULTS,
   KIND_DEFAULTS,
@@ -30,6 +31,7 @@ import type {
   FlowModel,
   FlowStep,
   GroupModel,
+  NarrationOptions,
   NodeKind,
   NodeModel,
   PacketKnobs,
@@ -52,6 +54,22 @@ const TYPE_LIST = ['architecture', 'sequence', 'state', 'class'] as const
 
 // ---- builders shared across diagram types ----
 
+/** Parse `meta.narrate`: a bool toggles the caption bar; a mapping tunes the
+ *  reading-time pace. Absent means enabled with defaults (captions only appear
+ *  once a `narrate:` step or edge `note:` supplies text). */
+function buildNarration(v: unknown): NarrationOptions {
+  const d = DEFAULT_NARRATION
+  if (v == null) return { ...d }
+  if (typeof v === 'boolean') return { ...d, enabled: v }
+  const o = asObject(v, 'meta.narrate')
+  return {
+    enabled: optBool(o.enabled, 'meta.narrate.enabled', true),
+    wpm: Math.max(30, optNumber(o.wpm, 'meta.narrate.wpm') ?? d.wpm),
+    min: Math.max(0, optNumber(o.min, 'meta.narrate.min') ?? d.min),
+    pad: Math.max(0, optNumber(o.pad, 'meta.narrate.pad') ?? d.pad),
+  }
+}
+
 export function buildMeta(m: Record<string, unknown>, type: DiagramType): DiagramMeta {
   const sp = asObject(m.spacing, 'meta.spacing')
   return {
@@ -69,6 +87,7 @@ export function buildMeta(m: Record<string, unknown>, type: DiagramType): Diagra
       cornerRadius:
         optNumber(sp.cornerRadius, 'meta.spacing.cornerRadius') ?? DEFAULT_SPACING.cornerRadius,
     },
+    narration: buildNarration(m.narrate),
   }
 }
 
@@ -205,6 +224,7 @@ function buildEdges(rawEdges: unknown[], validTargets: Set<string>): EdgeModel[]
       kind,
       color: optColor(e.color) ?? kd.color,
       arrow: arrowEnds(e.arrow),
+      note: optString(e.note),
       fromSide: e.fromSide != null ? (oneOf(e.fromSide, SIDES, 'edge.fromSide', 'bottom') as Side) : undefined,
       toSide: e.toSide != null ? (oneOf(e.toSide, SIDES, 'edge.toSide', 'top') as Side) : undefined,
       reply: false,
@@ -325,6 +345,19 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
       color: optColor(p.color),
     }
   }
+  if ('narrate' in s) {
+    // Shorthand `narrate: "text"` or the full `narrate: { text, hold, color }`.
+    if (typeof s.narrate === 'string' || typeof s.narrate === 'number' || typeof s.narrate === 'boolean') {
+      return { type: 'narrate', text: asString(s.narrate, 'narrate') }
+    }
+    const p = asObject(s.narrate, 'flow narrate')
+    return {
+      type: 'narrate',
+      text: asString(p.text, 'narrate.text'),
+      hold: optNumber(p.hold, 'narrate.hold'),
+      color: optColor(p.color),
+    }
+  }
   if ('phase' in s) {
     return { type: 'phase', label: asString(s.phase, 'flow phase') }
   }
@@ -339,7 +372,7 @@ function parseStep(s: Record<string, unknown>, nodeIds: Set<string>, groupIds: S
     return { type: 'parallel', steps }
   }
   throw new BeckError(
-    'A flow step must have one of: packet, burst, status, highlight, pulse, activate, stream, working, idle, fail, phase, wait, reset, parallel',
+    'A flow step must have one of: packet, burst, status, highlight, pulse, activate, stream, working, idle, fail, narrate, phase, wait, reset, parallel',
   )
 }
 
