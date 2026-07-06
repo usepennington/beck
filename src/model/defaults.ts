@@ -1,5 +1,6 @@
 import type {
   AccentToken,
+  DiagramType,
   EdgeKind,
   EdgeModel,
   EdgeStyle,
@@ -14,7 +15,29 @@ import type {
   Spacing,
 } from './schema'
 
+/** Baseline layout spacing — the architecture/sequence default. */
 export const DEFAULT_SPACING: Spacing = { rank: 96, node: 32, cornerRadius: 16 }
+
+/**
+ * Default spacing per diagram type. State and class diagrams compile onto the
+ * layered engine with *small* nodes and *many* short, labelled edges — state
+ * transitions with captions, self-loops, feedback pairs; UML relations with
+ * multiplicities — so at the architecture gap their labels stack on top of each
+ * other, self-loop captions hug their node, and sibling nodes nearly touch. They
+ * default to a roomier rank (along-flow) and node (across-flow) gap so all of
+ * that gets space to breathe. Architecture (big cards) and sequence (its own
+ * grid, where `node` means the lifeline gap) keep the tighter baseline.
+ *
+ * This only sets the DEFAULT: an explicit `meta.spacing` still wins. The C#
+ * builders emit `spacing:` only when a value is set, so authored diagrams
+ * inherit these too — no parity change needed there.
+ */
+export const SPACING_BY_TYPE: Record<DiagramType, Spacing> = {
+  architecture: DEFAULT_SPACING,
+  sequence: DEFAULT_SPACING,
+  state: { rank: 130, node: 72, cornerRadius: 16 },
+  class: { rank: 130, node: 72, cornerRadius: 16 },
+}
 
 /** Narration is available by default (opt in by writing `narrate:` steps or edge
  *  `note:`s); `wpm`/`min`/`pad` set the reading-time pace. Kept in lockstep with

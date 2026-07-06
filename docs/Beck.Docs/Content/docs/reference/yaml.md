@@ -55,8 +55,8 @@ the layered types — architecture, state, class.)
 
 | key | type | default | description |
 |---|---|---|---|
-| `rank` | number (px) | `96` | Gap between ranks, along the flow direction. |
-| `node` | number (px) | `32` | Gap between nodes within a rank, across the flow. |
+| `rank` | number (px) | `96` (state/class `130`) | Gap between ranks, along the flow direction. |
+| `node` | number (px) | `32` (state/class `72`) | Gap between nodes within a rank, across the flow. |
 | `cornerRadius` | number (px) | `16` | Corner radius on cards and edge bends. |
 
 `narrate` keys (a mapping value; a bare boolean just toggles `enabled`):

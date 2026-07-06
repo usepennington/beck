@@ -77,7 +77,7 @@ field tables and defaults, see the [YAML schema reference](/docs/reference/yaml)
 | `animate` | bool | `true` |
 | `loop` | bool | `true` (`false` plays once) |
 | `fit` | `shrink` `scroll` | `shrink` |
-| `spacing` | `{ rank, node, cornerRadius }` (px) | `96` / `32` / `16` |
+| `spacing` | `{ rank, node, cornerRadius }` (px) | `96` / `32` / `16` (state & class default roomier: `130` / `72` / `16`) |
 | `narrate` | bool, or `{ enabled, wpm, min, pad }` | `true` (caption-bar pacing; `false` = off) |
 
 ### nodes — `id` required, rest optional
