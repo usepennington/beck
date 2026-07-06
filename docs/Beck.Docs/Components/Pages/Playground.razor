@@ -115,16 +115,17 @@ edges:
             new Ex("Zero-trust access", "Every request authorised before it reaches a service", "/examples/zero-trust.beck.yaml"),
             new Ex("Incident response", "A metric breaches, an alert fires, on-call is paged", "/examples/incident-response.beck.yaml"),
             new Ex("Deploy pipeline", "Commit to production through CI/CD stages", "/examples/cicd.beck.yaml"),
+            new Ex("Webhook delivery", "A delivery fails, then a retry succeeds — narrated by captions", "/examples/webhook-retry.beck.yaml"),
             new Ex("Nested groups", "Nested boundaries via recursive compound layout", "/examples/nested-groups.beck.yaml"),
         }),
         new("sequence", "Sequence", "▷", "seq", new[]
         {
-            new Ex("Checkout", "Order placement with payment capture", "/examples/checkout-sequence.beck.yaml"),
+            new Ex("Checkout", "Payment capture and persistence, narrated by captions", "/examples/checkout-sequence.beck.yaml"),
             new Ex("OAuth login", "Authorization-code flow with PKCE", "/examples/oauth-login.beck.yaml"),
         }),
         new("state", "State", "◈", "state", new[]
         {
-            new Ex("Order lifecycle", "An order from placed through to delivered", "/examples/order-lifecycle.beck.yaml"),
+            new Ex("Order lifecycle", "Placed through to delivered, narrated by captions", "/examples/order-lifecycle.beck.yaml"),
             new Ex("Circuit breaker", "Closed, open and half-open transitions", "/examples/circuit-breaker.beck.yaml"),
         }),
         new("class", "Class", "▤", "class", new[]

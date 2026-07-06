@@ -10,10 +10,10 @@ states:
   - { id: cancelled, title: Cancelled, accent: danger }
 transitions:
   - { from: "[*]", to: placed }
-  - { from: placed, to: paid, label: payment ok }
-  - { from: placed, to: cancelled, label: timeout }
-  - { from: paid, to: shipped, label: dispatch }
+  - { from: placed, to: paid, label: payment ok, note: "Payment clears, so the order is confirmed." }
+  - { from: placed, to: cancelled, label: timeout, note: No payment arrives in time — the order is cancelled. }
+  - { from: paid, to: shipped, label: dispatch, note: The warehouse dispatches the parcel. }
   - { from: shipped, to: shipped, label: track }
-  - { from: shipped, to: delivered, label: handover }
+  - { from: shipped, to: delivered, label: handover, note: The courier hands it over — delivered. }
   - { from: delivered, to: "[*]" }
   - { from: cancelled, to: "[*]" }
