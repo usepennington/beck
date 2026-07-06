@@ -106,11 +106,14 @@ To skip the copy-paste, swap `.ToYaml()` for `.ToFence()` — it returns the YAM
 ## Step 4 — Script the motion
 
 So far Beck derives the animation from the edges. Add a `.Flow(...)` to choreograph it yourself —
-send a request to the API, mark the database busy while it works, then return a result:
+send a request to the API, mark the database busy while it works, then return a result. A
+`.Narrate(...)` between the steps captions each beat so the animation explains itself:
 
 ```csharp
     .Flow(f => f
+        .Narrate("The web app asks the API for data.")
         .Packet("web", "api", label: "GET /")
+        .Narrate("The API reads it from the database.")
         .Working("db")
         .Packet("api", "db", color: "info")
         .Idle("db")
@@ -138,7 +141,9 @@ edges:
   - { from: api, to: db, label: queries }
 flow:
   steps:
+    - narrate: The web app asks the API for data.
     - packet: { from: web, to: api, label: GET / }
+    - narrate: The API reads it from the database.
     - working: { node: db }
     - packet: { from: api, to: db, color: info }
     - idle: { node: db }

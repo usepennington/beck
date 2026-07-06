@@ -27,6 +27,7 @@ export class Snapshot {
   private svgs: SVGSVGElement[] = []
   private trailStates: TrailState[] = []
   private opacities: Array<{ el: SVGElement | HTMLElement; opacity: string }> = []
+  private captions: HTMLElement[] = []
 
   capturePills(container: HTMLElement): this {
     for (const el of container.querySelectorAll('.beck-status, .beck-status-inline')) {
@@ -69,6 +70,12 @@ export class Snapshot {
     return this
   }
 
+  /** The narration caption bar resets to blank + hidden on a loop restart. */
+  trackCaption(el: HTMLElement): this {
+    this.captions.push(el)
+    return this
+  }
+
   /** Capture the CURRENT inline opacity of elements a choreography dims at
    *  compile time (call after the dim is applied), so reset returns them to
    *  their dimmed start rather than wherever a reveal tween left them. */
@@ -104,6 +111,11 @@ export class Snapshot {
         .forEach((el) => el.setAttribute('opacity', '0'))
     }
     for (const s of this.opacities) s.el.style.opacity = s.opacity
+    for (const el of this.captions) {
+      el.textContent = ''
+      el.style.opacity = '0'
+      el.style.color = ''
+    }
     for (const state of this.trailStates) {
       for (const o of state.overlays) o.style.strokeDashoffset = o.style.strokeDasharray
       // Hide (don't remove) streams so the same overlay replays on the next loop.

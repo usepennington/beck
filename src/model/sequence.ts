@@ -64,6 +64,7 @@ export function buildSequenceModel(root: Record<string, unknown>): DiagramModel 
       color: optColor(m.color) ?? accentOf.get(worker) ?? EDGE_KIND_DEFAULTS[kind].color,
       arrow: 'end',
       markerEnd: dashed ? 'arrow-open' : 'arrow',
+      note: optString(m.note),
       reply,
       activate: triBool(m.activate, 'message.activate'),
     })
@@ -89,6 +90,8 @@ function deriveSequenceFlow(edges: EdgeModel[], sections: SectionMark[], loop: b
   const steps: FlowStep[] = []
   edges.forEach((e, i) => {
     for (const s of sections) if (s.at === i) steps.push({ type: 'phase', label: s.label })
+    // A message `note:` narrates the exchange just before it fires.
+    if (e.note) steps.push({ type: 'narrate', text: e.note })
     steps.push({
       type: 'packet',
       from: e.from,

@@ -62,6 +62,18 @@ public sealed class StateDiagramBuilder
     /// <summary>How the diagram behaves when wider than its container.</summary>
     public StateDiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
 
+    /// <summary>Toggle + tune the narration caption. Captions come from a transition
+    /// <see cref="TransitionBuilder.Note"/> (or explicit <see cref="FlowBuilder.Narrate"/> steps);
+    /// the knobs pace each caption's on-screen time by its length.</summary>
+    public StateDiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
+    {
+        _meta.Narrate = enabled;
+        if (wpm is { } w) _meta.NarrateWpm = w;
+        if (min is { } m) _meta.NarrateMin = m;
+        if (pad is { } p) _meta.NarratePad = p;
+        return this;
+    }
+
     /// <summary>Tune layout spacing.</summary>
     public StateDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
@@ -197,6 +209,7 @@ public sealed class TransitionBuilder
     private readonly string _to;
     private string? _label;
     private string? _color;
+    private string? _note;
     private EdgeStyle? _style;
 
     internal TransitionBuilder(string from, string to)
@@ -217,6 +230,10 @@ public sealed class TransitionBuilder
     /// <summary>Set the stroke to a raw color.</summary>
     public TransitionBuilder Color(string color) { _color = color; return this; }
 
+    /// <summary>Narrate this transition: the text becomes a caption just before the
+    /// transition fires in an auto-derived flow (ignored when a <c>Flow</c> is scripted).</summary>
+    public TransitionBuilder Note(string note) { _note = note; return this; }
+
     internal string ToFlow()
     {
         var pairs = new List<(string, string)>
@@ -227,6 +244,7 @@ public sealed class TransitionBuilder
         if (_label != null) pairs.Add(("label", YamlWriter.Scalar(_label)));
         if (_style is { } s) pairs.Add(("style", Tokens.Of(s)));
         if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
+        if (_note != null) pairs.Add(("note", YamlWriter.Scalar(_note)));
         return YamlWriter.FlowMap(pairs);
     }
 }

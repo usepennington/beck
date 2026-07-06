@@ -99,6 +99,7 @@ export function buildStateModel(root: Record<string, unknown>): DiagramModel {
       kind: 'control',
       color: optColor(t.color) ?? 'var(--beck-edge)',
       arrow: 'end',
+      note: optString(t.note),
       reply: false,
     })
   }

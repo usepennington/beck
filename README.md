@@ -54,7 +54,8 @@ type: class                    # classes: + relations: (inherits/implements/comp
 ### Schema reference
 
 - **`meta`** — `title`, `subtitle`, `direction` (TB/BT/LR/RL), `theme` (auto/light/dark),
-  `animate` (bool), `loop` (bool), `spacing: { rank, node, cornerRadius }`.
+  `animate` (bool), `loop` (bool), `spacing: { rank, node, cornerRadius }`, `narrate` (bool to
+  toggle the caption bar, or `{ wpm, min, pad }` to tune reading-time pacing — see `narrate` step).
 - **`nodes[]`** — `id` (required), `title`, `subtitle`, `icon` (named key or raw `<svg>`),
   `kind` (`service` `db` `queue` `cache` `gateway` `external` `user` `ghost`), `variant`
   (`solid` `subtle` `ghost`), `status`, `accent` (token `primary|success|warn|danger|info|neutral`
@@ -64,7 +65,8 @@ type: class                    # classes: + relations: (inherits/implements/comp
   group id nests it — groups compose to arbitrary depth and may span ranks), `accent`.
 - **`edges[]`** — `from`, `to` (node or group id), `label`, `style` (`solid`/`dashed`),
   `curve` (`step-round`/`straight`/`s`), `kind` (`data`/`control`/`async`/`dependency`),
-  `color`, `arrow` (`true`/`false`, or `end`/`start`/`both`/`none`), `fromSide`/`toSide`.
+  `color`, `arrow` (`true`/`false`, or `end`/`start`/`both`/`none`), `note` (prose that narrates
+  the hop in an auto-derived flow — see `narrate`), `fromSide`/`toSide`.
 - **`flow`** — `repeat`, `repeatDelay`, `steps[]`, where each step is one of: `packet`
   (`{from, to, via?, color?, label?}` plus look/motion knobs `shape` (`dot`/`circle`/`ring`),
   `size`, `speed`, `glow`, `impact` (burst-on-arrival), `ease`), `burst` (`{from, to|[to…], count,
@@ -72,13 +74,16 @@ type: class                    # classes: + relations: (inherits/implements/comp
   (`{node, color?}`), `activate`/`stream` (`{from, to, color?}` — persistently recolor an edge /
   flow continuous dashes along it), `working` (`{node, color?}` — leave a node breathing until
   `idle`/`reset`), `idle` (`{node}`), `fail` (`{node, text?, color?}` — red shake + flash),
+  `narrate` (`"text"`, or `{text, hold?, color?}` — set the caption line under the diagram and hold
+  long enough to read it; the hold scales with the text length, tuned by `meta.narrate`),
   `phase` (label, for seeking), `wait` (seconds), `parallel` (`[steps…]`), `reset`. Set
   `meta.loop: false` to play the flow once instead of looping.
 - **`type: sequence`** — `participants[]` (same fields as nodes) and `messages[]` (`from`, `to`,
-  `label`, `reply`, `kind`, `style`, `color`, `activate`; `- section: <label>` inserts a band).
+  `label`, `reply`, `kind`, `style`, `color`, `note` (narrates the message while the choreography
+  plays), `activate`; `- section: <label>` inserts a band).
   Request/reply pairs grow activation bars; the derived flow plays the messages in order.
 - **`type: state`** — optional `states[]` (`id`, `title`, `subtitle`, `accent`, …) and
-  `transitions[]` (`from`, `to`, `label`, `style`, `color`); `"[*]"` is the entry/exit
+  `transitions[]` (`from`, `to`, `label`, `style`, `color`, `note`); `"[*]"` is the entry/exit
   pseudo-state and undeclared ids auto-create pill states.
 - **`type: class`** — `classes[]` (`id`, `name`, `stereotype`, `fields[]`, `methods[]`, `accent`,
   …) and `relations[]` (`from`, `to`, `kind` = `inherits` `implements` `association` `aggregation`

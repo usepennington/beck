@@ -8,7 +8,9 @@ import { createTrailState, packetWithTrail, streamEdge } from './trail'
 import { statusPill } from './status'
 import { highlight, pulse, working, clearWorking, fail, colorLine } from './effects'
 import { setupSequenceChoreo } from './sequence'
+import { narrateBeat, readingTime } from './narrate'
 import { Snapshot, createSnapshot } from './snapshot'
+import type { NarrationOptions } from '../model/schema'
 
 export interface FlowContext {
   /** The `.beck-root` container — used for CSS-var color resolution + snapshot. */
@@ -20,6 +22,8 @@ export interface FlowContext {
   nodes: Map<string, HTMLElement>
   edges: RoutedEdge[]
   model: DiagramModel
+  /** The narration caption bar + its pacing, when narration is active. */
+  narration?: { el: HTMLElement; opts: NarrationOptions }
 }
 
 export interface CompiledFlow {
@@ -52,6 +56,7 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
   const choreo = setupSequenceChoreo(ctx.svg, ctx.model)
   const snapshot = createSnapshot().captureAll(ctx.canvas).trackSvg(ctx.svg).trackTrails(trail)
   if (choreo) snapshot.captureOpacity(choreo.dimmed)
+  if (ctx.narration) snapshot.trackCaption(ctx.narration.el)
 
   const resolve = (c?: string) => resolveColor(ctx.root, c ?? 'var(--beck-packet)')
   const nodeEl = (id: string) => ctx.nodes.get(id) ?? null
@@ -197,6 +202,15 @@ export function buildTimeline(ctx: FlowContext): CompiledFlow {
           fail(tl, el, { color }, position)
           if (step.text) statusPill(tl, el, step.text, { color }, position)
         }
+        break
+      }
+      case 'narrate': {
+        const n = ctx.narration
+        if (!n) break
+        const at = position ?? tl.duration()
+        const hold = step.hold ?? readingTime(step.text, n.opts)
+        // `step.color` is already a CSS value (var or literal) — set it inline.
+        narrateBeat(tl, n.el, step.text, step.color, hold, at)
         break
       }
       case 'phase': {

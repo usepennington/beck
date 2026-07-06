@@ -83,6 +83,10 @@ wwwroot/examples/guides/edges-06.beck.yaml
 > [!TIP]
 > Prefer tokens over raw colours so your edges adapt when the diagram switches theme. See [Match your theme and colours](/docs/guides/theme).
 
+## Narrate a hop
+
+Give an edge a `note:` and Beck captions the animation with it — the text appears in a bar under the diagram just before the edge's packet travels, when the flow is [derived](/docs/reference/flow#derived-flow) rather than scripted. It's the one-line way to explain *why* a connection fires. See [Narrate the story](/docs/guides/flow#narrate-the-story) for pacing and the scripted `narrate` step.
+
 ## Nudge the routing
 
 Beck auto-routes edges and the default is usually right, so reach for this only when a line leaves or enters somewhere awkward. Pin the anchor with `fromSide` and `toSide`, each one of `top`, `bottom`, `left`, or `right`.

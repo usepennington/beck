@@ -5,6 +5,7 @@ import type {
   EdgeStyle,
   FlowModel,
   FlowStep,
+  NarrationOptions,
   NodeKind,
   NodeModel,
   NodeVariant,
@@ -14,6 +15,17 @@ import type {
 } from './schema'
 
 export const DEFAULT_SPACING: Spacing = { rank: 96, node: 32, cornerRadius: 16 }
+
+/** Narration is available by default (opt in by writing `narrate:` steps or edge
+ *  `note:`s); `wpm`/`min`/`pad` set the reading-time pace. Kept in lockstep with
+ *  the C# `MetaOptions` narrate defaults. */
+export const DEFAULT_NARRATION: NarrationOptions = { enabled: true, wpm: 170, min: 1.4, pad: 0.5 }
+
+/** True when a flow contains any caption content (a `narrate` step, at any depth
+ *  through `parallel`). Used to decide whether to render the caption bar at all. */
+export function flowHasNarration(steps: FlowStep[]): boolean {
+  return steps.some((s) => (s.type === 'narrate' ? true : s.type === 'parallel' && flowHasNarration(s.steps)))
+}
 
 /** Per-kind visual defaults: accent token, default icon key, and visual weight. */
 export const KIND_DEFAULTS: Record<
@@ -133,6 +145,8 @@ export function deriveFlow(nodes: NodeModel[], edges: EdgeModel[]): FlowModel {
       steps.push({ type: 'phase', label: e.from })
       labeled.add(e.from)
     }
+    // A `note:` on the edge narrates the hop before its packet departs.
+    if (e.note) steps.push({ type: 'narrate', text: e.note })
     steps.push({ type: 'packet', from: e.from, to: e.to })
   }
   if (steps.length) {

@@ -51,6 +51,10 @@ The derived flow traces each transition in machine order. For a guided story —
 path, `fail` a state, park a `status` pill — add a `flow:` block; state ids work anywhere node ids
 do. See [Animate the flow](/docs/guides/flow).
 
+To caption the walk without scripting a flow, add a `note:` to a transition — it becomes a
+narration line under the diagram as that transition fires. See [Narrate the
+story](/docs/guides/flow#narrate-the-story).
+
 ---
 
 Full field tables: [states and transitions in the YAML

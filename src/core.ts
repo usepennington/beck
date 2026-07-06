@@ -1,4 +1,5 @@
 import { loadDiagram } from './model'
+import { flowHasNarration } from './model/defaults'
 import type { DiagramModel, ThemeMode } from './model/schema'
 import { createNode, type RenderedNode } from './render/node'
 import { createGroup } from './render/group'
@@ -47,6 +48,8 @@ interface BuiltState {
   rendered: Map<string, RenderedNode>
   edges: RoutedEdge[]
   layout: LayoutResult
+  /** The narration caption bar under the diagram (null when narration is off). */
+  narration: HTMLElement | null
 }
 
 /** Mount a validated model into an already-scoped `.beck-root` container. */
@@ -83,6 +86,13 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
   }
   applyTheme()
   watchMedia()
+
+  // Resolved once: whether the timeline plays, and whether a narration caption
+  // bar should exist (narration enabled + the flow actually carries captions).
+  // Both feed `build()`, so they're computed before it.
+  const shouldAnimate = opts.animate !== false && model.meta.animate && !prefersReducedMotion()
+  const narrationActive =
+    shouldAnimate && model.meta.narration.enabled && flowHasNarration(model.flow.steps)
 
   const build = (): BuiltState => {
     // keep the title/subtitle? They are rebuilt each time for simplicity.
@@ -166,7 +176,18 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
     canvas.style.width = `${layout.width}px`
     canvas.style.height = `${layout.height}px`
 
-    return { viewport, canvas, svg, rendered, edges, layout }
+    // The narration caption sits below the diagram body (outside the scaled
+    // canvas, so its text stays full size). It starts blank + hidden; the
+    // timeline fades captions in and the snapshot resets it on each loop.
+    let narration: HTMLElement | null = null
+    if (narrationActive) {
+      narration = document.createElement('div')
+      narration.className = 'beck-narration'
+      narration.style.opacity = '0'
+      root.appendChild(narration)
+    }
+
+    return { viewport, canvas, svg, rendered, edges, layout, narration }
   }
 
   let state = build()
@@ -195,7 +216,6 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
   fit()
 
   // ---- animation ----
-  const shouldAnimate = opts.animate !== false && model.meta.animate && !prefersReducedMotion()
   let compiled: CompiledFlow | null = null
   let io: IntersectionObserver | null = null
   let resolveReady!: () => void
@@ -204,7 +224,8 @@ export function mountModel(root: HTMLElement, model: DiagramModel, opts: RenderO
   const wireAnimation = () => {
     if (!shouldAnimate) return
     const wraps = new Map<string, HTMLElement>([...state.rendered].map(([id, rn]) => [id, rn.wrap]))
-    compiled = buildTimeline({ root, canvas: state.canvas, svg: state.svg, nodes: wraps, edges: state.edges, model })
+    const narration = state.narration ? { el: state.narration, opts: model.meta.narration } : undefined
+    compiled = buildTimeline({ root, canvas: state.canvas, svg: state.svg, nodes: wraps, edges: state.edges, model, narration })
     if (typeof IntersectionObserver !== 'undefined') {
       io = new IntersectionObserver(
         (entries) => {

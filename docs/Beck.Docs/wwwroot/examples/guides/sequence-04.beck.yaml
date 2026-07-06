@@ -1,0 +1,13 @@
+type: sequence
+participants:
+  - { id: shopper, title: Shopper, kind: user }
+  - { id: api, title: Orders API }
+  - { id: pay, title: Payments, kind: external }
+  - { id: db, title: Postgres, kind: db }
+messages:
+  - { from: shopper, to: api, label: POST /checkout, note: The shopper submits their cart to the Orders API. }
+  - { from: api, to: pay, label: capture, note: The API asks the payment service to capture the total. }
+  - { from: pay, to: api, label: captured, reply: true }
+  - { from: api, to: db, label: INSERT order, note: "With funds secured, the order is written to Postgres." }
+  - { from: db, to: api, label: ok, reply: true }
+  - { from: api, to: shopper, label: 201 Created, reply: true }

@@ -310,6 +310,44 @@ a.beck-node:hover {
   transition: color 0.15s, background-color 0.15s;
 }
 
+/* ---- narration caption ---- */
+
+/* A teleprompter line under the diagram that a `narrate:` step (or a derived
+   flow's edge `note:`) updates as the story plays. The animator drives its
+   opacity (fade between captions) and sets `color` inline when a caption tints
+   itself; everything here is the resting look. `min-height` reserves two lines
+   so the diagram never jumps as captions come and go. */
+.beck-narration {
+  margin: 0.9rem auto 0;
+  max-width: min(46rem, 92%);
+  min-height: 2.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--beck-primary) 6%, var(--beck-surface));
+  border: 1px solid color-mix(in srgb, var(--beck-primary) 15%, transparent);
+  box-shadow: var(--beck-node-shadow);
+  color: var(--beck-text);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+}
+/* Leading dot flags the line as narration; `currentColor` lets it inherit an
+   inline caption colour when one is set. */
+.beck-narration::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
 /* ---- group ---- */
 
 .beck-group {

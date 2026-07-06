@@ -58,6 +58,21 @@ export interface Spacing {
   cornerRadius: number
 }
 
+/** Controls the optional narration caption — a line under the diagram that a
+ *  `narrate:` step (or a `note:` on a derived-flow edge) updates as the flow
+ *  plays. `enabled: false` (authoring `meta.narrate: false`) suppresses the bar
+ *  entirely; the pacing knobs turn a caption's length into how long it lingers. */
+export interface NarrationOptions {
+  /** Whether captions render + hold at all. */
+  enabled: boolean
+  /** Reading pace in words per minute — drives each caption's auto hold. */
+  wpm: number
+  /** Floor on a caption's on-screen time, in seconds. */
+  min: number
+  /** Seconds added on top of the computed reading time (lead-in/out padding). */
+  pad: number
+}
+
 export interface DiagramMeta {
   type: DiagramType
   title?: string
@@ -69,6 +84,8 @@ export interface DiagramMeta {
   /** How the diagram behaves when wider than its container (`shrink`/`scroll`). */
   fit: FitMode
   spacing: Spacing
+  /** Narration caption behaviour + reading-time pacing. */
+  narration: NarrationOptions
 }
 
 export interface NodeModel {
@@ -123,6 +140,9 @@ export interface EdgeModel {
   color: string
   /** Which ends carry an arrowhead (`true`/`false` authoring maps to end/none). */
   arrow: ArrowEnds
+  /** Prose narration for this edge — surfaced as a caption before the edge's
+   *  packet in an auto-derived flow (ignored when a `flow:` is authored). */
+  note?: string
   fromSide?: Side
   toSide?: Side
   /** Explicit end decorations; when set they win over `arrow` at that end. */
@@ -185,6 +205,9 @@ export type FlowStep =
   | { type: 'idle'; node: string }
   /** A failure beat: red shake + flash, with an optional status text. */
   | { type: 'fail'; node: string; text?: string; color?: string }
+  /** Update the narration caption + hold long enough to read it. `hold` overrides
+   *  the length-derived reading time; `color` tints the caption text. */
+  | { type: 'narrate'; text: string; hold?: number; color?: string }
   | { type: 'phase'; label: string }
   | { type: 'wait'; seconds: number }
   | { type: 'reset' }

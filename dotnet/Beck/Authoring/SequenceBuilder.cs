@@ -56,6 +56,18 @@ public sealed class SequenceDiagramBuilder
     /// <summary>How the diagram behaves when wider than its container.</summary>
     public SequenceDiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
 
+    /// <summary>Toggle + tune the narration caption. Captions come from a message
+    /// <see cref="MessageBuilder.Note"/> (or explicit <see cref="FlowBuilder.Narrate"/> steps);
+    /// the knobs pace each caption's on-screen time by its length.</summary>
+    public SequenceDiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
+    {
+        _meta.Narrate = enabled;
+        if (wpm is { } w) _meta.NarrateWpm = w;
+        if (min is { } m) _meta.NarrateMin = m;
+        if (pad is { } p) _meta.NarratePad = p;
+        return this;
+    }
+
     /// <summary>Tune spacing: <paramref name="node"/> is the minimum gap between lifelines.</summary>
     public SequenceDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
@@ -164,6 +176,7 @@ public sealed class MessageBuilder
     private readonly bool _reply;
     private string? _label;
     private string? _color;
+    private string? _note;
     private EdgeKind? _kind;
     private EdgeStyle? _style;
     private bool? _activate;
@@ -193,6 +206,10 @@ public sealed class MessageBuilder
     /// <summary>Force (true) or suppress (false) an activation bar on the receiver.</summary>
     public MessageBuilder Activate(bool activate) { _activate = activate; return this; }
 
+    /// <summary>Narrate this message: the text becomes a caption just before the message
+    /// fires (in the derived flow), while the sequence choreography still plays.</summary>
+    public MessageBuilder Note(string note) { _note = note; return this; }
+
     internal string ToFlow()
     {
         var pairs = new List<(string, string)>
@@ -205,6 +222,7 @@ public sealed class MessageBuilder
         if (_kind is { } k) pairs.Add(("kind", Tokens.Of(k)));
         if (_style is { } s) pairs.Add(("style", Tokens.Of(s)));
         if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
+        if (_note != null) pairs.Add(("note", YamlWriter.Scalar(_note)));
         if (_activate is { } a) pairs.Add(("activate", a ? "true" : "false"));
         return YamlWriter.FlowMap(pairs);
     }

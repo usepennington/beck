@@ -145,6 +145,7 @@ public sealed class EdgeBuilder
     private EdgeCurve? _curve;
     private EdgeKind? _kind;
     private string? _arrow;
+    private string? _note;
     private Side? _fromSide;
     private Side? _toSide;
 
@@ -184,6 +185,10 @@ public sealed class EdgeBuilder
     /// <summary>Choose which ends carry an arrowhead (e.g. <see cref="ArrowEnds.Both"/>).</summary>
     public EdgeBuilder Arrows(ArrowEnds ends) { _arrow = Tokens.Of(ends); return this; }
 
+    /// <summary>Narrate this edge: the text becomes a caption just before the edge's
+    /// packet in an auto-derived flow (ignored when an explicit <c>Flow</c> is scripted).</summary>
+    public EdgeBuilder Note(string note) { _note = note; return this; }
+
     /// <summary>Pin the edge's exit side on the source node.</summary>
     public EdgeBuilder FromSide(Side side) { _fromSide = side; return this; }
 
@@ -203,6 +208,7 @@ public sealed class EdgeBuilder
         if (_kind is { } k) pairs.Add(("kind", Tokens.Of(k)));
         if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
         if (_arrow != null) pairs.Add(("arrow", _arrow));
+        if (_note != null) pairs.Add(("note", YamlWriter.Scalar(_note)));
         if (_fromSide is { } fs) pairs.Add(("fromSide", Tokens.Of(fs)));
         if (_toSide is { } ts) pairs.Add(("toSide", Tokens.Of(ts)));
         return YamlWriter.FlowMap(pairs);
