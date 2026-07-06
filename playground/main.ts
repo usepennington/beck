@@ -3,7 +3,6 @@ import { renderDiagram, type DiagramHandle } from '../src'
 import simple from './samples/simple.yaml?raw'
 import grouped from './samples/grouped.yaml?raw'
 import flow from './samples/flow.yaml?raw'
-import narrated from './samples/narrated.yaml?raw'
 import sequence from './samples/sequence.yaml?raw'
 import state from './samples/state.yaml?raw'
 import classes from './samples/class.yaml?raw'
@@ -14,7 +13,6 @@ const samples: Record<string, string> = {
   Simple: simple,
   Grouped: grouped,
   Flow: flow,
-  Narrated: narrated,
   Sequence: sequence,
   State: state,
   Class: classes,

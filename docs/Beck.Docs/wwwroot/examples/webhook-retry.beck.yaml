@@ -1,0 +1,26 @@
+type: architecture
+meta:
+  title: Webhook delivery
+  subtitle: The caption bar narrates a delivery that fails, then retries
+  direction: LR
+nodes:
+  - { id: app, title: Orders, kind: service }
+  - { id: queue, title: Delivery Queue, kind: queue }
+  - { id: hook, title: Customer Endpoint, kind: external, icon: webhook }
+edges:
+  - { from: app, to: queue }
+  - { from: queue, to: hook }
+flow:
+  repeat: -1
+  repeatDelay: 2.5
+  steps:
+    - narrate: An order ships, so a webhook is queued for the customer.
+    - packet: { from: app, to: queue, label: OrderShipped }
+    - narrate: The queue posts the event to the customer's endpoint.
+    - packet: { from: queue, to: hook, label: POST }
+    - narrate: { text: "The endpoint times out — the delivery failed.", color: danger }
+    - fail: { node: hook, text: 504 timeout }
+    - narrate: { text: "After a short backoff, the retry gets through.", color: success }
+    - packet: { from: queue, to: hook, label: retry, color: success }
+    - status: { node: hook, text: 200 OK, color: success }
+    - wait: 1.4
