@@ -1,0 +1,32 @@
+type: architecture
+meta:
+  title: Deploy pipeline
+  subtitle: The caption bar narrates each step of the flow
+  direction: LR
+nodes:
+  - { id: git, title: Git push, kind: external, icon: git }
+  - { id: ci, title: CI, kind: service, icon: code }
+  - { id: registry, title: Registry, kind: cache, icon: container }
+  - { id: prod, title: Production, kind: gateway }
+edges:
+  - { from: git, to: ci }
+  - { from: ci, to: registry }
+  - { from: registry, to: prod }
+flow:
+  repeat: -1
+  repeatDelay: 2.5
+  steps:
+    - narrate: A developer pushes to main — the pipeline wakes up.
+    - packet: { from: git, to: ci, label: push }
+    - narrate: CI builds the image and runs the test suite.
+    - working: { node: ci }
+    - wait: 0.6
+    - status: { node: ci, text: 240 tests passed, color: success }
+    - idle: { node: ci }
+    - narrate: The tagged image is pushed to the registry.
+    - packet: { from: ci, to: registry, label: image, color: info }
+    - narrate: { text: "Rolling out to production...", color: primary }
+    - packet: { from: registry, to: prod }
+    - narrate: { text: "Health checks failed — rolling back.", color: danger }
+    - fail: { node: prod, text: rollback }
+    - wait: 1.4
