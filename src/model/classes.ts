@@ -11,7 +11,7 @@ import {
   stringList,
 } from './coerce'
 import { buildFlow, buildGroups, buildMeta } from './validate'
-import type { DiagramModel, EdgeModel, FlowModel, FlowStep, NodeModel } from './schema'
+import type { DiagramModel, EdgeModel, FlowModel, NodeModel } from './schema'
 
 const RELATION_KINDS = [
   'inherits',
@@ -159,55 +159,18 @@ export function buildClassModel(root: Record<string, unknown>): DiagramModel {
   }
 
   const groupIdSet = new Set(groups.map((g) => g.id))
-  const flow =
-    root.flow != null
-      ? buildFlow(asObject(root.flow, 'flow'), ids, groupIdSet)
-      : deriveClassFlow(nodes, edges)
-  if (!meta.loop) flow.repeat = 0
+  // Class diagrams are structural reference material, not a narrative — there is
+  // no sequence of events to play, so nothing is auto-derived. An author who
+  // deliberately writes a `flow:` block still gets it; otherwise we render a
+  // still frame and never load the animation runtime.
+  let flow: FlowModel
+  if (root.flow != null) {
+    flow = buildFlow(asObject(root.flow, 'flow'), ids, groupIdSet)
+    if (!meta.loop) flow.repeat = 0
+  } else {
+    flow = { repeat: 0, repeatDelay: 0, steps: [], derived: false }
+    meta.animate = false
+  }
 
   return { meta, nodes, groups, edges, flow, sections: [] }
-}
-
-/**
- * Class diagrams are structural, so the derived animation is a quiet cascade
- * rather than a packet story: each inheritance level lights up in turn, with
- * the relations into that level recoloring as it does.
- */
-function deriveClassFlow(nodes: NodeModel[], edges: EdgeModel[]): FlowModel {
-  // Longest-path rank over the compiled edges (which already point top→bottom).
-  const rank = new Map<string, number>(nodes.map((n) => [n.id, 0]))
-  const indeg = new Map<string, number>(nodes.map((n) => [n.id, 0]))
-  const out = new Map<string, string[]>(nodes.map((n) => [n.id, []]))
-  for (const e of edges) {
-    if (e.from === e.to || !rank.has(e.from) || !rank.has(e.to)) continue
-    out.get(e.from)!.push(e.to)
-    indeg.set(e.to, (indeg.get(e.to) ?? 0) + 1)
-  }
-  const queue = nodes.filter((n) => (indeg.get(n.id) ?? 0) === 0).map((n) => n.id)
-  while (queue.length) {
-    const u = queue.shift()!
-    for (const v of out.get(u) ?? []) {
-      rank.set(v, Math.max(rank.get(v) ?? 0, (rank.get(u) ?? 0) + 1))
-      indeg.set(v, (indeg.get(v) ?? 1) - 1)
-      if ((indeg.get(v) ?? 0) === 0) queue.push(v)
-    }
-  }
-  const maxRank = Math.max(0, ...[...rank.values()])
-  const edgeRank = (e: EdgeModel) => Math.max(rank.get(e.from) ?? 0, rank.get(e.to) ?? 0)
-
-  const steps: FlowStep[] = []
-  for (let r = 0; r <= maxRank; r++) {
-    const level: FlowStep[] = []
-    for (const e of edges) if (edgeRank(e) === r) level.push({ type: 'activate', from: e.from, to: e.to })
-    for (const n of nodes) if ((rank.get(n.id) ?? 0) === r) level.push({ type: 'highlight', node: n.id })
-    if (level.length) {
-      steps.push({ type: 'parallel', steps: level })
-      steps.push({ type: 'wait', seconds: 0.4 })
-    }
-  }
-  if (steps.length) {
-    steps.push({ type: 'wait', seconds: 1.4 })
-    steps.push({ type: 'reset' })
-  }
-  return { repeat: -1, repeatDelay: 2.5, steps, derived: true }
 }

@@ -71,9 +71,11 @@ code](/docs/guides/generate) for the pattern.
 
 ## Animation
 
-Class diagrams are structural, so the derived animation is deliberately quiet: each inheritance
-level lights up in turn, top to bottom. Script your own `flow:` (highlight one aggregate, pulse the
-interfaces) if you want a guided tour — class ids work anywhere node ids do.
+Class diagrams are structural reference material, not a narrative, so — alone among the diagram
+types — they don't animate by default. There's no sequence of events to play, so Beck renders a
+still frame and never loads the animation runtime. If you genuinely want a guided tour (highlight
+one aggregate, pulse the interfaces), script your own `flow:` and it plays — class ids work
+anywhere node ids do.
 
 ---
 

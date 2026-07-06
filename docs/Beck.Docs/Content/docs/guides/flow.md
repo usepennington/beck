@@ -14,7 +14,7 @@ Each recipe below is a small live diagram; for the exhaustive list of steps and 
 
 ## Let Beck derive a flow
 
-If you write no `flow` block at all, Beck animates anyway — and what it derives fits the diagram type: architecture and state diagrams get a topological packet-walk from roots to leaves; a sequence plays its messages in authored order; a class diagram lights each inheritance level in turn. Declaring the boxes and connectors is enough to get motion — see [derived flow](/docs/reference/flow#derived-flow) for the exact behaviour per type.
+If you write no `flow` block at all, Beck animates anyway — and what it derives fits the diagram type: architecture and state diagrams get a topological packet-walk from roots to leaves; a sequence plays its messages in authored order. Class diagrams are the exception: they're structural reference material with no sequence of events to play, so they render a still frame unless you script a `flow:` yourself. Declaring the boxes and connectors is enough to get motion — see [derived flow](/docs/reference/flow#derived-flow) for the exact behaviour per type.
 
 ```yaml:symbol
 wwwroot/examples/guides/flow-01.beck.yaml
