@@ -378,9 +378,10 @@ or [Add Beck to a Pennington site](/docs/guides/pennington).
   anything off the list.
 - **Groups nest** by putting a group id in another group's `members`; the membership graph is a
   tree (one parent, no self-nesting).
-- **Animation is automatic** — no `flow:` means a derived one. `meta.loop: false` plays once;
-  `meta.animate: false` (or the reader's reduced-motion setting) renders a static frame and never
-  loads the motion runtime.
+- **Animation is automatic** — no `flow:` means a derived one, *except for `type: class`*, which is
+  structural reference material and renders a still frame unless you script a `flow:` yourself.
+  `meta.loop: false` plays once; `meta.animate: false` (or the reader's reduced-motion setting)
+  renders a static frame and never loads the motion runtime.
 - **Flow steps are ordered**, single-key mappings; `parallel` runs its children simultaneously;
   `status`/`working`/`stream`/`activate` persist until cleared or `reset`.
 - **It's plain YAML** — the parser reports friendly errors (with a line number for syntax issues),

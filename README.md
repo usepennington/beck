@@ -82,7 +82,9 @@ type: class                    # classes: + relations: (inherits/implements/comp
   pseudo-state and undeclared ids auto-create pill states.
 - **`type: class`** — `classes[]` (`id`, `name`, `stereotype`, `fields[]`, `methods[]`, `accent`,
   …) and `relations[]` (`from`, `to`, `kind` = `inherits` `implements` `association` `aggregation`
-  `composition` `dependency`, `label`, `fromCard`/`toCard`), plus `groups[]` as namespaces.
+  `composition` `dependency`, `label`, `fromCard`/`toCard`), plus `groups[]` as namespaces. Being
+  structural reference material, a class diagram renders a still frame — it only animates if you
+  script a `flow:`.
 
 ## Usage
 

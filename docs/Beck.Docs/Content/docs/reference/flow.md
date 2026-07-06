@@ -36,8 +36,8 @@ flow:
 
 ### Derived flow
 
-With no `flow` block, Beck derives one — a bare document already animates. What it derives depends
-on the diagram type:
+With no `flow` block, Beck derives one for the three types that have a sequence of events to play — a
+bare document already animates. What it derives depends on the diagram type:
 
 - **architecture** and **state** — a topological walk from roots to leaves: a `phase` label the
   first time each node (or state) sends, a `packet` along every edge (or transition) in order, then
@@ -46,8 +46,9 @@ on the diagram type:
   with each `- section:` band emitted as a seekable `phase`. Packets ride their message's colour
   (replies with a decelerating ease), and the scenery starts dimmed — each row, bar, and band
   lights up as the story reaches it, then everything fades back down before the loop.
-- **class** — a quiet structural cascade rather than a packet story: each inheritance level lights
-  up in turn, top to bottom, with the relations into that level recolouring as it does.
+- **class** — *nothing.* A class diagram is structural reference material, not a narrative, so it
+  has no derived flow: with no `flow` block it renders a still frame and never loads the animation
+  runtime. Script a `flow:` yourself if you want a guided tour.
 
 ## Steps
 

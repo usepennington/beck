@@ -245,8 +245,8 @@ See the [class diagrams guide](/docs/guides/class).
 | `dependency` | source → target | dashed, open arrowhead at the target |
 
 Parents rank above children automatically (`inherits`/`implements` are flipped internally so the
-hierarchy reads top-down). Without a `flow:`, the derived animation lights each inheritance level
-in turn.
+hierarchy reads top-down). Class diagrams are structural, so they don't animate by default: without
+a `flow:` the diagram renders a still frame. Script a `flow:` if you want a guided tour.
 
 ## Icons
 
