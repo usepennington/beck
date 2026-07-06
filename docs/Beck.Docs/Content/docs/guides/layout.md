@@ -25,7 +25,7 @@ wwwroot/examples/guides/layout-01.beck.yaml
 
 ## Tune the spacing
 
-To loosen or tighten the diagram, set `meta.spacing`. It takes three keys: `rank` (the gap along the flow, default `96`), `node` (the gap across a rank, default `32`), and `cornerRadius` (edge and card corner radius in px, default `16`).
+To loosen or tighten the diagram, set `meta.spacing`. It takes three keys: `rank` (the gap along the flow), `node` (the gap across a rank), and `cornerRadius` (edge and card corner radius in px, default `16`). The gap defaults depend on the diagram type: architecture and sequence default to `rank: 96` / `node: 32`, while [state](/docs/guides/state) and [class](/docs/guides/class) — which pack many small, labelled nodes — default roomier at `rank: 130` / `node: 72` so their transition labels and self-loops have space to breathe. Set the keys explicitly to override either.
 
 Give a busy diagram more room to breathe:
 

@@ -536,6 +536,7 @@ function anchorShifts(edges: EdgeModel[], prep: Array<EdgePrep | null>): Array<{
     const rect = faceRect(refs[0])
     const alongY = side === 'left' || side === 'right'
     const faceLen = alongY ? rect.h : rect.w
+    const faceCenter = alongY ? rect.y + rect.h / 2 : rect.x + rect.w / 2
     // Fill at most 70% of the face; cap the pitch at 20px so a two-edge face
     // reads as two clearly separate lines without hugging the corners.
     const step = Math.min(20, (faceLen * 0.7) / (refs.length - 1))
@@ -550,8 +551,42 @@ function anchorShifts(edges: EdgeModel[], prep: Array<EdgePrep | null>): Array<{
       // the two lines parallel - both faces sort the pair identically.
       return edges[r1.idx].id < edges[r2.idx].id ? -1 : 1
     })
+    // The comb is centered on the face by default (base = its midpoint). But if
+    // exactly one edge meets this face head-on — its far endpoint is centered on
+    // the face, so it would run dead straight through the center anchor — bias
+    // the comb so a tooth lands on 0 for that edge, keeping its line straight
+    // while the others fan around it. This is what stops a fan-in from kinking
+    // an otherwise-aligned edge (an even edge count straddles the center, so
+    // nobody would get the 0 tooth). Guarded twice: only when every resulting
+    // tooth still fits the usable 70% span (never trade a straight line for an
+    // anchor hung off the node's corner), and only when the alignment is unique
+    // (a bidirectional A<->B pair has *both* edges "aligned" and must stay
+    // symmetric so the two lines read as parallel).
+    const ALIGN_EPS = 4
+    const half = (faceLen * 0.7) / 2
+    let base = (refs.length - 1) / 2
+    let alignIdx = -1
+    let alignCount = 0
+    let bestDist = ALIGN_EPS
     refs.forEach((r, i) => {
-      const off = (i - (refs.length - 1) / 2) * step
+      const d = Math.abs(farCenter(r) - faceCenter)
+      if (d > ALIGN_EPS) return
+      alignCount++
+      if (d <= bestDist) {
+        bestDist = d
+        alignIdx = i
+      }
+    })
+    if (
+      alignCount === 1 &&
+      alignIdx >= 0 &&
+      -alignIdx * step >= -half - 0.01 &&
+      (refs.length - 1 - alignIdx) * step <= half + 0.01
+    ) {
+      base = alignIdx
+    }
+    refs.forEach((r, i) => {
+      const off = (i - base) * step
       if (r.end === 'from') shifts[r.idx].from = off
       else shifts[r.idx].to = off
     })

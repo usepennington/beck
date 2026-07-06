@@ -3,11 +3,11 @@ import { accentToCss } from '../util/color'
 import { isKnownIcon } from '../render/icons'
 import {
   DEFAULT_NARRATION,
-  DEFAULT_SPACING,
   EDGE_KIND_DEFAULTS,
   KIND_DEFAULTS,
   PACKET_EASES,
   PACKET_SHAPES,
+  SPACING_BY_TYPE,
   deriveFlow,
 } from './defaults'
 import {
@@ -72,6 +72,7 @@ function buildNarration(v: unknown): NarrationOptions {
 
 export function buildMeta(m: Record<string, unknown>, type: DiagramType): DiagramMeta {
   const sp = asObject(m.spacing, 'meta.spacing')
+  const spacingDefault = SPACING_BY_TYPE[type]
   return {
     type,
     title: optString(m.title),
@@ -82,10 +83,10 @@ export function buildMeta(m: Record<string, unknown>, type: DiagramType): Diagra
     loop: optBool(m.loop, 'meta.loop', true),
     fit: oneOf(m.fit, ['shrink', 'scroll'] as const, 'meta.fit', 'shrink'),
     spacing: {
-      rank: optNumber(sp.rank, 'meta.spacing.rank') ?? DEFAULT_SPACING.rank,
-      node: optNumber(sp.node, 'meta.spacing.node') ?? DEFAULT_SPACING.node,
+      rank: optNumber(sp.rank, 'meta.spacing.rank') ?? spacingDefault.rank,
+      node: optNumber(sp.node, 'meta.spacing.node') ?? spacingDefault.node,
       cornerRadius:
-        optNumber(sp.cornerRadius, 'meta.spacing.cornerRadius') ?? DEFAULT_SPACING.cornerRadius,
+        optNumber(sp.cornerRadius, 'meta.spacing.cornerRadius') ?? spacingDefault.cornerRadius,
     },
     narration: buildNarration(m.narrate),
   }
