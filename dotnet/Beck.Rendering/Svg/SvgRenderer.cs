@@ -18,6 +18,11 @@ internal static class SvgRenderer
     {
         var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer));
         var markers = new Markers(hash);
+        // Pill states a node's flow will swap through (null unless animating with >1 state).
+        var statusMap = StatusStates.Build(model);
+        bool animating = options.Animation == AnimationMode.Full && model.Meta.Animate;
+        IReadOnlyList<(string Text, string Color)>? StatesFor(string id) =>
+            animating && statusMap.TryGetValue(id, out var s) && s.Count > 1 ? s : null;
         string extraDefs = "";
         LayoutResult layout;
         var body = new StringBuilder();
@@ -39,7 +44,7 @@ internal static class SvgRenderer
                     seq.Bands.Count);
             body.Append("<g class=\"beck-nodes\">");
             for (int i = 0; i < model.Nodes.Count; i++)
-                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i));
+                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i, StatesFor(model.Nodes[i].Id)));
             body.Append("</g>");
         }
         else
@@ -79,7 +84,7 @@ internal static class SvgRenderer
             // z3 nodes
             body.Append("<g class=\"beck-nodes\">");
             for (int i = 0; i < model.Nodes.Count; i++)
-                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i));
+                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i, StatesFor(model.Nodes[i].Id)));
             body.Append("</g>");
 
             // z4 group labels
@@ -249,7 +254,8 @@ internal static class SvgRenderer
     // Text-stack line metrics (must match CardSizer).
     private const double TitleLine = 1.3 * 14, SubLine = 1.35 * 12, TextGap = 3;
 
-    private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash, int idx)
+    private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash, int idx,
+        IReadOnlyList<(string Text, string Color)>? statusStates = null)
     {
         var sb = new StringBuilder();
         string accentStyle = $"--beck-accent:{node.Accent}";
@@ -273,7 +279,7 @@ internal static class SvgRenderer
             case NodeShape.Class: EmitClass(sb, node, w, h, m, hash); break;
             default:
                 if (node.Variant == NodeVariant.Ghost || node.Kind == NodeKind.Ghost) EmitGhost(sb, node, w, h, m);
-                else EmitCard(sb, node, w, h, m);
+                else EmitCard(sb, node, w, h, m, idx, hash, statusStates);
                 break;
         }
 
@@ -292,6 +298,14 @@ internal static class SvgRenderer
             _ => 14,
         };
         return new NodeBox(r.X + 0.75, r.Y + 0.75, r.W - 1.5, r.H - 1.5, rx);
+    }
+
+    /// <summary>A status pill — chip bg tinted 14% of the colour + coloured text — at (x, sy).</summary>
+    private static void StatusPill(StringBuilder sb, string text, string color, double x, double sy, double h, ITextMeasurer m)
+    {
+        double sw = m.Measure(text, FontRole.Status).Width;
+        sb.Append($"<rect x=\"{N(x)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(h)}\" rx=\"{N(h / 2)}\" style=\"fill:color-mix(in srgb,{color} 14%,transparent)\"/>");
+        sb.Append($"<text x=\"{N(x + 8)}\" y=\"{N(sy + h / 2)}\" font-size=\"10.4\" font-weight=\"500\" dominant-baseline=\"central\" text-anchor=\"start\" textLength=\"{N(sw)}\" lengthAdjust=\"spacingAndGlyphs\" style=\"fill:{color}\">{SvgWriter.Text(text)}</text>");
     }
 
     private static void EmitPill(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m)
@@ -352,7 +366,8 @@ internal static class SvgRenderer
           .Append(SvgWriter.Text(text)).Append("</text>");
     }
 
-    private static void EmitCard(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m)
+    private static void EmitCard(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m,
+        int idx, string hash, IReadOnlyList<(string Text, string Color)>? states)
     {
         string cls = "beck-node";
         if (node.Kind == NodeKind.External) cls += " beck-node--external";
@@ -380,12 +395,29 @@ internal static class SvgRenderer
             Line(sb, sub, "beck-node-subtitle", textX, stackY + TextGap + SubLine / 2, 12, 400, m, FontRole.CardSubtitle);
             stackY += TextGap + SubLine;
         }
-        if (node.Status is { } status)
+        bool hasStates = states is { Count: > 1 };
+        if (node.Status is { } || hasStates)
         {
-            double sw = m.Measure(status, FontRole.Status).Width;
             double sy = stackY + TextGap + 2;
-            sb.Append($"<rect class=\"beck-status-bg\" x=\"{N(textX)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(statusChipH)}\" rx=\"{N(statusChipH / 2)}\"/>");
-            sb.Append($"<text class=\"beck-status-text\" x=\"{N(textX + 8)}\" y=\"{N(sy + statusChipH / 2)}\" font-size=\"10.4\" font-weight=\"500\" dominant-baseline=\"central\" text-anchor=\"start\" textLength=\"{N(sw)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(status)}</text>");
+            if (hasStates)
+            {
+                // The flow swaps this pill: pre-build one group per (text,color) state,
+                // state 0 (resting, possibly empty) visible, the rest hidden — the
+                // compiler cross-fades. A status-less target overhangs (accepted, §15).
+                for (int si = 0; si < states!.Count; si++)
+                {
+                    sb.Append($"<g class=\"beck-status-state bss{idx}-{si}-{hash}\"{(si == 0 ? "" : " opacity=\"0\"")}>");
+                    if (states[si].Text.Length > 0) StatusPill(sb, states[si].Text, states[si].Color, textX, sy, statusChipH, m);
+                    sb.Append("</g>");
+                }
+            }
+            else
+            {
+                string status = node.Status!;
+                double sw = m.Measure(status, FontRole.Status).Width;
+                sb.Append($"<rect class=\"beck-status-bg\" x=\"{N(textX)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(statusChipH)}\" rx=\"{N(statusChipH / 2)}\"/>");
+                sb.Append($"<text class=\"beck-status-text\" x=\"{N(textX + 8)}\" y=\"{N(sy + statusChipH / 2)}\" font-size=\"10.4\" font-weight=\"500\" dominant-baseline=\"central\" text-anchor=\"start\" textLength=\"{N(sw)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(status)}</text>");
+            }
         }
     }
 

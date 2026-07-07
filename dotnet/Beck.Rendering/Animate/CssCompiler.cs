@@ -44,7 +44,7 @@ internal sealed class CssCompiler
     private static string P(double pct) => Math.Round(pct, 4).ToString("0.####", CultureInfo.InvariantCulture);
     private static string Nm(double n) => SvgWriter.Num(n);
     private bool HasContent => _s.Packets.Count > 0 || _s.Cards.Count > 0 || _s.Impacts.Count > 0
-        || _s.Edges.Count > 0 || _s.Working.Count > 0 || _s.Narrations.Count > 0 || _choreo != null;
+        || _s.Edges.Count > 0 || _s.Working.Count > 0 || _s.Narrations.Count > 0 || _s.Statuses.Count > 0 || _choreo != null;
 
     private NodeBox? Box(int i) => i >= 0 && i < _boxes.Count ? _boxes[i] : null;
 
@@ -137,7 +137,43 @@ internal sealed class CssCompiler
         WorkingCss(sb);
         NarrateCss(sb);
         SequenceChoreoCss(sb);
+        StatusCss(sb);
         return sb.ToString();
+    }
+
+    // ---- status pills: one visible state at a time, instant swaps, restore to state 0 ----
+    private void StatusCss(StringBuilder sb)
+    {
+        foreach (var byNode in _s.Statuses.GroupBy(s => s.Node))
+        {
+            int node = byNode.Key;
+            var sw = new List<(double At, int State)> { (0, 0) };
+            sw.AddRange(byNode.OrderBy(s => s.At).Select(s => (s.At, s.State)));
+            sw.Add((_s.RestoreAt, 0));
+            sw.Sort((a, b) => a.At.CompareTo(b.At));
+
+            foreach (int st in sw.Select(x => x.State).Distinct())
+            {
+                string kf = $"kst{node}-{st}-{_h}";
+                sb.Append($".b-{_h} .bss{node}-{st}-{_h}{{animation:{kf} {Nm(_t)}s linear {_iter};}}");
+                sb.Append($"@keyframes {kf}{{");
+                double e = 0.01;
+                int prev = 0;
+                for (int k = 0; k < sw.Count - 1; k++)
+                {
+                    int val = sw[k].State == st ? 1 : 0;
+                    double at = Pct(sw[k].At);
+                    if (k == 0) { sb.Append($"0%{{opacity:{val};}}"); prev = val; continue; }
+                    if (val != prev)
+                    {
+                        if (at > e) sb.Append($"{P(at - e)}%{{opacity:{prev};}}");
+                        sb.Append($"{P(at)}%{{opacity:{val};}}");
+                        prev = val;
+                    }
+                }
+                sb.Append($"100%{{opacity:{prev};}}}}");
+            }
+        }
     }
 
     // ---- sequence storytelling: dim the scenery, reveal each row as its packet fires ----
