@@ -22,11 +22,14 @@ internal sealed record EdgeFx(EdgeFxKind Kind, double Start, string D, string Co
 /// <summary>A node's <c>working</c> breathing ring over an interval (until <c>idle</c> or restore).</summary>
 internal sealed record WorkFx(int Node, double Start, double End, string Color);
 
+/// <summary>One narration beat: the caption swaps in at <see cref="At"/> (pre-fade base).</summary>
+internal sealed record NarrateFx(double At, string? Color);
+
 /// <summary>The compiled, absolute-time flow schedule.</summary>
 internal sealed record Schedule(
     double Duration, double RepeatDelay, int Repeat, double RestoreAt,
     IReadOnlyList<PacketHop> Packets, IReadOnlyList<CardFx> Cards, IReadOnlyList<ImpactFx> Impacts,
-    IReadOnlyList<EdgeFx> Edges, IReadOnlyList<WorkFx> Working);
+    IReadOnlyList<EdgeFx> Edges, IReadOnlyList<WorkFx> Working, IReadOnlyList<NarrateFx> Narrations);
 
 /// <summary>
 /// Re-implements <c>src/animate/timeline.ts</c> as a <em>simulation</em>: walks
@@ -51,6 +54,7 @@ internal static class ScheduleBuilder
         var impacts = new List<ImpactFx>();
         var edgeFx = new List<EdgeFx>();
         var workEvents = new List<(int Node, double At, bool Start, string Color)>();
+        var narrations = new List<NarrateFx>();
         double duration = 0;
         double restoreAt = -1;
 
@@ -187,6 +191,7 @@ internal static class ScheduleBuilder
                 {
                     double at = position ?? duration;
                     double hold = n.Hold ?? ReadingTime(n.Text, model.Meta.Narration);
+                    narrations.Add(new NarrateFx(at, n.Color));
                     duration = Math.Max(duration, at + 0.12 + 0.3 + Math.Max(0, hold));
                     break;
                 }
@@ -223,7 +228,7 @@ internal static class ScheduleBuilder
             if (openAt is { } os) working.Add(new WorkFx(byNode.Key, os, Math.Max(os, restore), openColor));
         }
 
-        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working);
+        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working, narrations);
     }
 
     private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>

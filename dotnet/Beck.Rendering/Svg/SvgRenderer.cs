@@ -92,7 +92,21 @@ internal static class SvgRenderer
 
         double titleH = TitleHeight(model);
         double w = layout.Width;
-        double totalH = titleH + layout.Height;
+        double bodyH = layout.Height;
+
+        // Narration caption bar (§8.6): a teleprompter under the diagram whose beats
+        // cross-fade as the story plays. Rendered here (the compiler animates the beats).
+        var beats = model.Flow.Steps.OfType<NarrateStep>().ToList();
+        bool narrationActive = options.Animation == AnimationMode.Full && model.Meta.Animate
+            && model.Meta.Narration.Enabled && beats.Count > 0;
+        if (narrationActive)
+        {
+            var (barMarkup, blockH) = NarrationBar(beats, w, bodyH, measurer, hash);
+            body.Append(barMarkup);
+            bodyH += blockH;
+        }
+
+        double totalH = titleH + bodyH;
         string font = options.Font is { } f ? $"'{f.Family}', system-ui, sans-serif" : "'Inter', system-ui, -apple-system, sans-serif";
         string mono = options.Font?.MonoFamily is { } mf ? $"'{mf}', ui-monospace, monospace" : "'IBM Plex Mono', ui-monospace, monospace";
         ThemeMode theme = options.Theme ?? model.Meta.Theme;
@@ -149,6 +163,66 @@ internal static class SvgRenderer
               .Append($"font-size=\"14.4\">{SvgWriter.Text(sub)}</text>");
         }
         return sb.Append("</g>").ToString();
+    }
+
+    /// <summary>
+    /// The narration bar (§8.6): one pre-built <c>&lt;g class="beck-beat"&gt;</c> per
+    /// caption, stacked at the same spot (opacity 0; the compiler cross-fades them).
+    /// Each reserves two lines so the layout never jumps as beats come and go.
+    /// </summary>
+    private static (string Markup, double BlockH) NarrationBar(
+        IReadOnlyList<NarrateStep> beats, double canvasW, double topY, ITextMeasurer m, string hash)
+    {
+        const double margin = 14.4, padX = 18.4, padY = 9.6, lineHt = 14.72 * 1.45,
+                     dotR = 3.5, dotD = 7, gap = 9.6, minContentH = 40.48;
+        double barW = Math.Min(736, 0.92 * canvasW);
+        double barH = Math.Max(minContentH, 2 * lineHt) + 2 * padY;
+        double barTop = topY + margin, cx = canvasW / 2, barLeft = cx - barW / 2, midY = barTop + barH / 2;
+        double maxTextW = barW - 2 * padX - dotD - gap;
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < beats.Count; i++)
+        {
+            var lines = WrapNarration(beats[i].Text, maxTextW, m);
+            double textW = lines.Max(l => m.Measure(l, FontRole.Narration).Width);
+            double left = cx - (dotD + gap + textW) / 2;
+            double textCx = left + dotD + gap + textW / 2;
+            double firstY = midY - (lines.Count - 1) * lineHt / 2;
+            string color = beats[i].Color ?? "var(--beck-text)";
+
+            sb.Append($"<g class=\"beck-beat bbeat{i}-{hash}\" opacity=\"0\" style=\"color:{color}\">");
+            sb.Append($"<rect class=\"beck-narration-bar\" x=\"{N(barLeft)}\" y=\"{N(barTop)}\" width=\"{N(barW)}\" height=\"{N(barH)}\" rx=\"12\" ")
+              .Append("style=\"fill:color-mix(in srgb,var(--beck-primary) 6%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) 15%,transparent);filter:drop-shadow(0 4px 12px rgb(0 0 0/.06))\"/>");
+            sb.Append($"<circle cx=\"{N(left + dotR)}\" cy=\"{N(midY)}\" r=\"{N(dotR)}\" style=\"fill:currentColor\" opacity=\"0.55\"/>");
+            for (int k = 0; k < lines.Count; k++)
+                sb.Append($"<text class=\"beck-narration-text\" x=\"{N(textCx)}\" y=\"{N(firstY + k * lineHt)}\" text-anchor=\"middle\" dominant-baseline=\"central\" ")
+                  .Append($"font-size=\"14.72\" font-weight=\"400\" style=\"fill:currentColor\">{SvgWriter.Text(lines[k])}</text>");
+            sb.Append("</g>");
+        }
+        return (sb.ToString(), margin + barH);
+    }
+
+    /// <summary>Greedy word-wrap into ≤2 lines at the Narration role (overflow folds into line 2).</summary>
+    private static List<string> WrapNarration(string text, double maxW, ITextMeasurer m)
+    {
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var lines = new List<string>();
+        var cur = new StringBuilder();
+        foreach (var word in words)
+        {
+            string cand = cur.Length == 0 ? word : cur + " " + word;
+            if (cur.Length > 0 && m.Measure(cand, FontRole.Narration).Width > maxW)
+            {
+                lines.Add(cur.ToString());
+                cur.Clear();
+                cur.Append(word);
+            }
+            else { cur.Clear(); cur.Append(cand); }
+        }
+        if (cur.Length > 0) lines.Add(cur.ToString());
+        if (lines.Count > 2) lines = new List<string> { lines[0], string.Join(" ", lines.Skip(1)) };
+        if (lines.Count == 0) lines.Add(text);
+        return lines;
     }
 
     private static string Edge(RoutedEdge e, Markers markers)
