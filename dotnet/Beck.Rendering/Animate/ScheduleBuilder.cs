@@ -15,10 +15,18 @@ internal sealed record CardFx(int Node, CardFxKind Kind, double Start, string Co
 /// <summary>An expanding "impact" ring at a packet's landing point (the <c>impact</c> knob).</summary>
 internal sealed record ImpactFx(double Start, double X, double Y, string Color, double Radius);
 
+/// <summary>A persistent edge overlay: <c>activate</c> (solid recolor) or <c>stream</c> (marching dashes).</summary>
+internal enum EdgeFxKind { Activate, Stream }
+internal sealed record EdgeFx(EdgeFxKind Kind, double Start, string D, string Color, double Length);
+
+/// <summary>A node's <c>working</c> breathing ring over an interval (until <c>idle</c> or restore).</summary>
+internal sealed record WorkFx(int Node, double Start, double End, string Color);
+
 /// <summary>The compiled, absolute-time flow schedule.</summary>
 internal sealed record Schedule(
     double Duration, double RepeatDelay, int Repeat, double RestoreAt,
-    IReadOnlyList<PacketHop> Packets, IReadOnlyList<CardFx> Cards, IReadOnlyList<ImpactFx> Impacts);
+    IReadOnlyList<PacketHop> Packets, IReadOnlyList<CardFx> Cards, IReadOnlyList<ImpactFx> Impacts,
+    IReadOnlyList<EdgeFx> Edges, IReadOnlyList<WorkFx> Working);
 
 /// <summary>
 /// Re-implements <c>src/animate/timeline.ts</c> as a <em>simulation</em>: walks
@@ -41,6 +49,8 @@ internal static class ScheduleBuilder
         var packets = new List<PacketHop>();
         var cards = new List<CardFx>();
         var impacts = new List<ImpactFx>();
+        var edgeFx = new List<EdgeFx>();
+        var workEvents = new List<(int Node, double At, bool Start, string Color)>();
         double duration = 0;
         double restoreAt = -1;
 
@@ -154,6 +164,22 @@ internal static class ScheduleBuilder
                 case FailStep fs:
                     AddCard(fs.Node, CardFxKind.Fail, position ?? duration, fs.Color ?? "var(--beck-danger)", FailDur);
                     break;
+                case ActivateStep a:
+                    if (PathOf(a.From, a.To, null) is { } af)
+                        edgeFx.Add(new EdgeFx(EdgeFxKind.Activate, position ?? duration, af.D, a.Color ?? "var(--beck-primary)", PathLength.Of(af.D)));
+                    break;
+                case StreamStep st:
+                    if (PathOf(st.From, st.To, null) is { } sf)
+                        edgeFx.Add(new EdgeFx(EdgeFxKind.Stream, position ?? duration, sf.D, st.Color ?? "var(--beck-primary)", PathLength.Of(sf.D)));
+                    break;
+                case WorkingStep wk:
+                    if (indexOf.TryGetValue(wk.Node, out int wi))
+                        workEvents.Add((wi, position ?? duration, true, wk.Color ?? Accent(accentOf, wk.Node)));
+                    break;
+                case IdleStep il:
+                    if (indexOf.TryGetValue(il.Node, out int ii))
+                        workEvents.Add((ii, position ?? duration, false, ""));
+                    break;
                 case WaitStep w:
                     duration = Math.Max(duration, (position ?? duration) + w.Seconds);
                     break;
@@ -181,8 +207,23 @@ internal static class ScheduleBuilder
 
         int repeat = (int)flow.Repeat;
         if (restoreAt < 0 && repeat != 0) restoreAt = duration;
+        double restore = restoreAt < 0 ? duration : restoreAt;
 
-        return new Schedule(duration, flow.RepeatDelay, repeat, restoreAt < 0 ? duration : restoreAt, packets, cards, impacts);
+        // Pair each working start with the next idle on that node (else it breathes
+        // until the restore point). A re-issued working before an idle is idempotent.
+        var working = new List<WorkFx>();
+        foreach (var byNode in workEvents.GroupBy(e => e.Node))
+        {
+            double? openAt = null; string openColor = "";
+            foreach (var ev in byNode.OrderBy(e => e.At))
+            {
+                if (ev.Start) { openAt ??= ev.At; if (openAt == ev.At) openColor = ev.Color; }
+                else if (openAt is { } s) { working.Add(new WorkFx(byNode.Key, s, ev.At, openColor)); openAt = null; }
+            }
+            if (openAt is { } os) working.Add(new WorkFx(byNode.Key, os, Math.Max(os, restore), openColor));
+        }
+
+        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working);
     }
 
     private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>
