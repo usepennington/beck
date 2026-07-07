@@ -25,3 +25,6 @@ docs/Beck.Docs/output/
 # IDE
 .idea/
 .vs/
+
+# Beck.Rendering visual-check outputs (regenerable)
+/tools/oracle/rendered/
