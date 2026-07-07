@@ -4,25 +4,32 @@ using Beck.Rendering.Svg;
 
 namespace Beck.Rendering.Animate;
 
+/// <summary>A node's card box in canvas coordinates (for overlay placement).</summary>
+internal readonly record struct NodeBox(double X, double Y, double W, double H, double Rx);
+
 /// <summary>
 /// Compiles a <see cref="Schedule"/> into CSS keyframes on the shared-cycle model
 /// (§10): every element animates over the whole cycle <c>T = Duration +
 /// RepeatDelay</c>, its action a percentage window, all in lockstep and looping.
-/// Packets ride <c>offset-path</c>; trails reveal via <c>stroke-dashoffset</c>.
-/// The core motion (M8); the full effect vocabulary is M9.
+/// Packets ride <c>offset-path</c>; trails reveal via <c>stroke-dashoffset</c>;
+/// node effects (pulse/highlight/fail incl. pulse-on-arrival) bounce a per-node
+/// <c>.beck-fx-node</c> wrapper and flash ripple/glow overlays; the <c>impact</c>
+/// knob expands a ring at each landing.
 /// </summary>
 internal sealed class CssCompiler
 {
     private readonly string _h;
     private readonly Schedule _s;
+    private readonly IReadOnlyList<NodeBox> _boxes;
     private readonly double _t;
     private readonly string _iter;
     private bool _needGlow;
 
-    public CssCompiler(Schedule schedule, string hash)
+    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes)
     {
         _s = schedule;
         _h = hash;
+        _boxes = boxes;
         _t = schedule.Duration + schedule.RepeatDelay;
         _iter = schedule.Repeat == -1 ? "infinite" : schedule.Repeat == 0 ? "1" : (schedule.Repeat + 1).ToString(CultureInfo.InvariantCulture);
     }
@@ -30,13 +37,37 @@ internal sealed class CssCompiler
     private double Pct(double time) => _t <= 0 ? 0 : Math.Clamp(time / _t * 100, 0, 100);
     private static string P(double pct) => Math.Round(pct, 4).ToString("0.####", CultureInfo.InvariantCulture);
     private static string Nm(double n) => SvgWriter.Num(n);
+    private bool HasContent => _s.Packets.Count > 0 || _s.Cards.Count > 0 || _s.Impacts.Count > 0;
 
-    /// <summary>The fx-layer markup (packet circles + trail paths).</summary>
+    private NodeBox? Box(int i) => i >= 0 && i < _boxes.Count ? _boxes[i] : null;
+
+    /// <summary>The fx-layer markup (overlays behind, then trails + packet circles).</summary>
     public string Markup()
     {
-        if (_s.Packets.Count == 0) return "";
+        if (!HasContent) return "";
         var sb = new StringBuilder("<g class=\"beck-fx\">");
-        // trails first (behind the dots)
+
+        // glow / ripple overlays (behind the packets) — one element per card effect.
+        for (int j = 0; j < _s.Cards.Count; j++)
+        {
+            CardFx c = _s.Cards[j];
+            if (Box(c.Node) is not { } b) continue;
+            string col = SvgWriter.Attr(c.Color);
+            string box = $"x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\"";
+            if (c.Kind == CardFxKind.Pulse)
+                sb.Append($"<rect class=\"brip{j}-{_h}\" {box} stroke-width=\"2\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+            else // highlight / fail — a glowing border overlay
+                sb.Append($"<rect class=\"bgl{j}-{_h}\" {box} stroke-width=\"2\" opacity=\"0\" style=\"filter:drop-shadow(0 0 6px {c.Color})\"/>");
+        }
+
+        // impact rings (the `impact` knob) — expanding ring at each landing point.
+        for (int j = 0; j < _s.Impacts.Count; j++)
+        {
+            ImpactFx im = _s.Impacts[j];
+            sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"2.5\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+        }
+
+        // trails (behind the dots)
         for (int i = 0; i < _s.Packets.Count; i++)
         {
             PacketHop p = _s.Packets[i];
@@ -44,6 +75,7 @@ internal sealed class CssCompiler
             sb.Append($"<path class=\"beck-trail bt{i}-{_h}\" d=\"{p.D}\" fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"2\" ")
               .Append($"style=\"stroke-dasharray:{Nm(p.Length)};stroke-dashoffset:{Nm(off)}\"/>");
         }
+        // packet dots
         for (int i = 0; i < _s.Packets.Count; i++)
         {
             PacketHop p = _s.Packets[i];
@@ -54,6 +86,9 @@ internal sealed class CssCompiler
             if (p.Glow) _needGlow = true;
             sb.Append($"<circle class=\"beck-packet bp{i}-{_h}\" r=\"{Nm(p.Size)}\" {fillStroke}{glow} opacity=\"0\" ")
               .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg\"/>");
+            if (!string.IsNullOrEmpty(p.Label))
+                sb.Append($"<text class=\"beck-packet-label bpl{i}-{_h}\" text-anchor=\"middle\" fill=\"{SvgWriter.Attr(p.Color)}\" opacity=\"0\" ")
+                  .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg;offset-anchor:center;transform:translateY(-{Nm(p.Size + 6)}px)\">{SvgWriter.Text(p.Label!)}</text>");
         }
         return sb.Append("</g>").ToString();
     }
@@ -68,8 +103,16 @@ internal sealed class CssCompiler
     /// <summary>The animation CSS (wrapped in a reduced-motion guard by the caller).</summary>
     public string Css()
     {
-        if (_s.Packets.Count == 0) return "";
+        if (!HasContent) return "";
         var sb = new StringBuilder();
+        PacketCss(sb);
+        CardCss(sb);
+        return sb.ToString();
+    }
+
+    // ---- packets + trails (M8) ----
+    private void PacketCss(StringBuilder sb)
+    {
         double restore = Pct(_s.RestoreAt);
         for (int i = 0; i < _s.Packets.Count; i++)
         {
@@ -80,8 +123,11 @@ internal sealed class CssCompiler
             string startDist = p.Reversed ? "100%" : "0%";
             string endDist = p.Reversed ? "0%" : "100%";
 
-            // packet: opacity + offset-distance
-            sb.Append($".b-{_h} .bp{i}-{_h}{{animation:kp{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+            void Rider(string cls)
+            {
+                sb.Append($".b-{_h} .{cls}{i}-{_h}{{animation:kp{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+            }
+            Rider("bp");
             sb.Append($"@keyframes kp{i}-{_h}{{");
             sb.Append($"0%{{offset-distance:{startDist};opacity:0;}}");
             if (ws > e) sb.Append($"{P(ws - e)}%{{opacity:0;}}");
@@ -89,6 +135,10 @@ internal sealed class CssCompiler
             sb.Append($"{P(we)}%{{offset-distance:{endDist};opacity:1;}}");
             if (we + e < 100) sb.Append($"{P(we + e)}%{{opacity:0;}}");
             sb.Append($"100%{{offset-distance:{startDist};opacity:0;}}}}");
+
+            // label rides the same keyframes (offset-path shared; its own animation ref)
+            if (!string.IsNullOrEmpty(p.Label))
+                sb.Append($".b-{_h} .bpl{i}-{_h}{{animation:kp{i}-{_h} {Nm(_t)}s linear {_iter};}}");
 
             // trail: reveal then hold, snap back at restore
             double off = p.Reversed ? -p.Length : p.Length;
@@ -101,6 +151,115 @@ internal sealed class CssCompiler
             if (restore + e < 100) sb.Append($"{P(restore + e)}%{{stroke-dashoffset:{Nm(off)};}}");
             sb.Append($"100%{{stroke-dashoffset:{Nm(off)};}}}}");
         }
-        return sb.ToString();
+    }
+
+    // ---- node card effects: transform tracks + overlays (M9) ----
+    private void CardCss(StringBuilder sb)
+    {
+        // per-node transform track (pulse/highlight bounce, fail shake) merged into one animation
+        var byNode = new Dictionary<int, List<CardFx>>();
+        foreach (CardFx c in _s.Cards)
+        {
+            if (!byNode.TryGetValue(c.Node, out var list)) byNode[c.Node] = list = new();
+            list.Add(c);
+        }
+        foreach (var (node, list) in byNode) TransformTrack(sb, node, list);
+
+        // ripple / glow overlays (one keyframe animation each — no target sharing)
+        for (int j = 0; j < _s.Cards.Count; j++)
+        {
+            CardFx c = _s.Cards[j];
+            if (Box(c.Node) is null) continue;
+            if (c.Kind == CardFxKind.Pulse) RippleCss(sb, j, c.Start);
+            else GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? 0.7 : 1.0);
+        }
+
+        // impact rings
+        for (int j = 0; j < _s.Impacts.Count; j++) ImpactCss(sb, j, _s.Impacts[j].Start);
+    }
+
+    private void TransformTrack(StringBuilder sb, int node, List<CardFx> list)
+    {
+        var pts = new List<(double T, string Tf, Ease? E)> { (0, "none", null) };
+        foreach (CardFx c in list.OrderBy(c => c.Start))
+        {
+            double s = c.Start;
+            switch (c.Kind)
+            {
+                case CardFxKind.Pulse:
+                    pts.Add((s, "none", Easing.BackOut(3)));
+                    pts.Add((s + 0.18, "translateY(-2px) scale(1.04)", Easing.ElasticOut(1, 0.5)));
+                    pts.Add((s + 0.6, "none", null));
+                    break;
+                case CardFxKind.Highlight:
+                    pts.Add((s, "none", Easing.BackOut(2)));
+                    pts.Add((s + 0.21, "translateY(-2px) scale(1.04)", Easing.ElasticOut(1, 0.4)));
+                    pts.Add((s + 0.7, "none", null));
+                    break;
+                case CardFxKind.Fail:
+                    pts.Add((s + 0.12, "none", null));
+                    pts.Add((s + 0.18, "translateX(-5px)", null));
+                    pts.Add((s + 0.26, "translateX(5px)", null));
+                    pts.Add((s + 0.33, "translateX(-3px)", null));
+                    pts.Add((s + 0.40, "none", null));
+                    break;
+            }
+        }
+        pts.Add((_t, "none", null));
+        pts.Sort((a, b) => a.T.CompareTo(b.T));
+
+        sb.Append($".b-{_h} .bn{node}-{_h} .beck-fx-node{{animation:kn{node}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"@keyframes kn{node}-{_h}{{");
+        string lastPct = "";
+        foreach (var (t, tf, e) in pts)
+        {
+            string pct = P(Pct(t));
+            if (pct == lastPct) continue; // collapse coincident keyframes (last effect wins)
+            lastPct = pct;
+            sb.Append($"{pct}%{{transform:{tf};");
+            if (e is { } ee) sb.Append($"animation-timing-function:{Easing.ToCss(ee)};");
+            sb.Append('}');
+        }
+        sb.Append('}');
+    }
+
+    private void RippleCss(StringBuilder sb, int j, double start)
+    {
+        double s = Pct(start), end = Pct(start + 0.48), e = 0.01;
+        string po = Easing.ToCss(Easing.Power2Out);
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{");
+        sb.Append("0%{opacity:0;transform:scale(1);}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        sb.Append($"{P(s)}%{{opacity:0.6;transform:scale(1);animation-timing-function:{po};}}");
+        sb.Append($"{P(end)}%{{opacity:0;transform:scale(1.15);}}");
+        sb.Append("100%{opacity:0;transform:scale(1);}}");
+    }
+
+    private void GlowCss(StringBuilder sb, int j, double start, double fadeIn, double total)
+    {
+        double s = Pct(start), up = Pct(start + fadeIn), hold = Pct(start + total), e = 0.01;
+        sb.Append($".b-{_h} .bgl{j}-{_h}{{animation:kgl{j}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"@keyframes kgl{j}-{_h}{{");
+        sb.Append("0%{opacity:0;}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        sb.Append($"{P(s)}%{{opacity:0;}}");
+        sb.Append($"{P(up)}%{{opacity:1;}}");
+        sb.Append($"{P(hold)}%{{opacity:1;}}");
+        if (hold + e < 100) sb.Append($"{P(hold + e)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
+    }
+
+    private void ImpactCss(StringBuilder sb, int j, double start)
+    {
+        double s = Pct(start), end = Pct(start + 0.55), e = 0.01;
+        string po = Easing.ToCss(Easing.Power2Out);
+        sb.Append($".b-{_h} .bimp{j}-{_h}{{animation:kimp{j}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"@keyframes kimp{j}-{_h}{{");
+        sb.Append("0%{opacity:0;transform:scale(1);stroke-width:2.5;}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        sb.Append($"{P(s)}%{{opacity:0.9;transform:scale(1);stroke-width:2.5;animation-timing-function:{po};}}");
+        sb.Append($"{P(end)}%{{opacity:0;transform:scale(3.4);stroke-width:0.5;}}");
+        sb.Append("100%{opacity:0;transform:scale(1);stroke-width:2.5;}}");
     }
 }

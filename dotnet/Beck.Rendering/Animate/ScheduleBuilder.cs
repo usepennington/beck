@@ -8,26 +8,62 @@ internal sealed record PacketHop(
     double Start, double Duration, string D, double Length, bool Reversed,
     string Color, PacketShape Shape, double Size, bool Glow, Ease Ease, string? Label, bool Impact);
 
+/// <summary>A node-card effect (pulse / highlight / fail) pinned to an absolute time.</summary>
+internal enum CardFxKind { Pulse, Highlight, Fail }
+internal sealed record CardFx(int Node, CardFxKind Kind, double Start, string Color);
+
+/// <summary>An expanding "impact" ring at a packet's landing point (the <c>impact</c> knob).</summary>
+internal sealed record ImpactFx(double Start, double X, double Y, string Color, double Radius);
+
 /// <summary>The compiled, absolute-time flow schedule.</summary>
-internal sealed record Schedule(double Duration, double RepeatDelay, int Repeat, double RestoreAt, IReadOnlyList<PacketHop> Packets);
+internal sealed record Schedule(
+    double Duration, double RepeatDelay, int Repeat, double RestoreAt,
+    IReadOnlyList<PacketHop> Packets, IReadOnlyList<CardFx> Cards, IReadOnlyList<ImpactFx> Impacts);
 
 /// <summary>
 /// Re-implements <c>src/animate/timeline.ts</c> as a <em>simulation</em>: walks
 /// <c>flow.steps</c> with the same position/duration semantics and emits an
 /// absolute-time <see cref="Schedule"/>. Motion steps (packet/burst) produce
-/// <see cref="PacketHop"/>s; wait/narrate extend duration; reset marks the restore
-/// point. (Non-motion effects register their time but their CSS is M9.)
+/// <see cref="PacketHop"/>s; node effects (pulse/highlight/fail incl. the
+/// pulse-on-arrival that every hop fires on its target) produce <see cref="CardFx"/>;
+/// the <c>impact</c> knob produces <see cref="ImpactFx"/>. Sub-timeline effects
+/// extend the duration; zero-duration effects register a time but don't (§9).
 /// </summary>
 internal static class ScheduleBuilder
 {
+    // Effect sub-timeline lengths (seconds) — must match effects.ts so the schedule
+    // duration lands where GSAP's tl.duration() would.
+    private const double PulseDur = 0.6, HighlightDur = 0.7, FailDur = 1.0;
+
     public static Schedule Build(DiagramModel model, IReadOnlyList<FlowEdge> edges)
     {
         FlowModel flow = model.Flow;
         var packets = new List<PacketHop>();
+        var cards = new List<CardFx>();
+        var impacts = new List<ImpactFx>();
         double duration = 0;
         double restoreAt = -1;
 
         var accentOf = model.Nodes.ToDictionary(n => n.Id, n => n.Accent);
+        var indexOf = new Dictionary<string, int>();
+        for (int i = 0; i < model.Nodes.Count; i++) indexOf[model.Nodes[i].Id] = i;
+        var membersOf = model.Groups.ToDictionary(g => g.Id, g => (IReadOnlyList<string>)g.Members);
+
+        // A node-card effect that also extends the duration to cover its sub-timeline.
+        void AddCard(string nodeId, CardFxKind kind, double at, string color, double dur)
+        {
+            if (!indexOf.TryGetValue(nodeId, out int i)) return;
+            cards.Add(new CardFx(i, kind, at, color));
+            duration = Math.Max(duration, at + dur);
+        }
+
+        // Pulse-on-arrival: a node target flashes; a group target flashes every member.
+        void PulseTarget(string targetId, double at, string color)
+        {
+            if (indexOf.ContainsKey(targetId)) { AddCard(targetId, CardFxKind.Pulse, at, color, PulseDur); return; }
+            if (membersOf.TryGetValue(targetId, out var members))
+                foreach (var m in members) AddCard(m, CardFxKind.Pulse, at, color, PulseDur);
+        }
 
         (string D, bool Reversed, EdgeKind Kind)? PathOf(string from, string to, string? edgeId)
         {
@@ -56,12 +92,22 @@ internal static class ScheduleBuilder
                 double size = k.Size ?? Defaults.PacketShapeSize[shape] ?? ks.Size;
                 double speed = k.Speed ?? ks.Speed;
                 bool glow = k.Glow ?? ks.Glow;
+                bool impact = k.Impact ?? false;
                 Ease ease = Easing.ForPacket(k.Ease ?? ks.Ease);
 
                 double len = PathLength.Of(f.D);
                 double dur = Math.Max(0.3, len / speed);
-                packets.Add(new PacketHop(at, dur, f.D, len, f.Reversed, color, shape, size, glow, ease, hopLabel, k.Impact ?? false));
+                packets.Add(new PacketHop(at, dur, f.D, len, f.Reversed, color, shape, size, glow, ease, hopLabel, impact));
                 at += dur;
+
+                // Each hop pulses its destination as the dot lands (packetWithTrail),
+                // and drops an impact ring there when the knob is set (packet.ts).
+                PulseTarget(chain[i + 1], at, color);
+                if (impact)
+                {
+                    (double x, double y) = EndPoint(f.D, f.Reversed);
+                    impacts.Add(new ImpactFx(at, x, y, color, size));
+                }
             }
             return at;
         }
@@ -99,12 +145,18 @@ internal static class ScheduleBuilder
                     }
                     break;
                 }
-                case WaitStep w:
-                {
-                    double at = position ?? duration;
-                    duration = Math.Max(duration, at + w.Seconds);
+                case PulseStep ps:
+                    AddCard(ps.Node, CardFxKind.Pulse, position ?? duration, ps.Color ?? Accent(accentOf, ps.Node), PulseDur);
                     break;
-                }
+                case HighlightStep hs:
+                    AddCard(hs.Node, CardFxKind.Highlight, position ?? duration, hs.Color ?? Accent(accentOf, hs.Node), HighlightDur);
+                    break;
+                case FailStep fs:
+                    AddCard(fs.Node, CardFxKind.Fail, position ?? duration, fs.Color ?? "var(--beck-danger)", FailDur);
+                    break;
+                case WaitStep w:
+                    duration = Math.Max(duration, (position ?? duration) + w.Seconds);
+                    break;
                 case NarrateStep n:
                 {
                     double at = position ?? duration;
@@ -121,17 +173,41 @@ internal static class ScheduleBuilder
                     foreach (var child in par.Steps) Exec(child, bas);
                     break;
                 }
-                // phase + non-motion effects register a time but don't extend duration (their CSS is M9).
+                // status/working/idle/activate/stream/phase land in later M9 commits.
             }
         }
 
         foreach (var step in flow.Steps) Exec(step, null);
 
         int repeat = (int)flow.Repeat;
-        // Clean loop restart: if looping and the flow didn't end in reset, restore at the end.
         if (restoreAt < 0 && repeat != 0) restoreAt = duration;
 
-        return new Schedule(duration, flow.RepeatDelay, repeat, restoreAt < 0 ? duration : restoreAt, packets);
+        return new Schedule(duration, flow.RepeatDelay, repeat, restoreAt < 0 ? duration : restoreAt, packets, cards, impacts);
+    }
+
+    private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>
+        accentOf.TryGetValue(node, out string? a) ? a : "var(--beck-primary)";
+
+    /// <summary>The landing point of a hop: the path's end (forward) or start (reversed).</summary>
+    private static (double X, double Y) EndPoint(string d, bool reversed)
+    {
+        var nums = new List<double>();
+        int i = 0;
+        while (i < d.Length)
+        {
+            char c = d[i];
+            if (c == '-' || c == '.' || char.IsDigit(c))
+            {
+                int j = i + 1;
+                while (j < d.Length && (char.IsDigit(d[j]) || d[j] == '.' || d[j] == '-' && d[j - 1] == 'e')) j++;
+                if (double.TryParse(d.AsSpan(i, j - i), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out double v)) nums.Add(v);
+                i = j;
+            }
+            else i++;
+        }
+        if (nums.Count < 2) return (0, 0);
+        return reversed ? (nums[0], nums[1]) : (nums[^2], nums[^1]);
     }
 
     private static double ReadingTime(string text, NarrationOptions opts)
