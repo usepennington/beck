@@ -1,17 +1,21 @@
 using Beck.Rendering.Text;
+using HarfBuzzSharp;
+using SkiaSharp;
 
 namespace Beck.Rendering.Skia;
 
 /// <summary>
-/// Exact text measurement via SkiaSharp typefaces + HarfBuzzSharp shaping, so
-/// ligatures and kerning contribute to the advance sum. Constructed from a
-/// <see cref="BeckFontSpec"/>; pass the same spec to
+/// Exact text measurement: HarfBuzz shapes each run (so kerning + ligatures land
+/// exactly as a browser does), SkiaSharp supplies vertical metrics. Constructed
+/// from a <see cref="BeckFontSpec"/>; pass the same spec to
 /// <see cref="SvgRenderOptions.Font"/> so the SVG asks for the measured font.
 /// </summary>
-/// <remarks>The shaping implementation lands in milestone M2.</remarks>
-public sealed class SkiaTextMeasurer : ITextMeasurer
+public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 {
     private readonly BeckFontSpec _spec;
+    private readonly Dictionary<(bool Mono, int Weight), Loaded> _fonts = new();
+
+    private sealed record Loaded(SKTypeface Typeface, Font HbFont, int UnitsPerEm, Face Face, Blob Blob);
 
     public SkiaTextMeasurer(BeckFontSpec spec)
     {
@@ -20,6 +24,78 @@ public sealed class SkiaTextMeasurer : ITextMeasurer
     }
 
     /// <inheritdoc />
-    public TextMetrics Measure(string text, FontRole role) =>
-        throw new NotImplementedException("SkiaTextMeasurer is implemented in milestone M2.");
+    public TextMetrics Measure(string text, FontRole role)
+    {
+        FontRoleSpec s = FontRoles.Of(role);
+        string t = s.Uppercase ? text.ToUpperInvariant() : text;
+        Loaded f = Load(s.Mono, s.Weight);
+
+        double width = 0;
+        if (t.Length > 0)
+        {
+            using var buffer = new HarfBuzzSharp.Buffer();
+            buffer.AddUtf16(t);
+            buffer.GuessSegmentProperties();
+            f.HbFont.Shape(buffer);
+            long advance = 0;
+            foreach (GlyphPosition p in buffer.GlyphPositions) advance += p.XAdvance;
+            width = advance * s.SizePx / f.UnitsPerEm;
+            // CSS letter-spacing adds a gap after every character (Chrome keeps the trailing gap).
+            if (s.LetterSpacingEm != 0) width += t.Length * s.LetterSpacingEm * s.SizePx;
+        }
+
+        using var font = new SKFont(f.Typeface, (float)s.SizePx);
+        font.GetFontMetrics(out SKFontMetrics m);
+        return new TextMetrics(width, -m.Ascent, m.Descent);
+    }
+
+    private Loaded Load(bool mono, int weight)
+    {
+        var key = (mono, weight);
+        if (_fonts.TryGetValue(key, out Loaded? cached)) return cached;
+
+        IReadOnlyDictionary<int, string>? files = mono ? _spec.MonoFiles : _spec.Files;
+        if (files is null || files.Count == 0)
+            throw new InvalidOperationException(
+                $"BeckFontSpec provides no {(mono ? "monospace " : "")}font files for weight {weight}.");
+
+        string path = files[NearestWeight(files.Keys, weight)];
+        SKTypeface typeface = SKTypeface.FromFile(path)
+            ?? throw new InvalidOperationException($"Could not load font file '{path}'.");
+
+        var blob = Blob.FromFile(path);
+        var face = new Face(blob, 0);
+        int upem = face.UnitsPerEm;
+        var hbFont = new Font(face);
+        hbFont.SetFunctionsOpenType();
+        hbFont.SetScale(upem, upem);
+
+        var loaded = new Loaded(typeface, hbFont, upem, face, blob);
+        _fonts[key] = loaded;
+        return loaded;
+    }
+
+    private static int NearestWeight(IEnumerable<int> available, int want)
+    {
+        int best = -1, bestDistance = int.MaxValue;
+        foreach (int w in available)
+        {
+            int d = Math.Abs(w - want);
+            if (d < bestDistance) { bestDistance = d; best = w; }
+        }
+        return best;
+    }
+
+    /// <summary>Releases the cached typefaces and HarfBuzz resources.</summary>
+    public void Dispose()
+    {
+        foreach (Loaded f in _fonts.Values)
+        {
+            f.HbFont.Dispose();
+            f.Face.Dispose();
+            f.Blob.Dispose();
+            f.Typeface.Dispose();
+        }
+        _fonts.Clear();
+    }
 }

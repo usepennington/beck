@@ -23,6 +23,8 @@
   <ItemGroup>
     <!-- The parity/golden tests exercise the pure porting internals directly. -->
     <InternalsVisibleTo Include="Beck.Rendering.Tests" />
+    <!-- The Skia measurer needs the shared FontRole metrics table. -->
+    <InternalsVisibleTo Include="Beck.Rendering.Skia" />
   </ItemGroup>
 
 </Project>
