@@ -15,76 +15,89 @@ internal static class SvgRenderer
 
     public static string Render(DiagramModel model, ITextMeasurer measurer, string hash, SvgRenderOptions options)
     {
-        // measure → layout → route
         var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer));
-        LayoutResult layout = LayeredLayout.Compute(model, sizes);
-        var edges = EdgePainter.RouteEdges(model, layout);
-
         var markers = new Markers(hash);
+        string extraDefs = "";
+        LayoutResult layout;
+        var body = new StringBuilder();
+
+        if (model.Meta.Type == DiagramType.Sequence)
+        {
+            SequenceLayoutResult seq = SequenceLayout.Compute(model, sizes);
+            layout = seq.AsLayout();
+            var painter = new SequencePainter(hash, markers, measurer);
+            body.Append("<g class=\"beck-overlay\">").Append(painter.Render(model, seq)).Append("</g>");
+            extraDefs = painter.Defs;
+            body.Append("<g class=\"beck-nodes\">");
+            foreach (var n in model.Nodes)
+                if (layout.Nodes.TryGetValue(n.Id, out var r)) body.Append(Node(n, r, measurer, hash));
+            body.Append("</g>");
+        }
+        else
+        {
+            layout = LayeredLayout.Compute(model, sizes);
+            var edges = EdgePainter.RouteEdges(model, layout);
+
+            // z1 groups (largest-area first so nested boxes stack on top)
+            body.Append("<g class=\"beck-groups\">");
+            foreach (var g in model.Groups.Where(g => layout.Groups.ContainsKey(g.Id))
+                         .OrderByDescending(g => layout.Groups[g.Id].W * layout.Groups[g.Id].H))
+            {
+                Rect r = layout.Groups[g.Id];
+                body.Append($"<rect class=\"beck-group\" x=\"{N(r.X)}\" y=\"{N(r.Y)}\" width=\"{N(r.W)}\" height=\"{N(r.H)}\" rx=\"18\" ")
+                    .Append($"style=\"stroke:color-mix(in srgb, {SvgWriter.Attr(g.Accent)} 45%, transparent)\"/>");
+            }
+            body.Append("</g>");
+
+            // z2 edges (+ markers), then labels (pass 2 — mid labels dodge every line)
+            body.Append("<g class=\"beck-overlay\">");
+            foreach (var e in edges) body.Append(Edge(e, markers));
+            var placer = new LabelPlacer(layout.Nodes.Values, layout.Width, layout.Height);
+            foreach (var e in edges)
+            {
+                if (!string.IsNullOrEmpty(e.Edge.FromLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.FromLabel!, true, measurer));
+                if (!string.IsNullOrEmpty(e.Edge.ToLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.ToLabel!, false, measurer));
+            }
+            for (int i = 0; i < edges.Count; i++)
+            {
+                if (string.IsNullOrEmpty(edges[i].Edge.Label)) continue;
+                var otherLines = edges.Where((_, j) => j != i).Select(o => (IReadOnlyList<Point>)o.Points).ToList();
+                body.Append(placer.MidLabel(edges[i].Points, edges[i].Edge.Label!, otherLines, measurer));
+            }
+            body.Append("</g>");
+
+            // z3 nodes
+            body.Append("<g class=\"beck-nodes\">");
+            foreach (var n in model.Nodes)
+                if (layout.Nodes.TryGetValue(n.Id, out var r)) body.Append(Node(n, r, measurer, hash));
+            body.Append("</g>");
+
+            // z4 group labels
+            body.Append("<g class=\"beck-group-labels\">");
+            foreach (var g in model.Groups.Where(g => layout.Groups.ContainsKey(g.Id) && !string.IsNullOrEmpty(g.Label)))
+            {
+                Rect r = layout.Groups[g.Id];
+                double lw = measurer.Measure(g.Label, FontRole.GroupLabel).Width;
+                double lx = r.X + 14, ly = r.Y - 9;
+                body.Append($"<rect class=\"beck-group-label-bg\" x=\"{N(lx - 5.6)}\" y=\"{N(ly - 8)}\" width=\"{N(lw + 11.2)}\" height=\"16\" rx=\"3\"/>");
+                body.Append($"<text class=\"beck-group-label\" x=\"{N(lx)}\" y=\"{N(ly)}\" dominant-baseline=\"central\" ")
+                    .Append($"font-size=\"11.2\" font-weight=\"600\" letter-spacing=\"0.04em\" style=\"fill:{SvgWriter.Attr(g.Accent)}\">{SvgWriter.Text(g.Label.ToUpperInvariant())}</text>");
+            }
+            body.Append("</g>");
+        }
+
         double titleH = TitleHeight(model);
         double w = layout.Width;
         double totalH = titleH + layout.Height;
-
-        // font tokens: the measured font (options.Font) or the Inter default.
         string font = options.Font is { } f ? $"'{f.Family}', system-ui, sans-serif" : "'Inter', system-ui, -apple-system, sans-serif";
         string mono = options.Font?.MonoFamily is { } mf ? $"'{mf}', ui-monospace, monospace" : "'IBM Plex Mono', ui-monospace, monospace";
         ThemeMode theme = options.Theme ?? model.Meta.Theme;
-
-        var body = new StringBuilder();
-
-        // z1 groups (largest-area first so nested boxes stack on top)
-        body.Append("<g class=\"beck-groups\">");
-        foreach (var g in model.Groups.Where(g => layout.Groups.ContainsKey(g.Id))
-                     .OrderByDescending(g => layout.Groups[g.Id].W * layout.Groups[g.Id].H))
-        {
-            Rect r = layout.Groups[g.Id];
-            body.Append($"<rect class=\"beck-group\" x=\"{N(r.X)}\" y=\"{N(r.Y)}\" width=\"{N(r.W)}\" height=\"{N(r.H)}\" rx=\"18\" ")
-                .Append($"style=\"stroke:color-mix(in srgb, {SvgWriter.Attr(g.Accent)} 45%, transparent)\"/>");
-        }
-        body.Append("</g>");
-
-        // z2 edges (+ markers), then labels (pass 2 — mid labels dodge every line)
-        body.Append("<g class=\"beck-overlay\">");
-        foreach (var e in edges) body.Append(Edge(e, markers));
-        var placer = new LabelPlacer(layout.Nodes.Values, layout.Width, layout.Height);
-        foreach (var e in edges)
-        {
-            if (!string.IsNullOrEmpty(e.Edge.FromLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.FromLabel!, true, measurer));
-            if (!string.IsNullOrEmpty(e.Edge.ToLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.ToLabel!, false, measurer));
-        }
-        for (int i = 0; i < edges.Count; i++)
-        {
-            if (string.IsNullOrEmpty(edges[i].Edge.Label)) continue;
-            var otherLines = edges.Where((_, j) => j != i).Select(o => (IReadOnlyList<Point>)o.Points).ToList();
-            body.Append(placer.MidLabel(edges[i].Points, edges[i].Edge.Label!, otherLines, measurer));
-        }
-        body.Append("</g>");
-
-        // z3 nodes
-        body.Append("<g class=\"beck-nodes\">");
-        foreach (var n in model.Nodes)
-            if (layout.Nodes.TryGetValue(n.Id, out var r)) body.Append(Node(n, r, measurer, hash));
-        body.Append("</g>");
-
-        // z4 group labels
-        body.Append("<g class=\"beck-group-labels\">");
-        foreach (var g in model.Groups.Where(g => layout.Groups.ContainsKey(g.Id) && !string.IsNullOrEmpty(g.Label)))
-        {
-            Rect r = layout.Groups[g.Id];
-            string label = g.Label.ToUpperInvariant();
-            double lw = measurer.Measure(g.Label, FontRole.GroupLabel).Width;
-            double lx = r.X + 14, ly = r.Y - 9;
-            body.Append($"<rect class=\"beck-group-label-bg\" x=\"{N(lx - 5.6)}\" y=\"{N(ly - 8)}\" width=\"{N(lw + 11.2)}\" height=\"16\" rx=\"3\"/>");
-            body.Append($"<text class=\"beck-group-label\" x=\"{N(lx)}\" y=\"{N(ly)}\" dominant-baseline=\"central\" ")
-                .Append($"font-size=\"11.2\" font-weight=\"600\" letter-spacing=\"0.04em\" style=\"fill:{SvgWriter.Attr(g.Accent)}\">{SvgWriter.Text(label)}</text>");
-        }
-        body.Append("</g>");
 
         var svg = new StringBuilder();
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
            .Append($"style=\"max-width:{N(w)}px;height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
         svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme)).Append("</style>");
-        svg.Append("<defs>").Append(markers.Defs).Append("</defs>");
+        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append("</defs>");
         svg.Append(TitleBlock(model, w));
         svg.Append($"<g class=\"beck-canvas\" transform=\"translate(0,{N(titleH)})\">").Append(body).Append("</g>");
         svg.Append("</svg>");
