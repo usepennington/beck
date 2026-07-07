@@ -37,7 +37,8 @@ internal sealed class CssCompiler
     private double Pct(double time) => _t <= 0 ? 0 : Math.Clamp(time / _t * 100, 0, 100);
     private static string P(double pct) => Math.Round(pct, 4).ToString("0.####", CultureInfo.InvariantCulture);
     private static string Nm(double n) => SvgWriter.Num(n);
-    private bool HasContent => _s.Packets.Count > 0 || _s.Cards.Count > 0 || _s.Impacts.Count > 0;
+    private bool HasContent => _s.Packets.Count > 0 || _s.Cards.Count > 0 || _s.Impacts.Count > 0
+        || _s.Edges.Count > 0 || _s.Working.Count > 0;
 
     private NodeBox? Box(int i) => i >= 0 && i < _boxes.Count ? _boxes[i] : null;
 
@@ -65,6 +66,25 @@ internal sealed class CssCompiler
         {
             ImpactFx im = _s.Impacts[j];
             sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"2.5\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+        }
+
+        // edge overlays: activate (solid recolor) + stream (marching dashes).
+        for (int j = 0; j < _s.Edges.Count; j++)
+        {
+            EdgeFx ef = _s.Edges[j];
+            string col = SvgWriter.Attr(ef.Color);
+            if (ef.Kind == EdgeFxKind.Activate)
+                sb.Append($"<path class=\"bact{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"2\" opacity=\"0\"/>");
+            else
+                sb.Append($"<path class=\"bstr{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"2.5\" stroke-dasharray=\"5 9\" opacity=\"0\"/>");
+        }
+
+        // working breathing rings (card bounds; the pulse expands via stroke-width).
+        for (int j = 0; j < _s.Working.Count; j++)
+        {
+            WorkFx wf = _s.Working[j];
+            if (Box(wf.Node) is not { } b) continue;
+            sb.Append($"<rect class=\"bwrk{j}-{_h}\" x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(wf.Color)}\" stroke-width=\"0\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
         }
 
         // trails (behind the dots)
@@ -107,7 +127,66 @@ internal sealed class CssCompiler
         var sb = new StringBuilder();
         PacketCss(sb);
         CardCss(sb);
+        EdgeCss(sb);
+        WorkingCss(sb);
         return sb.ToString();
+    }
+
+    // ---- edge overlays: activate (instant recolor) + stream (marching dashes) ----
+    private void EdgeCss(StringBuilder sb)
+    {
+        double restore = Pct(_s.RestoreAt);
+        bool anyStream = false;
+        for (int j = 0; j < _s.Edges.Count; j++)
+        {
+            EdgeFx ef = _s.Edges[j];
+            string cls = ef.Kind == EdgeFxKind.Activate ? $"bact{j}-{_h}" : $"bstr{j}-{_h}";
+            string kf = ef.Kind == EdgeFxKind.Activate ? $"kact{j}-{_h}" : $"kstr{j}-{_h}";
+            string extra = "";
+            if (ef.Kind == EdgeFxKind.Stream)
+            {
+                anyStream = true;
+                double march = Math.Max(0.5, ef.Length / 220);
+                extra = $", bmarch-{_h} {Nm(march)}s linear infinite";
+            }
+            sb.Append($".b-{_h} .{cls}{{animation:{kf} {Nm(_t)}s linear {_iter}{extra};}}");
+            GateKeyframes(sb, kf, Pct(ef.Start), restore);
+        }
+        if (anyStream) sb.Append($"@keyframes bmarch-{_h}{{to{{stroke-dashoffset:-14;}}}}");
+    }
+
+    // ---- working: a gated opacity window + an infinite breathing ring ----
+    private void WorkingCss(StringBuilder sb)
+    {
+        if (_s.Working.Count == 0) return;
+        for (int j = 0; j < _s.Working.Count; j++)
+        {
+            WorkFx wf = _s.Working[j];
+            if (Box(wf.Node) is null) continue;
+            string kf = $"kwrk{j}-{_h}";
+            sb.Append($".b-{_h} .bwrk{j}-{_h}{{animation:{kf} {Nm(_t)}s linear {_iter}, bbreath-{_h} 1.5s ease-in-out infinite;}}");
+            double s = Pct(wf.Start), end = Pct(wf.End), e = 0.01;
+            sb.Append($"@keyframes {kf}{{0%{{opacity:0;}}");
+            if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+            sb.Append($"{P(s)}%{{opacity:1;}}");
+            if (end > s) sb.Append($"{P(end)}%{{opacity:1;}}");
+            if (end + e < 100) sb.Append($"{P(end + e)}%{{opacity:0;}}");
+            sb.Append("100%{opacity:0;}}");
+        }
+        // breathing: expand + fade the ring (stroke-based rebuild of the box-shadow pulse).
+        sb.Append($"@keyframes bbreath-{_h}{{0%{{stroke-width:0;stroke-opacity:0.55;}}100%{{stroke-width:18;stroke-opacity:0;}}}}");
+    }
+
+    /// <summary>Instant-on at <paramref name="start"/>, instant-off at <paramref name="restore"/> (steps-end pairs).</summary>
+    private void GateKeyframes(StringBuilder sb, string kf, double start, double restore)
+    {
+        double e = 0.01;
+        sb.Append($"@keyframes {kf}{{0%{{opacity:0;}}");
+        if (start > e) sb.Append($"{P(start - e)}%{{opacity:0;}}");
+        sb.Append($"{P(start)}%{{opacity:1;}}");
+        if (restore > start) sb.Append($"{P(restore)}%{{opacity:1;}}");
+        if (restore + e < 100) sb.Append($"{P(restore + e)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
     }
 
     // ---- packets + trails (M8) ----
