@@ -29,4 +29,24 @@ public sealed class RenderSmokeTests
             File.WriteAllText(Path.Combine(outDir, file + ".svg"), svg);
         }
     }
+
+    [Fact]
+    public void ScrubModeDrivesAnimationsOffTheViewTimeline()
+    {
+        var font = TestFonts.Spec();
+        using var measurer = new SkiaTextMeasurer(font);
+        string yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Corpus", "arch-flow.yaml"));
+
+        string full = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font });
+        string scrub = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font, Animation = AnimationMode.Scrub });
+
+        // Full loops on a time cycle; Scrub swaps that for `auto` + a scroll timeline.
+        Assert.Contains("linear infinite;", full);
+        Assert.DoesNotContain("animation-timeline", full);
+        Assert.Contains("auto linear both", scrub);
+        Assert.Contains("animation-timeline:view(block 90% 10%)", scrub);
+        // Same keyframes either way (the choreography is identical, only its clock differs).
+        Assert.Contains("@keyframes kp0-", full);
+        Assert.Contains("@keyframes kp0-", scrub);
+    }
 }

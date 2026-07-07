@@ -26,18 +26,24 @@ internal sealed class CssCompiler
     private readonly Schedule _s;
     private readonly IReadOnlyList<NodeBox> _boxes;
     private readonly SeqChoreo? _choreo;
+    private readonly bool _scrub;
     private readonly double _t;
     private readonly string _iter;
+    private readonly string _cyc;
     private bool _needGlow;
 
-    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes, SeqChoreo? choreo = null)
+    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes, SeqChoreo? choreo = null, bool scrub = false)
     {
         _s = schedule;
         _h = hash;
         _boxes = boxes;
         _choreo = choreo;
+        _scrub = scrub;
         _t = schedule.Duration + schedule.RepeatDelay;
         _iter = schedule.Repeat == -1 ? "infinite" : schedule.Repeat == 0 ? "1" : (schedule.Repeat + 1).ToString(CultureInfo.InvariantCulture);
+        // Scrub mode drives every keyframe track off scroll position instead of time:
+        // `auto` duration + a view() timeline (added by ScrubTimeline). Same keyframes.
+        _cyc = scrub ? "auto linear both" : $"{Nm(_t)}s linear {_iter}";
     }
 
     private double Pct(double time) => _t <= 0 ? 0 : Math.Clamp(time / _t * 100, 0, 100);
@@ -138,8 +144,18 @@ internal sealed class CssCompiler
         NarrateCss(sb);
         SequenceChoreoCss(sb);
         StatusCss(sb);
+        if (_scrub) ScrubTimeline(sb);
         return sb.ToString();
     }
+
+    // Scrub mode: point every animated element at the view() scroll timeline, so
+    // scrolling the diagram through the viewport scrubs the whole choreography.
+    // Browsers without scroll-timelines ignore this and show the (both-filled) frame.
+    private void ScrubTimeline(StringBuilder sb) =>
+        sb.Append($".b-{_h} .beck-fx>*,.b-{_h} .beck-fx-node,.b-{_h} .beck-msg path,")
+          .Append($".b-{_h} .beck-msg-chip,.b-{_h} .beck-msg-text,.b-{_h} .beck-band,")
+          .Append($".b-{_h} .beck-activation,.b-{_h} .beck-status-state,.b-{_h} .beck-beat")
+          .Append("{animation-timeline:view(block 90% 10%);}");
 
     // ---- status pills: one visible state at a time, instant swaps, restore to state 0 ----
     private void StatusCss(StringBuilder sb)
@@ -155,7 +171,7 @@ internal sealed class CssCompiler
             foreach (int st in sw.Select(x => x.State).Distinct())
             {
                 string kf = $"kst{node}-{st}-{_h}";
-                sb.Append($".b-{_h} .bss{node}-{st}-{_h}{{animation:{kf} {Nm(_t)}s linear {_iter};}}");
+                sb.Append($".b-{_h} .bss{node}-{st}-{_h}{{animation:{kf} {_cyc};}}");
                 sb.Append($"@keyframes {kf}{{");
                 double e = 0.01;
                 int prev = 0;
@@ -224,7 +240,7 @@ internal sealed class CssCompiler
     private void RevealTrack(StringBuilder sb, string kf, string selector, double dim, double revealAt, double revealDur, double finaleAt)
     {
         double rs = Pct(revealAt), re = Pct(revealAt + revealDur), fs = Pct(finaleAt), fe = Pct(finaleAt + 0.6), e = 0.01;
-        sb.Append($"{selector}{{animation:{kf} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"{selector}{{animation:{kf} {_cyc};}}");
         sb.Append($"@keyframes {kf}{{0%{{opacity:{G(dim)};}}");
         if (rs > e) sb.Append($"{P(rs - e)}%{{opacity:{G(dim)};}}");
         sb.Append($"{P(rs)}%{{opacity:{G(dim)};}}");
@@ -238,7 +254,7 @@ internal sealed class CssCompiler
     {
         string kf = $"kcha{i}-{_h}";
         double e = 0.01;
-        sb.Append($".b-{_h} .beck-activation[data-bar=\"{i}\"]{{animation:{kf} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($".b-{_h} .beck-activation[data-bar=\"{i}\"]{{animation:{kf} {_cyc};}}");
         sb.Append($"@keyframes {kf}{{0%{{opacity:{G(DimAct)};}}");
         if (startSec is { } ss)
         {
@@ -266,7 +282,7 @@ internal sealed class CssCompiler
             double outE = i + 1 < beats.Count ? Pct(beats[i + 1].At + 0.12) : Math.Min(100, Pct(_s.RestoreAt) + 0.5);
             string pin = Easing.ToCss(Easing.Power1In), pout = Easing.ToCss(Easing.Power2Out);
 
-            sb.Append($".b-{_h} .bbeat{i}-{_h}{{animation:kbe{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+            sb.Append($".b-{_h} .bbeat{i}-{_h}{{animation:kbe{i}-{_h} {_cyc};}}");
             sb.Append($"@keyframes kbe{i}-{_h}{{0%{{opacity:0;}}");
             if (inS > e) sb.Append($"{P(inS - e)}%{{opacity:0;}}");
             sb.Append($"{P(inS)}%{{opacity:0;animation-timing-function:{pout};}}");
@@ -294,7 +310,7 @@ internal sealed class CssCompiler
                 double march = Math.Max(0.5, ef.Length / 220);
                 extra = $", bmarch-{_h} {Nm(march)}s linear infinite";
             }
-            sb.Append($".b-{_h} .{cls}{{animation:{kf} {Nm(_t)}s linear {_iter}{extra};}}");
+            sb.Append($".b-{_h} .{cls}{{animation:{kf} {_cyc}{extra};}}");
             GateKeyframes(sb, kf, Pct(ef.Start), restore);
         }
         if (anyStream) sb.Append($"@keyframes bmarch-{_h}{{to{{stroke-dashoffset:-14;}}}}");
@@ -309,7 +325,7 @@ internal sealed class CssCompiler
             WorkFx wf = _s.Working[j];
             if (Box(wf.Node) is null) continue;
             string kf = $"kwrk{j}-{_h}";
-            sb.Append($".b-{_h} .bwrk{j}-{_h}{{animation:{kf} {Nm(_t)}s linear {_iter}, bbreath-{_h} 1.5s ease-in-out infinite;}}");
+            sb.Append($".b-{_h} .bwrk{j}-{_h}{{animation:{kf} {_cyc}, bbreath-{_h} 1.5s ease-in-out infinite;}}");
             double s = Pct(wf.Start), end = Pct(wf.End), e = 0.01;
             sb.Append($"@keyframes {kf}{{0%{{opacity:0;}}");
             if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
@@ -349,7 +365,7 @@ internal sealed class CssCompiler
 
             void Rider(string cls)
             {
-                sb.Append($".b-{_h} .{cls}{i}-{_h}{{animation:kp{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+                sb.Append($".b-{_h} .{cls}{i}-{_h}{{animation:kp{i}-{_h} {_cyc};}}");
             }
             Rider("bp");
             sb.Append($"@keyframes kp{i}-{_h}{{");
@@ -362,11 +378,11 @@ internal sealed class CssCompiler
 
             // label rides the same keyframes (offset-path shared; its own animation ref)
             if (!string.IsNullOrEmpty(p.Label))
-                sb.Append($".b-{_h} .bpl{i}-{_h}{{animation:kp{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+                sb.Append($".b-{_h} .bpl{i}-{_h}{{animation:kp{i}-{_h} {_cyc};}}");
 
             // trail: reveal then hold, snap back at restore
             double off = p.Reversed ? -p.Length : p.Length;
-            sb.Append($".b-{_h} .bt{i}-{_h}{{animation:kt{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+            sb.Append($".b-{_h} .bt{i}-{_h}{{animation:kt{i}-{_h} {_cyc};}}");
             sb.Append($"@keyframes kt{i}-{_h}{{");
             sb.Append($"0%{{stroke-dashoffset:{Nm(off)};}}");
             sb.Append($"{P(ws)}%{{stroke-dashoffset:{Nm(off)};animation-timing-function:{ease};}}");
@@ -432,7 +448,7 @@ internal sealed class CssCompiler
         pts.Add((_t, "none", null));
         pts.Sort((a, b) => a.T.CompareTo(b.T));
 
-        sb.Append($".b-{_h} .bn{node}-{_h} .beck-fx-node{{animation:kn{node}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($".b-{_h} .bn{node}-{_h} .beck-fx-node{{animation:kn{node}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kn{node}-{_h}{{");
         string lastPct = "";
         foreach (var (t, tf, e) in pts)
@@ -451,7 +467,7 @@ internal sealed class CssCompiler
     {
         double s = Pct(start), end = Pct(start + 0.48), e = 0.01;
         string po = Easing.ToCss(Easing.Power2Out);
-        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{");
         sb.Append("0%{opacity:0;transform:scale(1);}");
         if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
@@ -463,7 +479,7 @@ internal sealed class CssCompiler
     private void GlowCss(StringBuilder sb, int j, double start, double fadeIn, double total)
     {
         double s = Pct(start), up = Pct(start + fadeIn), hold = Pct(start + total), e = 0.01;
-        sb.Append($".b-{_h} .bgl{j}-{_h}{{animation:kgl{j}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($".b-{_h} .bgl{j}-{_h}{{animation:kgl{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kgl{j}-{_h}{{");
         sb.Append("0%{opacity:0;}");
         if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
@@ -478,7 +494,7 @@ internal sealed class CssCompiler
     {
         double s = Pct(start), end = Pct(start + 0.55), e = 0.01;
         string po = Easing.ToCss(Easing.Power2Out);
-        sb.Append($".b-{_h} .bimp{j}-{_h}{{animation:kimp{j}-{_h} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($".b-{_h} .bimp{j}-{_h}{{animation:kimp{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kimp{j}-{_h}{{");
         sb.Append("0%{opacity:0;transform:scale(1);stroke-width:2.5;}");
         if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
