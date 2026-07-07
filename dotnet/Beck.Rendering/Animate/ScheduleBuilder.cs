@@ -25,12 +25,62 @@ internal sealed record WorkFx(int Node, double Start, double End, string Color);
 /// <summary>One narration beat: the caption swaps in at <see cref="At"/> (pre-fade base).</summary>
 internal sealed record NarrateFx(double At, string? Color);
 
+/// <summary>A status-pill swap: node <see cref="Node"/> shows state <see cref="State"/> at <see cref="At"/>.</summary>
+internal sealed record StatusFx(int Node, int State, double At);
+
+/// <summary>
+/// The distinct status pill states each node shows — its authored resting state
+/// (index 0) plus every <c>(text,color)</c> a flow <c>status</c>/<c>fail</c> step
+/// gives it. Computed identically by the renderer (to pre-build the pill groups)
+/// and the schedule (to reference them by index), so it must stay a pure function.
+/// </summary>
+internal static class StatusStates
+{
+    public static Dictionary<string, List<(string Text, string Color)>> Build(DiagramModel model)
+    {
+        var accent = model.Nodes.ToDictionary(n => n.Id, n => n.Accent);
+        var ids = model.Nodes.Select(n => n.Id).ToHashSet();
+        var map = new Dictionary<string, List<(string, string)>>();
+        foreach (var n in model.Nodes)
+            if (n.Status is { } s) map[n.Id] = new List<(string, string)> { (s, n.Accent) };
+
+        void Add(string node, string text, string color)
+        {
+            if (!ids.Contains(node)) return;
+            // A node the flow gives a status but with no authored one gets an empty
+            // resting state 0 (no pill shown at rest), then the flow states on top.
+            if (!map.TryGetValue(node, out var list)) map[node] = list = new List<(string, string)> { ("", "") };
+            if (!list.Any(x => x.Item1 == text && x.Item2 == color)) list.Add((text, color));
+        }
+        void Walk(IEnumerable<FlowStep> steps)
+        {
+            foreach (var st in steps)
+                switch (st)
+                {
+                    case StatusStep s: Add(s.Node, s.Text, s.Color ?? Ac(accent, s.Node)); break;
+                    case FailStep f when f.Text is { } t: Add(f.Node, t, f.Color ?? "var(--beck-danger)"); break;
+                    case ParallelStep p: Walk(p.Steps); break;
+                }
+        }
+        Walk(model.Flow.Steps);
+        return map;
+    }
+
+    public static int IndexOf(List<(string Text, string Color)> states, string text, string color)
+    {
+        for (int i = 0; i < states.Count; i++) if (states[i].Text == text && states[i].Color == color) return i;
+        return -1;
+    }
+
+    private static string Ac(Dictionary<string, string> a, string n) => a.TryGetValue(n, out var v) ? v : "var(--beck-primary)";
+}
+
 /// <summary>The compiled, absolute-time flow schedule.</summary>
 internal sealed record Schedule(
     double Duration, double RepeatDelay, int Repeat, double RestoreAt,
     IReadOnlyList<PacketHop> Packets, IReadOnlyList<CardFx> Cards, IReadOnlyList<ImpactFx> Impacts,
     IReadOnlyList<EdgeFx> Edges, IReadOnlyList<WorkFx> Working, IReadOnlyList<NarrateFx> Narrations,
-    IReadOnlyList<double> Phases);
+    IReadOnlyList<double> Phases, IReadOnlyList<StatusFx> Statuses);
 
 /// <summary>
 /// Re-implements <c>src/animate/timeline.ts</c> as a <em>simulation</em>: walks
@@ -57,10 +107,12 @@ internal static class ScheduleBuilder
         var workEvents = new List<(int Node, double At, bool Start, string Color)>();
         var narrations = new List<NarrateFx>();
         var phases = new List<double>();
+        var statuses = new List<StatusFx>();
         double duration = 0;
         double restoreAt = -1;
 
         var accentOf = model.Nodes.ToDictionary(n => n.Id, n => n.Accent);
+        var statusMap = StatusStates.Build(model);
         var indexOf = new Dictionary<string, int>();
         for (int i = 0; i < model.Nodes.Count; i++) indexOf[model.Nodes[i].Id] = i;
         var membersOf = model.Groups.ToDictionary(g => g.Id, g => (IReadOnlyList<string>)g.Members);
@@ -71,6 +123,14 @@ internal static class ScheduleBuilder
             if (!indexOf.TryGetValue(nodeId, out int i)) return;
             cards.Add(new CardFx(i, kind, at, color));
             duration = Math.Max(duration, at + dur);
+        }
+
+        // Resolve a status (text,color) to its pill-state index and register the swap.
+        void AddStatus(string node, string text, string color, double at)
+        {
+            if (!statusMap.TryGetValue(node, out var states) || !indexOf.TryGetValue(node, out int i)) return;
+            int s = StatusStates.IndexOf(states, text, color);
+            if (s >= 0) statuses.Add(new StatusFx(i, s, at));
         }
 
         // Pulse-on-arrival: a node target flashes; a group target flashes every member.
@@ -168,9 +228,17 @@ internal static class ScheduleBuilder
                 case HighlightStep hs:
                     AddCard(hs.Node, CardFxKind.Highlight, position ?? duration, hs.Color ?? Accent(accentOf, hs.Node), HighlightDur);
                     break;
-                case FailStep fs:
-                    AddCard(fs.Node, CardFxKind.Fail, position ?? duration, fs.Color ?? "var(--beck-danger)", FailDur);
+                case StatusStep sts:
+                    AddStatus(sts.Node, sts.Text, sts.Color ?? Accent(accentOf, sts.Node), position ?? duration);
                     break;
+                case FailStep fs:
+                {
+                    double at = position ?? duration;
+                    string fcol = fs.Color ?? "var(--beck-danger)";
+                    AddCard(fs.Node, CardFxKind.Fail, at, fcol, FailDur);
+                    if (fs.Text is { } ft) AddStatus(fs.Node, ft, fcol, at);
+                    break;
+                }
                 case ActivateStep a:
                     if (PathOf(a.From, a.To, null) is { } af)
                         edgeFx.Add(new EdgeFx(EdgeFxKind.Activate, position ?? duration, af.Edge.D, a.Color ?? "var(--beck-primary)", PathLength.Of(af.Edge.D)));
@@ -234,7 +302,7 @@ internal static class ScheduleBuilder
             if (openAt is { } os) working.Add(new WorkFx(byNode.Key, os, Math.Max(os, restore), openColor));
         }
 
-        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working, narrations, phases);
+        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working, narrations, phases, statuses);
     }
 
     private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>
