@@ -130,6 +130,17 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-class-field{{fill:var(--beck-text-muted);}}");
         sb.Append($"{scope} .beck-class-method{{fill:var(--beck-text);}}");
 
+        // sequence scenery
+        sb.Append($"{scope} .beck-lifeline{{stroke-width:2;stroke-dasharray:6 7;}}");
+        sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) 45%, transparent));}}");
+        sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) 40%, transparent);stroke-width:1;}}");
+        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) 34%, var(--beck-text));}}");
+        sb.Append($"{scope} .beck-msg--reply .beck-msg-chip{{stroke:none;}}");
+        sb.Append($"{scope} .beck-msg--reply .beck-msg-text,{scope} .beck-msg-text--bare{{fill:var(--beck-text-muted);}}");
+        sb.Append($"{scope} .beck-band-box{{fill:color-mix(in srgb, var(--beck-accent) 5%, transparent);stroke:color-mix(in srgb, var(--beck-accent) 30%, transparent);stroke-width:1.5;stroke-dasharray:6 6;}}");
+        sb.Append($"{scope} .beck-band-chip{{fill:var(--beck-surface);stroke:color-mix(in srgb, var(--beck-accent) 40%, transparent);stroke-width:1;}}");
+        sb.Append($"{scope} .beck-band-label{{fill:color-mix(in srgb, var(--beck-accent) 70%, var(--beck-text));}}");
+
         // edges + labels
         sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}}");
         sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:3px;stroke-linejoin:round;}}");
