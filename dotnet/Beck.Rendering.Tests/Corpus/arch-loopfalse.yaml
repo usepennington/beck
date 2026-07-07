@@ -1,0 +1,12 @@
+type: architecture
+meta:
+  title: No Loop
+  loop: false
+  narrate: false
+nodes:
+  - id: a
+    title: Alpha
+  - id: b
+    title: Beta
+edges:
+  - { from: a, to: b }

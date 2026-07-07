@@ -1,0 +1,19 @@
+type: sequence
+meta:
+  title: Checkout
+  narrate: true
+participants:
+  - { id: user, title: User, accent: success }
+  - { id: web, title: Web }
+  - { id: api }
+  - { id: db, kind: db }
+messages:
+  - section: Browse
+  - { from: user, to: web, label: click, note: user clicks buy }
+  - { from: web, to: api, label: POST /order, kind: control }
+  - { from: api, to: db, label: insert, activate: true }
+  - { from: db, to: api, reply: true, label: ok }
+  - { from: api, to: web, reply: true, label: "201" }
+  - section: Notify
+  - { from: api, to: user, kind: async, label: email }
+  - section: Done

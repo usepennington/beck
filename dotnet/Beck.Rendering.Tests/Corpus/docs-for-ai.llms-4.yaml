@@ -1,0 +1,30 @@
+type: architecture
+meta:
+  title: Order service
+  direction: LR
+nodes:
+  - { id: client, title: Web App, kind: user }
+  - { id: api, title: API, kind: gateway }
+  - { id: orders, title: Orders }
+  - { id: cache, title: Redis, kind: cache }
+  - { id: db, title: Postgres, kind: db }
+  - { id: bus, title: Events, kind: queue }
+groups:
+  - { id: backend, label: Backend, members: [orders, cache, db], accent: primary }
+edges:
+  - { from: client, to: api }
+  - { from: api, to: orders }
+  - { from: orders, to: cache, label: read-through }
+  - { from: orders, to: db, label: query }
+  - { from: orders, to: bus, label: publish, kind: async }
+flow:
+  steps:
+    - packet: { from: client, to: api, label: POST /orders }
+    - packet: { from: api, to: orders }
+    - working: { node: db }
+    - packet: { from: orders, to: db, color: info }
+    - idle: { node: db }
+    - packet: { from: orders, to: bus, color: warn }
+    - status: { node: orders, text: created, color: success }
+    - wait: 1
+    - reset:

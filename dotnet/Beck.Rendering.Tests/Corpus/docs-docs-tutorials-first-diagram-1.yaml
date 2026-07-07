@@ -1,0 +1,9 @@
+type: architecture
+meta: { animate: false }
+nodes:
+  - { id: web, title: Web App }
+  - { id: api, title: API }
+  - { id: db, title: Database }
+edges:
+  - { from: web, to: api }
+  - { from: api, to: db }

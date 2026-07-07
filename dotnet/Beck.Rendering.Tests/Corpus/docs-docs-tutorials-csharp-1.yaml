@@ -1,0 +1,25 @@
+type: architecture
+meta:
+  title: My first system
+  direction: LR
+nodes:
+  - { id: web, title: Web App, kind: user }
+  - { id: api, title: API }
+  - { id: cache, title: Redis, kind: cache }
+  - { id: db, title: Database, kind: db }
+groups:
+  - { id: data, label: Data, members: [cache, db], accent: info }
+edges:
+  - { from: web, to: api }
+  - { from: api, to: cache }
+  - { from: api, to: db, label: queries }
+flow:
+  steps:
+    - narrate: The web app asks the API for data.
+    - packet: { from: web, to: api, label: GET / }
+    - narrate: The API reads it from the database.
+    - working: { node: db }
+    - packet: { from: api, to: db, color: info }
+    - idle: { node: db }
+    - packet: { from: db, to: api, color: success }
+    - wait: 1

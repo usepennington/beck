@@ -1,0 +1,9 @@
+type: architecture
+meta: { direction: LR }
+nodes:
+  - { id: web, title: Web App, kind: user }
+  - { id: api, title: API, kind: gateway }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: web, to: api }
+  - { from: api, to: db, label: queries }

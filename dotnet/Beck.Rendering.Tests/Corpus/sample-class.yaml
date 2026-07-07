@@ -1,0 +1,11 @@
+type: class
+meta:
+  title: Order Model
+classes:
+  - { id: entity, name: Entity, stereotype: abstract, accent: neutral, fields: ["Id: Guid", "CreatedAt: DateTimeOffset"] }
+  - { id: order, name: Order, stereotype: aggregate, fields: ["Status: OrderStatus", "Total: Money"], methods: ["AddLine(sku, qty)", Submit()] }
+  - { id: line, name: OrderLine, fields: ["Sku: string", "Qty: int"] }
+relations:
+  - { from: order, to: entity, kind: inherits }
+  - { from: order, to: line, kind: composition, fromCard: "1", toCard: "*" }
+

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Beck.Rendering.Skia</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <PackageId>Beck.Rendering.Skia</PackageId>
+    <Description>Exact text measurement for Beck.Rendering using SkiaSharp + HarfBuzzSharp shaping. Optional plug-in: supply your own font files and diagrams size to the real glyph metrics instead of the embedded Inter fallback table.</Description>
+    <PackageTags>diagram;beck;svg;skiasharp;harfbuzz;text-measurement</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Beck.Rendering\Beck.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="HarfBuzzSharp" />
+  </ItemGroup>
+
+</Project>

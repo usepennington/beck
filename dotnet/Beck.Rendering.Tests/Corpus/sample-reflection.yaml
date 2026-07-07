@@ -1,0 +1,16 @@
+type: class
+meta:
+  title: Order Model (reflected)
+classes:
+  - { id: entity, name: Entity, stereotype: abstract, fields: ["Id: Guid", "CreatedAt: DateTimeOffset"] }
+  - { id: order, name: Order, fields: ["Status: OrderStatus", "Total: decimal", "Customer: Customer", "Lines: List<OrderLine>"], methods: ["AddLine(sku, qty)", Submit()] }
+  - { id: orderLine, name: OrderLine, fields: ["Sku: string", "Qty: int"] }
+  - { id: customer, name: Customer, fields: ["Name: string", "Email: string"] }
+  - { id: orderStatus, name: OrderStatus, stereotype: enum, fields: [Draft, Submitted, Shipped, Cancelled] }
+relations:
+  - { from: order, to: entity, kind: inherits }
+  - { from: order, to: orderStatus, kind: association, label: Status }
+  - { from: order, to: customer, kind: association, label: Customer }
+  - { from: order, to: orderLine, kind: association, label: Lines, toCard: "*" }
+  - { from: customer, to: entity, kind: inherits }
+

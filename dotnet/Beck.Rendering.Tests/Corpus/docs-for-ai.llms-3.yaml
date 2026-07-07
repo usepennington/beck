@@ -1,0 +1,8 @@
+type: class
+classes:
+  - { id: entity, name: Entity, stereotype: abstract, accent: neutral, fields: ["Id: Guid"] }
+  - { id: order, name: Order, fields: ["Total: Money"], methods: ["Submit()"] }
+  - { id: line, name: OrderLine, fields: ["Sku: string"] }
+relations:
+  - { from: order, to: entity, kind: inherits }
+  - { from: order, to: line, kind: composition, fromCard: "1", toCard: "*" }
