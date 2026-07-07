@@ -38,7 +38,7 @@ internal sealed class CssCompiler
     private static string P(double pct) => Math.Round(pct, 4).ToString("0.####", CultureInfo.InvariantCulture);
     private static string Nm(double n) => SvgWriter.Num(n);
     private bool HasContent => _s.Packets.Count > 0 || _s.Cards.Count > 0 || _s.Impacts.Count > 0
-        || _s.Edges.Count > 0 || _s.Working.Count > 0;
+        || _s.Edges.Count > 0 || _s.Working.Count > 0 || _s.Narrations.Count > 0;
 
     private NodeBox? Box(int i) => i >= 0 && i < _boxes.Count ? _boxes[i] : null;
 
@@ -129,7 +129,31 @@ internal sealed class CssCompiler
         CardCss(sb);
         EdgeCss(sb);
         WorkingCss(sb);
+        NarrateCss(sb);
         return sb.ToString();
+    }
+
+    // ---- narration beats: sequential cross-fades (out 0.12 power1.in, in 0.3 power2.out) ----
+    private void NarrateCss(StringBuilder sb)
+    {
+        var beats = _s.Narrations;
+        for (int i = 0; i < beats.Count; i++)
+        {
+            double inS = Pct(beats[i].At + 0.12), inE = Pct(beats[i].At + 0.42), e = 0.01;
+            // Fade out when the next beat begins (else hold to the restore point).
+            double outS = i + 1 < beats.Count ? Pct(beats[i + 1].At) : Pct(_s.RestoreAt);
+            double outE = i + 1 < beats.Count ? Pct(beats[i + 1].At + 0.12) : Math.Min(100, Pct(_s.RestoreAt) + 0.5);
+            string pin = Easing.ToCss(Easing.Power1In), pout = Easing.ToCss(Easing.Power2Out);
+
+            sb.Append($".b-{_h} .bbeat{i}-{_h}{{animation:kbe{i}-{_h} {Nm(_t)}s linear {_iter};}}");
+            sb.Append($"@keyframes kbe{i}-{_h}{{0%{{opacity:0;}}");
+            if (inS > e) sb.Append($"{P(inS - e)}%{{opacity:0;}}");
+            sb.Append($"{P(inS)}%{{opacity:0;animation-timing-function:{pout};}}");
+            sb.Append($"{P(inE)}%{{opacity:1;}}");
+            if (outS > inE) sb.Append($"{P(outS)}%{{opacity:1;animation-timing-function:{pin};}}");
+            if (outE > outS) sb.Append($"{P(outE)}%{{opacity:0;}}");
+            sb.Append("100%{opacity:0;}}");
+        }
     }
 
     // ---- edge overlays: activate (instant recolor) + stream (marching dashes) ----
