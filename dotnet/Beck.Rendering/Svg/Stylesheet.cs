@@ -84,6 +84,9 @@ internal static class Stylesheet
 
         // ---- stratum 2: shape CSS (SVG translation of styles.css) ----
         sb.Append(scope).Append("{font-family:var(--beck-font);}");
+        // fx-node wrapper: effect transforms (scale/shake) pivot on the card centre.
+        sb.Append($"{scope} .beck-fx-node{{transform-box:fill-box;transform-origin:center;}}");
+        sb.Append($"{scope} .beck-packet-label{{font-family:var(--beck-font-mono);font-size:11px;font-weight:600;}}");
 
         // node card
         sb.Append($"{scope} .beck-node{{")

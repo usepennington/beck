@@ -32,8 +32,8 @@ internal static class SvgRenderer
             extraDefs = painter.Defs;
             flowEdges = painter.MessageEdges;
             body.Append("<g class=\"beck-nodes\">");
-            foreach (var n in model.Nodes)
-                if (layout.Nodes.TryGetValue(n.Id, out var r)) body.Append(Node(n, r, measurer, hash));
+            for (int i = 0; i < model.Nodes.Count; i++)
+                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i));
             body.Append("</g>");
         }
         else
@@ -72,8 +72,8 @@ internal static class SvgRenderer
 
             // z3 nodes
             body.Append("<g class=\"beck-nodes\">");
-            foreach (var n in model.Nodes)
-                if (layout.Nodes.TryGetValue(n.Id, out var r)) body.Append(Node(n, r, measurer, hash));
+            for (int i = 0; i < model.Nodes.Count; i++)
+                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i));
             body.Append("</g>");
 
             // z4 group labels
@@ -102,7 +102,10 @@ internal static class SvgRenderer
         if (options.Animation == AnimationMode.Full && model.Meta.Animate && model.Flow.Steps.Count > 0 && flowEdges.Count > 0)
         {
             Schedule schedule = ScheduleBuilder.Build(model, flowEdges);
-            var compiler = new CssCompiler(schedule, hash);
+            var boxes = new List<NodeBox>(model.Nodes.Count);
+            foreach (var n in model.Nodes)
+                boxes.Add(layout.Nodes.TryGetValue(n.Id, out var r) ? CardBox(n, r) : default);
+            var compiler = new CssCompiler(schedule, hash, boxes);
             body.Append(compiler.Markup());
             animDefs = compiler.Defs();
             string css = compiler.Css();
@@ -166,13 +169,17 @@ internal static class SvgRenderer
     // Text-stack line metrics (must match CardSizer).
     private const double TitleLine = 1.3 * 14, SubLine = 1.35 * 12, TextGap = 3;
 
-    private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash)
+    private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash, int idx)
     {
         var sb = new StringBuilder();
         string accentStyle = $"--beck-accent:{node.Accent}";
         if (node.Surface != null) accentStyle += $";--beck-node-bg:{node.Surface}";
         if (node.TextColor != null) accentStyle += $";--beck-text:{node.TextColor}";
-        sb.Append($"<g class=\"beck-node-wrap\" data-node=\"{SvgWriter.Attr(node.Id)}\" transform=\"translate({N(rect.X)},{N(rect.Y)})\" style=\"{SvgWriter.Attr(accentStyle)}\">");
+        // bn{idx} lets the animation compiler target this node's fx wrapper; the inner
+        // .beck-fx-node isolates effect transforms (scale/shake) from the positioning
+        // translate so pulses/highlights/fails bounce the card in place (§10.2).
+        sb.Append($"<g class=\"beck-node-wrap bn{idx}-{hash}\" data-node=\"{SvgWriter.Attr(node.Id)}\" transform=\"translate({N(rect.X)},{N(rect.Y)})\" style=\"{SvgWriter.Attr(accentStyle)}\">");
+        sb.Append("<g class=\"beck-fx-node\">");
 
         double w = rect.W, h = rect.H;
         switch (node.Shape)
@@ -190,8 +197,21 @@ internal static class SvgRenderer
                 break;
         }
 
-        sb.Append("</g>");
+        sb.Append("</g></g>");
         return sb.ToString();
+    }
+
+    /// <summary>The node's card box in canvas coords + corner radius, for effect overlays.</summary>
+    private static NodeBox CardBox(NodeModel node, Rect r)
+    {
+        double rx = node.Shape switch
+        {
+            NodeShape.Pill => r.H / 2,
+            NodeShape.Class => 12,
+            NodeShape.Start or NodeShape.End => Math.Min(r.W, r.H) / 2,
+            _ => 14,
+        };
+        return new NodeBox(r.X + 0.75, r.Y + 0.75, r.W - 1.5, r.H - 1.5, rx);
     }
 
     private static void EmitPill(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m)
