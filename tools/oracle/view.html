@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  :root {
+    --color-base-50:#ffffff; --color-base-100:#f1f5f9; --color-base-200:#e2e8f0;
+    --color-base-300:#cbd5e1; --color-base-400:#94a3b8; --color-base-500:#64748b;
+    --color-base-700:#334155; --color-base-800:#1e293b; --color-base-900:#0f172a; --color-base-950:#020617;
+    --color-primary-600:#175ddc; --color-emerald-500:#10b981; --color-amber-500:#f59e0b;
+    --color-red-500:#ef4444; --color-violet-500:#8b5cf6;
+  }
+  @font-face { font-family:'Inter'; font-weight:400; src:url('/dotnet/Beck.Rendering.Tests/fonts/Inter-Regular.ttf'); }
+  @font-face { font-family:'Inter'; font-weight:500; src:url('/dotnet/Beck.Rendering.Tests/fonts/Inter-Medium.ttf'); }
+  @font-face { font-family:'Inter'; font-weight:600; src:url('/dotnet/Beck.Rendering.Tests/fonts/Inter-SemiBold.ttf'); }
+  @font-face { font-family:'Inter'; font-weight:700; src:url('/dotnet/Beck.Rendering.Tests/fonts/Inter-Bold.ttf'); }
+  @font-face { font-family:'IBM Plex Mono'; font-weight:400; src:url('/dotnet/Beck.Rendering.Tests/fonts/IBMPlexMono-Regular.ttf'); }
+  @font-face { font-family:'IBM Plex Mono'; font-weight:500; src:url('/dotnet/Beck.Rendering.Tests/fonts/IBMPlexMono-Medium.ttf'); }
+  @font-face { font-family:'IBM Plex Mono'; font-weight:700; src:url('/dotnet/Beck.Rendering.Tests/fonts/IBMPlexMono-Bold.ttf'); }
+  body { margin:0; padding:30px; background:#ffffff; }
+  :root[data-theme='dark'] body, body.dark { background:#0d1117; }
+</style>
+</head>
+<body>
+<div id="host"></div>
+<script>
+(async () => {
+  const p = new URLSearchParams(location.search);
+  const f = p.get('f') || 'arch-grouped';
+  if (p.get('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  const svg = await (await fetch(`/tools/oracle/rendered/${f}.svg`)).text();
+  document.getElementById('host').innerHTML = svg;
+  for (const [w,fam] of [['400','Inter'],['500','Inter'],['600','Inter'],['700','Inter'],['400','"IBM Plex Mono"'],['500','"IBM Plex Mono"'],['700','"IBM Plex Mono"']]) { try { await document.fonts.load(`${w} 20px ${fam}`); } catch(e){} }
+  await document.fonts.ready;
+  window.ready = true;
+})();
+</script>
+</body>
+</html>
