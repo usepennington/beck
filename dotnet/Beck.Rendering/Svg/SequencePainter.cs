@@ -1,4 +1,5 @@
 using System.Text;
+using Beck.Rendering.Animate;
 using Beck.Rendering.Route;
 using Beck.Rendering.Text;
 
@@ -29,6 +30,9 @@ internal sealed class SequencePainter
 
     /// <summary>Gradient defs (appended to the document <c>&lt;defs&gt;</c>).</summary>
     public string Defs => _defs.ToString();
+
+    /// <summary>Message paths, for the flow schedule (each packet rides a message row).</summary>
+    public List<FlowEdge> MessageEdges { get; } = new();
 
     private static string N(double n) => SvgWriter.Num(n);
     private static string I(double n) => Js.Str(Js.Round(n));
@@ -85,7 +89,9 @@ internal sealed class SequencePainter
                     new(sx, row.Y), new(cxFrom + SequenceLayout.SelfLoop, row.Y),
                     new(cxFrom + SequenceLayout.SelfLoop, row.Y + 22), new(sx, row.Y + 22),
                 };
-                sb.Append(MsgPath(edge, StepRound.RoundedPath(poly, 9)));
+                string selfD = StepRound.RoundedPath(poly, 9);
+                sb.Append(MsgPath(edge, selfD));
+                MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, selfD));
                 if (!string.IsNullOrEmpty(edge.Label))
                     sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"10.88\" font-weight=\"500\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
             }
@@ -94,7 +100,9 @@ internal sealed class SequencePainter
                 double dir = Math.Sign(cxTo - cxFrom); if (dir == 0) dir = 1;
                 double x1 = cxFrom + dir * SequenceLayout.ActivationOffset(layout.Activations, edge.From, row.Y);
                 double x2 = cxTo - dir * SequenceLayout.ActivationOffset(layout.Activations, edge.To, row.Y);
-                sb.Append(MsgPath(edge, $"M {N(x1)} {N(row.Y)} L {N(x2)} {N(row.Y)}"));
+                string msgD = $"M {N(x1)} {N(row.Y)} L {N(x2)} {N(row.Y)}";
+                sb.Append(MsgPath(edge, msgD));
+                MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, msgD));
                 if (!string.IsNullOrEmpty(edge.Label))
                 {
                     double mw = _m.Measure(edge.Label!, FontRole.MsgText).Width;
