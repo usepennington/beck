@@ -1,4 +1,5 @@
 using System.Text;
+using Beck.Rendering.Animate;
 using Beck.Rendering.Route;
 using Beck.Rendering.Text;
 
@@ -20,6 +21,7 @@ internal static class SvgRenderer
         string extraDefs = "";
         LayoutResult layout;
         var body = new StringBuilder();
+        var flowEdges = new List<FlowEdge>();
 
         if (model.Meta.Type == DiagramType.Sequence)
         {
@@ -28,6 +30,7 @@ internal static class SvgRenderer
             var painter = new SequencePainter(hash, markers, measurer);
             body.Append("<g class=\"beck-overlay\">").Append(painter.Render(model, seq)).Append("</g>");
             extraDefs = painter.Defs;
+            flowEdges = painter.MessageEdges;
             body.Append("<g class=\"beck-nodes\">");
             foreach (var n in model.Nodes)
                 if (layout.Nodes.TryGetValue(n.Id, out var r)) body.Append(Node(n, r, measurer, hash));
@@ -37,6 +40,7 @@ internal static class SvgRenderer
         {
             layout = LayeredLayout.Compute(model, sizes);
             var edges = EdgePainter.RouteEdges(model, layout);
+            flowEdges = edges.Select(e => new FlowEdge(e.Edge.Id, e.Edge.From, e.Edge.To, e.Edge.Kind, e.D)).ToList();
 
             // z1 groups (largest-area first so nested boxes stack on top)
             body.Append("<g class=\"beck-groups\">");
@@ -93,11 +97,23 @@ internal static class SvgRenderer
         string mono = options.Font?.MonoFamily is { } mf ? $"'{mf}', ui-monospace, monospace" : "'IBM Plex Mono', ui-monospace, monospace";
         ThemeMode theme = options.Theme ?? model.Meta.Theme;
 
+        // Animation compiler (§9–10): simulate the flow → CSS keyframes + fx layer.
+        string animCss = "", animDefs = "";
+        if (options.Animation == AnimationMode.Full && model.Meta.Animate && model.Flow.Steps.Count > 0 && flowEdges.Count > 0)
+        {
+            Schedule schedule = ScheduleBuilder.Build(model, flowEdges);
+            var compiler = new CssCompiler(schedule, hash);
+            body.Append(compiler.Markup());
+            animDefs = compiler.Defs();
+            string css = compiler.Css();
+            if (!string.IsNullOrEmpty(css)) animCss = "@media (prefers-reduced-motion:no-preference){" + css + "}";
+        }
+
         var svg = new StringBuilder();
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
            .Append($"style=\"max-width:{N(w)}px;height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
-        svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme)).Append("</style>");
-        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append("</defs>");
+        svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme)).Append(animCss).Append("</style>");
+        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append("</defs>");
         svg.Append(TitleBlock(model, w));
         svg.Append($"<g class=\"beck-canvas\" transform=\"translate(0,{N(titleH)})\">").Append(body).Append("</g>");
         svg.Append("</svg>");
