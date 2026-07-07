@@ -116,6 +116,20 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-group-label-bg{{fill:var(--beck-surface);}}");
         sb.Append($"{scope} .beck-group-label{{fill:var(--beck-group-label);}}");
 
+        // state pills reuse the card treatment; start/end pseudo-states
+        sb.Append($"{scope} .beck-node--start{{fill:var(--beck-text-muted);}}");
+        sb.Append($"{scope} .beck-node--end{{fill:none;stroke:var(--beck-text-muted);stroke-width:2;}}");
+        sb.Append($"{scope} .beck-end-dot{{fill:var(--beck-text-muted);}}");
+
+        // class compartment card
+        sb.Append($"{scope} .beck-class-head{{fill:color-mix(in srgb, var(--beck-accent) 10%, transparent);}}");
+        sb.Append($"{scope} .beck-class-head-border{{stroke:color-mix(in srgb, var(--beck-accent) 28%, var(--beck-node-border));stroke-width:1;}}");
+        sb.Append($"{scope} .beck-class-divider{{stroke:var(--beck-node-border);stroke-width:1;}}");
+        sb.Append($"{scope} .beck-class-stereo{{fill:var(--beck-text-muted);}}");
+        sb.Append($"{scope} .beck-class-title{{fill:var(--beck-text);}}");
+        sb.Append($"{scope} .beck-class-field{{fill:var(--beck-text-muted);}}");
+        sb.Append($"{scope} .beck-class-method{{fill:var(--beck-text);}}");
+
         // edges + labels
         sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}}");
         sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:3px;stroke-linejoin:round;}}");
