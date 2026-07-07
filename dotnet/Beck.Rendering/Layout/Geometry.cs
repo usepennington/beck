@@ -3,6 +3,9 @@ namespace Beck.Rendering;
 /// <summary>An intrinsic size in px (a measured card, a laid-out box).</summary>
 internal readonly record struct Size(double W, double H);
 
+/// <summary>A 2D point in canvas coordinates.</summary>
+internal readonly record struct Point(double X, double Y);
+
 /// <summary>A placed rectangle (top-left corner + size), in canvas coordinates.</summary>
 internal readonly record struct Rect(double X, double Y, double W, double H)
 {
