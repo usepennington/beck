@@ -20,7 +20,7 @@ internal static class SvgRenderer
         var markers = new Markers(hash);
         // Pill states a node's flow will swap through (null unless animating with >1 state).
         var statusMap = StatusStates.Build(model);
-        bool animating = options.Animation == AnimationMode.Full && model.Meta.Animate;
+        bool animating = options.Animation is AnimationMode.Full or AnimationMode.Scrub && model.Meta.Animate;
         IReadOnlyList<(string Text, string Color)>? StatesFor(string id) =>
             animating && statusMap.TryGetValue(id, out var s) && s.Count > 1 ? s : null;
         string extraDefs = "";
@@ -108,7 +108,7 @@ internal static class SvgRenderer
         // Narration caption bar (§8.6): a teleprompter under the diagram whose beats
         // cross-fade as the story plays. Rendered here (the compiler animates the beats).
         var beats = model.Flow.Steps.OfType<NarrateStep>().ToList();
-        bool narrationActive = options.Animation == AnimationMode.Full && model.Meta.Animate
+        bool narrationActive = options.Animation is AnimationMode.Full or AnimationMode.Scrub && model.Meta.Animate
             && model.Meta.Narration.Enabled && beats.Count > 0;
         if (narrationActive)
         {
@@ -123,14 +123,16 @@ internal static class SvgRenderer
         ThemeMode theme = options.Theme ?? model.Meta.Theme;
 
         // Animation compiler (§9–10): simulate the flow → CSS keyframes + fx layer.
+        // Full loops on load; Scrub drives the same keyframes off scroll position.
         string animCss = "", animDefs = "";
-        if (options.Animation == AnimationMode.Full && model.Meta.Animate && model.Flow.Steps.Count > 0 && flowEdges.Count > 0)
+        if (options.Animation is AnimationMode.Full or AnimationMode.Scrub
+            && model.Meta.Animate && model.Flow.Steps.Count > 0 && flowEdges.Count > 0)
         {
             Schedule schedule = ScheduleBuilder.Build(model, flowEdges);
             var boxes = new List<NodeBox>(model.Nodes.Count);
             foreach (var n in model.Nodes)
                 boxes.Add(layout.Nodes.TryGetValue(n.Id, out var r) ? CardBox(n, r) : default);
-            var compiler = new CssCompiler(schedule, hash, boxes, choreo);
+            var compiler = new CssCompiler(schedule, hash, boxes, choreo, options.Animation == AnimationMode.Scrub);
             body.Append(compiler.Markup());
             animDefs = compiler.Defs();
             string css = compiler.Css();
