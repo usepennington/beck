@@ -7,6 +7,10 @@ namespace Beck.Rendering.Animate;
 /// <summary>A node's card box in canvas coordinates (for overlay placement).</summary>
 internal readonly record struct NodeBox(double X, double Y, double W, double H, double Rx);
 
+/// <summary>Sequence storytelling context: the activation bars (by their start/end edge)
+/// and the section-band count, used to dim + reveal the scenery as the story plays.</summary>
+internal sealed record SeqChoreo(IReadOnlyList<(string Start, string End)> Bars, int BandCount);
+
 /// <summary>
 /// Compiles a <see cref="Schedule"/> into CSS keyframes on the shared-cycle model
 /// (§10): every element animates over the whole cycle <c>T = Duration +
@@ -21,15 +25,17 @@ internal sealed class CssCompiler
     private readonly string _h;
     private readonly Schedule _s;
     private readonly IReadOnlyList<NodeBox> _boxes;
+    private readonly SeqChoreo? _choreo;
     private readonly double _t;
     private readonly string _iter;
     private bool _needGlow;
 
-    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes)
+    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes, SeqChoreo? choreo = null)
     {
         _s = schedule;
         _h = hash;
         _boxes = boxes;
+        _choreo = choreo;
         _t = schedule.Duration + schedule.RepeatDelay;
         _iter = schedule.Repeat == -1 ? "infinite" : schedule.Repeat == 0 ? "1" : (schedule.Repeat + 1).ToString(CultureInfo.InvariantCulture);
     }
@@ -38,7 +44,7 @@ internal sealed class CssCompiler
     private static string P(double pct) => Math.Round(pct, 4).ToString("0.####", CultureInfo.InvariantCulture);
     private static string Nm(double n) => SvgWriter.Num(n);
     private bool HasContent => _s.Packets.Count > 0 || _s.Cards.Count > 0 || _s.Impacts.Count > 0
-        || _s.Edges.Count > 0 || _s.Working.Count > 0 || _s.Narrations.Count > 0;
+        || _s.Edges.Count > 0 || _s.Working.Count > 0 || _s.Narrations.Count > 0 || _choreo != null;
 
     private NodeBox? Box(int i) => i >= 0 && i < _boxes.Count ? _boxes[i] : null;
 
@@ -130,8 +136,87 @@ internal sealed class CssCompiler
         EdgeCss(sb);
         WorkingCss(sb);
         NarrateCss(sb);
+        SequenceChoreoCss(sb);
         return sb.ToString();
     }
+
+    // ---- sequence storytelling: dim the scenery, reveal each row as its packet fires ----
+    private const double DimLine = 0.15, DimLabel = 0.35, DimAct = 0.25, DimBand = 0.45;
+
+    private void SequenceChoreoCss(StringBuilder sb)
+    {
+        if (_choreo is null) return;
+        double finaleAt = Math.Max(0, _s.Duration - 0.75);
+
+        // initial dims (the whole block is motion-guarded by the caller).
+        sb.Append($".b-{_h} .beck-msg path{{opacity:{G(DimLine)};}}");
+        sb.Append($".b-{_h} .beck-msg-chip,.b-{_h} .beck-msg-text{{opacity:{G(DimLabel)};}}");
+        sb.Append($".b-{_h} .beck-band{{opacity:{G(DimBand)};}}");
+        sb.Append($".b-{_h} .beck-activation{{opacity:{G(DimAct)};}}");
+
+        // first departure + arrival per message edge.
+        var revealAt = new Dictionary<string, (double At, double Arr)>();
+        foreach (PacketHop p in _s.Packets)
+            if (p.EdgeId is { } id && !revealAt.ContainsKey(id)) revealAt[id] = (p.Start, p.Start + p.Duration);
+
+        int idx = 0;
+        foreach (var (id, t) in revealAt)
+        {
+            string esc = id.Replace("\"", "\\\"");
+            RevealTrack(sb, $"kchl{idx}-{_h}", $".b-{_h} .beck-msg[data-msg=\"{esc}\"] path", DimLine, t.At, 0.25, finaleAt);
+            RevealTrack(sb, $"kcht{idx}-{_h}",
+                $".b-{_h} .beck-msg[data-msg=\"{esc}\"] .beck-msg-chip,.b-{_h} .beck-msg[data-msg=\"{esc}\"] .beck-msg-text",
+                DimLabel, t.At, 0.25, finaleAt);
+            idx++;
+        }
+
+        // activation bars: brighten at their start edge, fade after their end edge.
+        for (int i = 0; i < _choreo.Bars.Count; i++)
+        {
+            var (start, end) = _choreo.Bars[i];
+            double? sT = revealAt.TryGetValue(start, out var s0) ? Math.Max(s0.At, s0.Arr - 0.15) : null;
+            double? eT = revealAt.TryGetValue(end, out var e0) ? e0.Arr : null;
+            BarTrack(sb, i, sT, eT, finaleAt);
+        }
+
+        // section bands: light up in phase order.
+        for (int i = 0; i < _choreo.BandCount && i < _s.Phases.Count; i++)
+            RevealTrack(sb, $"kchb{i}-{_h}", $".b-{_h} .beck-band[data-band=\"{i}\"]", DimBand, _s.Phases[i], 0.4, finaleAt);
+    }
+
+    // dim -> (reveal to 1 over revealDur at revealAt) -> hold -> (finale back to dim over 0.6s)
+    private void RevealTrack(StringBuilder sb, string kf, string selector, double dim, double revealAt, double revealDur, double finaleAt)
+    {
+        double rs = Pct(revealAt), re = Pct(revealAt + revealDur), fs = Pct(finaleAt), fe = Pct(finaleAt + 0.6), e = 0.01;
+        sb.Append($"{selector}{{animation:{kf} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"@keyframes {kf}{{0%{{opacity:{G(dim)};}}");
+        if (rs > e) sb.Append($"{P(rs - e)}%{{opacity:{G(dim)};}}");
+        sb.Append($"{P(rs)}%{{opacity:{G(dim)};}}");
+        sb.Append($"{P(re)}%{{opacity:1;}}");
+        if (fs > re) sb.Append($"{P(fs)}%{{opacity:1;}}");
+        if (fe > fs) sb.Append($"{P(fe)}%{{opacity:{G(dim)};}}");
+        sb.Append($"100%{{opacity:{G(dim)};}}}}");
+    }
+
+    private void BarTrack(StringBuilder sb, int i, double? startSec, double? endSec, double finaleSec)
+    {
+        string kf = $"kcha{i}-{_h}";
+        double e = 0.01;
+        sb.Append($".b-{_h} .beck-activation[data-bar=\"{i}\"]{{animation:{kf} {Nm(_t)}s linear {_iter};}}");
+        sb.Append($"@keyframes {kf}{{0%{{opacity:{G(DimAct)};}}");
+        if (startSec is { } ss)
+        {
+            double s = Pct(ss), se = Pct(ss + 0.3);
+            if (s > e) sb.Append($"{P(s - e)}%{{opacity:{G(DimAct)};}}");
+            sb.Append($"{P(s)}%{{opacity:{G(DimAct)};}}{P(se)}%{{opacity:1;}}");
+        }
+        double fadeAt = endSec ?? finaleSec;
+        double fs = Pct(fadeAt), fe = Pct(fadeAt + 0.35);
+        sb.Append($"{P(fs)}%{{opacity:1;}}{P(fe)}%{{opacity:{G(DimAct)};}}");
+        sb.Append($"100%{{opacity:{G(DimAct)};}}}}");
+    }
+
+    private static string G(double n) => n.ToString("0.##", CultureInfo.InvariantCulture);
 
     // ---- narration beats: sequential cross-fades (out 0.12 power1.in, in 0.3 power2.out) ----
     private void NarrateCss(StringBuilder sb)
