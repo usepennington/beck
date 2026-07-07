@@ -83,6 +83,11 @@ internal static class BrandStyling
            when it's taller than a constrained frame, so the title stays scrollable. */
         .beck-embed > .beck-root { max-width: 100%; margin: auto; }
         beck-diagram { display: block; max-width: 100%; }
+        /* Static build-time renderer (M10): the C# engine emits the <svg> directly into
+           the embed instead of a hydrated .beck-root, so centre it the same way. */
+        .beck-embed > .beck-svg { max-width: 100%; height: auto; margin: auto; }
+        .beck-embed--error { border-color: var(--color-red-400, #f87171); }
+        .beck-embed--error pre { margin: 0; width: 100%; overflow: auto; font-family: var(--font-mono); font-size: 12px; }
         /* The playground renders into its own canvas — strip the fence frame there. */
         .pg-preview-canvas .beck-embed {
           border: 0; background: none; padding: 0; margin: 0; min-height: 0;

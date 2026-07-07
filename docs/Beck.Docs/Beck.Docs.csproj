@@ -11,8 +11,21 @@
 
   <ItemGroup>
     <!-- The Beck engine RCL: ships _content/Beck/beck.global.js as a static web asset
-         and the Beck.Authoring DiagramBuilder C# API used by the API docs. -->
+         (still used by the interactive playground) and the Beck.Authoring
+         DiagramBuilder C# API used by the API docs. -->
     <ProjectReference Include="..\..\dotnet\Beck\Beck.csproj" />
+    <!-- The pure-C# renderer: turns ```beck fences into static self-animating SVG at
+         build time (BeckSvgPreprocessor), so content diagrams need no client JS.
+         Beck.Rendering.Skia supplies exact text measurement over the site's own fonts. -->
+    <ProjectReference Include="..\..\dotnet\Beck.Rendering\Beck.Rendering.csproj" />
+    <ProjectReference Include="..\..\dotnet\Beck.Rendering.Skia\Beck.Rendering.Skia.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- IBM Plex Sans + Mono TTFs: the build-time measurer shapes text with the same
+         fonts the browser renders (the site loads them from Google Fonts), so card
+         sizing matches. Copied next to the assembly; read via AppContext.BaseDirectory. -->
+    <None Update="fonts\*.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

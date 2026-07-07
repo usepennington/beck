@@ -26,6 +26,11 @@ builder.Services.AddPennington(penn =>
     penn.AddLlmsTxt();
 });
 
+// Render ```beck fences to static, self-animating inline SVG at build time via the
+// pure-C# engine (the-bad-idea.md, M10) — content diagrams need no client JS. Priority
+// 500 beats the tree-sitter source-embed preprocessor; every other fence is deferred.
+builder.Services.AddSingleton<Pennington.Markdown.Extensions.ICodeBlockPreprocessor, BeckSvgPreprocessor>();
+
 // MonorailCSS: scans compiled IL + watched source for utility-class literals and serves
 // them from /styles.css. The semantic palette maps the brand green to `primary`, slate to
 // `base`, and a violet secondary to `accent`. MonorailCSS only emits ramps that a utility
