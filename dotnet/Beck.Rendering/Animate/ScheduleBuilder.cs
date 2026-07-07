@@ -6,7 +6,7 @@ internal sealed record FlowEdge(string Id, string From, string To, EdgeKind Kind
 /// <summary>One travelling packet + its trail: an absolute-time window on a path.</summary>
 internal sealed record PacketHop(
     double Start, double Duration, string D, double Length, bool Reversed,
-    string Color, PacketShape Shape, double Size, bool Glow, Ease Ease, string? Label, bool Impact);
+    string Color, PacketShape Shape, double Size, bool Glow, Ease Ease, string? Label, bool Impact, string? EdgeId);
 
 /// <summary>A node-card effect (pulse / highlight / fail) pinned to an absolute time.</summary>
 internal enum CardFxKind { Pulse, Highlight, Fail }
@@ -29,7 +29,8 @@ internal sealed record NarrateFx(double At, string? Color);
 internal sealed record Schedule(
     double Duration, double RepeatDelay, int Repeat, double RestoreAt,
     IReadOnlyList<PacketHop> Packets, IReadOnlyList<CardFx> Cards, IReadOnlyList<ImpactFx> Impacts,
-    IReadOnlyList<EdgeFx> Edges, IReadOnlyList<WorkFx> Working, IReadOnlyList<NarrateFx> Narrations);
+    IReadOnlyList<EdgeFx> Edges, IReadOnlyList<WorkFx> Working, IReadOnlyList<NarrateFx> Narrations,
+    IReadOnlyList<double> Phases);
 
 /// <summary>
 /// Re-implements <c>src/animate/timeline.ts</c> as a <em>simulation</em>: walks
@@ -55,6 +56,7 @@ internal static class ScheduleBuilder
         var edgeFx = new List<EdgeFx>();
         var workEvents = new List<(int Node, double At, bool Start, string Color)>();
         var narrations = new List<NarrateFx>();
+        var phases = new List<double>();
         double duration = 0;
         double restoreAt = -1;
 
@@ -79,17 +81,17 @@ internal static class ScheduleBuilder
                 foreach (var m in members) AddCard(m, CardFxKind.Pulse, at, color, PulseDur);
         }
 
-        (string D, bool Reversed, EdgeKind Kind)? PathOf(string from, string to, string? edgeId)
+        (FlowEdge Edge, bool Reversed)? PathOf(string from, string to, string? edgeId)
         {
             if (edgeId != null)
             {
                 var hit = edges.FirstOrDefault(e => e.Id == edgeId);
-                if (hit != null) return (hit.D, false, hit.Kind);
+                if (hit != null) return (hit, false);
             }
             var direct = edges.FirstOrDefault(e => e.From == from && e.To == to);
-            if (direct != null) return (direct.D, false, direct.Kind);
+            if (direct != null) return (direct, false);
             var rev = edges.FirstOrDefault(e => e.From == to && e.To == from);
-            return rev != null ? (rev.D, true, rev.Kind) : null;
+            return rev != null ? (rev, true) : null;
         }
 
         double EmitDot(IReadOnlyList<string> chain, PacketKnobs k, string color, string? label, double startAt, string? edgeId)
@@ -98,10 +100,11 @@ internal static class ScheduleBuilder
             for (int i = 0; i < chain.Count - 1; i++)
             {
                 var found = PathOf(chain[i], chain[i + 1], chain.Count == 2 ? edgeId : null);
-                if (found is not { } f) continue;
+                if (found is not { } fr) continue;
+                FlowEdge fe = fr.Edge;
                 string? hopLabel = i == chain.Count - 2 ? label : null;
 
-                PacketKindStyle ks = Defaults.PacketKindStyle[f.Kind];
+                PacketKindStyle ks = Defaults.PacketKindStyle[fe.Kind];
                 PacketShape shape = k.Shape ?? PacketShape.Dot;
                 double size = k.Size ?? Defaults.PacketShapeSize[shape] ?? ks.Size;
                 double speed = k.Speed ?? ks.Speed;
@@ -109,9 +112,9 @@ internal static class ScheduleBuilder
                 bool impact = k.Impact ?? false;
                 Ease ease = Easing.ForPacket(k.Ease ?? ks.Ease);
 
-                double len = PathLength.Of(f.D);
+                double len = PathLength.Of(fe.D);
                 double dur = Math.Max(0.3, len / speed);
-                packets.Add(new PacketHop(at, dur, f.D, len, f.Reversed, color, shape, size, glow, ease, hopLabel, impact));
+                packets.Add(new PacketHop(at, dur, fe.D, len, fr.Reversed, color, shape, size, glow, ease, hopLabel, impact, fe.Id));
                 at += dur;
 
                 // Each hop pulses its destination as the dot lands (packetWithTrail),
@@ -119,7 +122,7 @@ internal static class ScheduleBuilder
                 PulseTarget(chain[i + 1], at, color);
                 if (impact)
                 {
-                    (double x, double y) = EndPoint(f.D, f.Reversed);
+                    (double x, double y) = EndPoint(fe.D, fr.Reversed);
                     impacts.Add(new ImpactFx(at, x, y, color, size));
                 }
             }
@@ -170,11 +173,11 @@ internal static class ScheduleBuilder
                     break;
                 case ActivateStep a:
                     if (PathOf(a.From, a.To, null) is { } af)
-                        edgeFx.Add(new EdgeFx(EdgeFxKind.Activate, position ?? duration, af.D, a.Color ?? "var(--beck-primary)", PathLength.Of(af.D)));
+                        edgeFx.Add(new EdgeFx(EdgeFxKind.Activate, position ?? duration, af.Edge.D, a.Color ?? "var(--beck-primary)", PathLength.Of(af.Edge.D)));
                     break;
                 case StreamStep st:
                     if (PathOf(st.From, st.To, null) is { } sf)
-                        edgeFx.Add(new EdgeFx(EdgeFxKind.Stream, position ?? duration, sf.D, st.Color ?? "var(--beck-primary)", PathLength.Of(sf.D)));
+                        edgeFx.Add(new EdgeFx(EdgeFxKind.Stream, position ?? duration, sf.Edge.D, st.Color ?? "var(--beck-primary)", PathLength.Of(sf.Edge.D)));
                     break;
                 case WorkingStep wk:
                     if (indexOf.TryGetValue(wk.Node, out int wi))
@@ -195,6 +198,9 @@ internal static class ScheduleBuilder
                     duration = Math.Max(duration, at + 0.12 + 0.3 + Math.Max(0, hold));
                     break;
                 }
+                case PhaseStep:
+                    phases.Add(position ?? duration);
+                    break;
                 case ResetStep:
                     restoreAt = position ?? duration;
                     break;
@@ -228,7 +234,7 @@ internal static class ScheduleBuilder
             if (openAt is { } os) working.Add(new WorkFx(byNode.Key, os, Math.Max(os, restore), openColor));
         }
 
-        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working, narrations);
+        return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working, narrations, phases);
     }
 
     private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>

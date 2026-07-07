@@ -64,12 +64,13 @@ internal sealed class SequencePainter
         }
 
         // ---- activation bars ----
-        foreach (var b in layout.Activations)
+        for (int bi = 0; bi < layout.Activations.Count; bi++)
         {
+            ActivationBar b = layout.Activations[bi];
             double cx = layout.Centers[b.Participant];
             double x = cx - SequenceLayout.BarHalf + b.Level * SequenceLayout.LevelStep;
             double h = Math.Max(SequenceLayout.BarHalf * 2, b.Y2 - b.Y1);
-            sb.Append($"<rect class=\"beck-activation\" x=\"{N(x)}\" y=\"{N(b.Y1)}\" width=\"{N(SequenceLayout.BarHalf * 2)}\" height=\"{N(h)}\" rx=\"{N(SequenceLayout.BarHalf)}\" ")
+            sb.Append($"<rect class=\"beck-activation\" data-bar=\"{bi}\" x=\"{N(x)}\" y=\"{N(b.Y1)}\" width=\"{N(SequenceLayout.BarHalf * 2)}\" height=\"{N(h)}\" rx=\"{N(SequenceLayout.BarHalf)}\" ")
               .Append($"fill=\"{ActivationFill(b.Accent)}\" style=\"--beck-accent:{SvgWriter.Attr(b.Accent)}\" data-start=\"{SvgWriter.Attr(b.StartEdge)}\" data-end=\"{SvgWriter.Attr(b.EndEdge)}\"/>");
         }
 

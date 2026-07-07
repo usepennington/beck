@@ -22,6 +22,7 @@ internal static class SvgRenderer
         LayoutResult layout;
         var body = new StringBuilder();
         var flowEdges = new List<FlowEdge>();
+        SeqChoreo? choreo = null;
 
         if (model.Meta.Type == DiagramType.Sequence)
         {
@@ -31,6 +32,11 @@ internal static class SvgRenderer
             body.Append("<g class=\"beck-overlay\">").Append(painter.Render(model, seq)).Append("</g>");
             extraDefs = painter.Defs;
             flowEdges = painter.MessageEdges;
+            // Sequence storytelling applies only to a DERIVED flow (authored message order).
+            if (model.Flow.Derived)
+                choreo = new SeqChoreo(
+                    seq.Activations.Select(a => (a.StartEdge ?? "", a.EndEdge ?? "")).ToList(),
+                    seq.Bands.Count);
             body.Append("<g class=\"beck-nodes\">");
             for (int i = 0; i < model.Nodes.Count; i++)
                 if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i));
@@ -119,7 +125,7 @@ internal static class SvgRenderer
             var boxes = new List<NodeBox>(model.Nodes.Count);
             foreach (var n in model.Nodes)
                 boxes.Add(layout.Nodes.TryGetValue(n.Id, out var r) ? CardBox(n, r) : default);
-            var compiler = new CssCompiler(schedule, hash, boxes);
+            var compiler = new CssCompiler(schedule, hash, boxes, choreo);
             body.Append(compiler.Markup());
             animDefs = compiler.Defs();
             string css = compiler.Css();
