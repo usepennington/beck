@@ -1,0 +1,10 @@
+nodes:
+  - id: one
+    title: One
+    kind: service
+  - id: two
+    title: "2"
+  - id: three
+edges:
+  - { from: one, to: two }
+  - { from: two, to: three, kind: async }

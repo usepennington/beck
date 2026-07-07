@@ -1,0 +1,11 @@
+type: sequence
+participants:
+  - { id: web, title: Web App, kind: user }
+  - { id: api, title: API }
+  - { id: db, title: Postgres, kind: db }
+messages:
+  - { from: web, to: api, label: POST /orders }
+  - { from: api, to: api, label: validate }
+  - { from: api, to: db, label: INSERT }
+  - { from: db, to: api, label: ok, reply: true }
+  - { from: api, to: web, label: 201, reply: true }

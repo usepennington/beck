@@ -1,0 +1,12 @@
+type: class
+meta: { animate: false }
+classes:
+  - { id: Order, name: Order, group: sales }
+  - { id: OrderLine, name: OrderLine, group: sales }
+  - { id: Customer, name: Customer, group: crm }
+groups:
+  - { id: sales, label: Sales }
+  - { id: crm, label: CRM }
+relations:
+  - { from: Order, to: OrderLine, kind: composition, fromCard: "1", toCard: "*" }
+  - { from: Order, to: Customer, kind: association }

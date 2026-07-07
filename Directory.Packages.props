@@ -11,4 +11,18 @@
     <PackageVersion Include="Pennington.TreeSitter" Version="0.1.4" />
     <PackageVersion Include="Pennington.MonorailCss" Version="0.1.4" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Beck.Rendering: pure-C# SVG renderer (the-bad-idea.md). YamlDotNet is its
+         only runtime dependency; SkiaSharp/HarfBuzzSharp back the optional
+         Beck.Rendering.Skia exact-measurement plug-in. -->
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+    <PackageVersion Include="SkiaSharp" Version="2.88.9" />
+    <PackageVersion Include="HarfBuzzSharp" Version="7.3.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Test stack for Beck.Rendering.Tests (first automated tests in the repo). -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
 </Project>

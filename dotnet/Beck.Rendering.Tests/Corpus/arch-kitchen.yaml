@@ -1,0 +1,104 @@
+type: architecture
+meta:
+  title: Kitchen Sink
+  subtitle: Exercises the whole grammar
+  direction: LR
+  theme: dark
+  fit: scroll
+  spacing:
+    rank: 120
+    node: 40
+    cornerRadius: 20
+  narrate:
+    wpm: 200
+    min: 1
+    pad: 0.25
+nodes:
+  - id: usr
+    kind: user
+    title: Visitor
+    status: online
+  - id: gw
+    kind: gateway
+    accent: primary
+    width: 200
+    rank: 0
+    order: 1
+  - id: svc
+    kind: service
+    variant: subtle
+    subtitle: does work
+    href: /svc
+    target: _blank
+  - id: cache
+    kind: cache
+    surface: "#fff"
+    textColor: "#111"
+  - id: q
+    kind: queue
+    icon: kafka
+  - id: db
+    kind: db
+    icon: not-a-real-icon
+  - id: ext
+    kind: external
+  - id: ghost1
+    kind: ghost
+    title: Placeholder
+groups:
+  - id: backend
+    label: Backend
+    accent: info
+    members: [core, data]
+  - id: core
+    members: [svc, cache]
+  - id: data
+    accent: success
+    members: [q, db]
+edges:
+  - { from: usr, to: gw, kind: data, label: request, arrow: end }
+  - { from: gw, to: svc, kind: control, arrow: both, fromSide: right, toSide: left }
+  - { from: svc, to: cache, kind: async, note: cache lookup }
+  - { from: svc, to: db, kind: data, arrow: true }
+  - { from: q, to: db, kind: dependency, arrow: false }
+  - { from: db, to: ext, kind: data, arrow: start, curve: straight }
+  - { from: ghost1, to: usr, kind: data, curve: s, style: dashed }
+flow:
+  repeat: 2
+  repeatDelay: 0.8
+  steps:
+    - phase: start
+    - narrate: Kickoff
+    - packet:
+        from: usr
+        to: db
+        via: [gw, svc]
+        shape: ring
+        size: 9
+        speed: 500
+        glow: false
+        impact: true
+        ease: bounce
+        color: danger
+        label: req
+    - burst:
+        from: gw
+        to: [svc, cache]
+        count: 3
+        stagger: 0.1
+        color: info
+        shape: circle
+    - status: { node: svc, text: busy, color: warn }
+    - highlight: { node: db, color: success }
+    - pulse: { node: cache }
+    - activate: { from: svc, to: db, color: primary }
+    - stream: { from: q, to: db }
+    - working: { node: svc }
+    - idle: { node: svc }
+    - fail: { node: db, text: oops, color: danger }
+    - narrate: { text: Recovering, hold: 2, color: info }
+    - parallel:
+        - packet: { from: db, to: svc }
+        - pulse: { node: q }
+    - wait: 1.5
+    - reset:

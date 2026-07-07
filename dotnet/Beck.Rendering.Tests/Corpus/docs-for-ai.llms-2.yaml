@@ -1,0 +1,10 @@
+type: state
+meta: { direction: LR }
+states:
+  - { id: review, title: In Review, accent: warn }
+transitions:
+  - { from: "[*]", to: draft }
+  - { from: draft, to: review, label: submit }
+  - { from: review, to: draft, label: reject }
+  - { from: review, to: published, label: approve }
+  - { from: published, to: "[*]" }
