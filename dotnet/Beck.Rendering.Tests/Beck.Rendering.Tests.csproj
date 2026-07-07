@@ -25,6 +25,8 @@
     <!-- Frozen corpus + oracle goldens travel to the test output for the parity gates. -->
     <None Update="Corpus\**\*.yaml"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Update="Goldens\**\*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <!-- Pinned Inter + IBM Plex Mono (the fallback fonts) for the measurement gate. -->
+    <None Update="fonts\**\*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
   </ItemGroup>
 
 </Project>
