@@ -226,7 +226,24 @@ internal static class OrthogonalRouter
         return true;
     }
 
-    private static List<Point> OrthogonalPolyline(Point a, Point b, Side fromSide, Side toSide, IReadOnlyList<Rect> obstacles, Size? bounds)
+    /// <summary>
+    /// The turn column (or row) for a step between opposite parallel faces. Starts at the gap's
+    /// midpoint, then staggers fanned edges (nonzero anchor shifts) toward the fanning node,
+    /// outermost anchor first, so a fan's parallel runs occupy parallel channels instead of
+    /// merging into one visual trunk — collinear runs never cross (their spans are disjoint),
+    /// but they read as a single wire. Clamped clear of both faces; degenerate gaps keep the mid.
+    /// </summary>
+    private static double Channel(double aC, double bC, double fromShift, double toShift)
+    {
+        double mid = (aC + bC) / 2;
+        double channel = mid + Math.Sign(bC - aC) * (Math.Abs(toShift) - Math.Abs(fromShift));
+        double lo = Math.Min(aC, bC) + ChannelOffset, hi = Math.Max(aC, bC) - ChannelOffset;
+        return lo <= hi ? Math.Clamp(channel, lo, hi) : mid;
+    }
+
+    private static List<Point> OrthogonalPolyline(
+        Point a, Point b, Side fromSide, Side toSide, double fromShift, double toShift,
+        IReadOnlyList<Rect> obstacles, Size? bounds)
     {
         if (fromSide == toSide) return SameFaceLoop(a, b, fromSide, obstacles, bounds);
 
@@ -235,14 +252,14 @@ internal static class OrthogonalRouter
 
         if (vert)
         {
-            double channelY = (a.Y + b.Y) / 2;
+            double channelY = Channel(a.Y, b.Y, fromShift, toShift);
             var simple = new List<Point> { a, new(a.X, channelY), new(b.X, channelY), b };
             if (!PolylineHits(simple, obstacles)) return simple;
             return LaneDetour(a, b, true, obstacles, bounds) ?? simple;
         }
         if (horz)
         {
-            double channelX = (a.X + b.X) / 2;
+            double channelX = Channel(a.X, b.X, fromShift, toShift);
             var simple = new List<Point> { a, new(channelX, a.Y), new(channelX, b.Y), b };
             if (!PolylineHits(simple, obstacles)) return simple;
             return LaneDetour(a, b, false, obstacles, bounds) ?? simple;
@@ -300,7 +317,7 @@ internal static class OrthogonalRouter
 
         var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromShift, req.ToShift, req.Obstacles, ref a, ref b)
             ? new List<Point> { a, b }
-            : OrthogonalPolyline(a, b, fromSide, toSide, req.Obstacles, req.Bounds);
+            : OrthogonalPolyline(a, b, fromSide, toSide, req.FromShift, req.ToShift, req.Obstacles, req.Bounds);
         return new RoutedPath(StepRound.RoundedPath(poly, req.Radius), poly);
     }
 }
