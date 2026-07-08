@@ -114,12 +114,19 @@ public static class BlueprintStyle
         // stay classic so measured widths (which the embedded measurer computes from the static role
         // table) stay put. Edge labels are textLength-guarded, and group labels are already uppercased
         // at the render site, so this is layout-safe. Node titles stay sans (see the remarks note).
+        //
+        // MsgText (sequence message labels) joins the uppercase treatment so blueprint's mono-uppercase
+        // annotation look is consistent across every label role — architecture edge labels, group
+        // labels, section-band labels, and sequence messages all read the same. MsgText is already a
+        // mono role, and mono advance is count-based, so uppercasing is width-invariant: the measured
+        // (lowercase) chip still fits the rendered uppercase run with no textLength guard needed.
         StyleTypography typography = c.Typography with
         {
             Roles = new FontRoleTable(role => role switch
             {
                 FontRole.EdgeLabel => FontRoles.Of(role) with { Mono = true, Uppercase = true },
                 FontRole.GroupLabel => FontRoles.Of(role) with { Mono = true },
+                FontRole.MsgText => FontRoles.Of(role) with { Uppercase = true },
                 _ => FontRoles.Of(role),
             }),
         };

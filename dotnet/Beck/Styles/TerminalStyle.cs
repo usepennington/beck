@@ -92,6 +92,9 @@ public static class TerminalStyle
             GroupLabelBgRadius = 0,
             NarrationRadius = 0,
             BandRadius = 0,
+            // The mono caption sets wider than classic's sans, so classic's 9.6px bullet→text gap
+            // reads as jammed ("•user clicks buy"). Give the bullet more air for the terminal look.
+            NarrationBulletGap = 14,
         };
 
         StyleMotion motion = c.Motion with

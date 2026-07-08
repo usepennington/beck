@@ -209,7 +209,9 @@ internal static class SvgRenderer
         IReadOnlyList<NarrateStep> beats, double canvasW, double topY, ITextMeasurer m, string hash, BeckStyle style)
     {
         const double margin = 14.4, padX = 18.4, padY = 9.6, lineHt = 14.72 * 1.45,
-                     dotR = 3.5, dotD = 7, gap = 9.6, minContentH = 40.48;
+                     dotR = 3.5, dotD = 7, minContentH = 40.48;
+        // The bullet→text gap is a style field (terminal widens it for its mono caption); classic = 9.6.
+        double gap = style.Geometry.NarrationBulletGap;
         double barW = Math.Min(736, 0.92 * canvasW);
         double barH = Math.Max(minContentH, 2 * lineHt) + 2 * padY;
         double barTop = topY + margin, cx = canvasW / 2, barLeft = cx - barW / 2, midY = barTop + barH / 2;
@@ -235,8 +237,16 @@ internal static class SvgRenderer
             string color = beats[i].Color ?? "var(--beck-text)";
 
             sb.Append($"<g class=\"beck-beat bbeat{i}-{hash}\" opacity=\"0\" style=\"color:{color}\">");
-            sb.Append($"<rect class=\"beck-narration-bar\" x=\"{N(barLeft)}\" y=\"{N(barTop)}\" width=\"{N(barW)}\" height=\"{N(barH)}\" rx=\"{N(style.Geometry.NarrationRadius)}\" ")
-              .Append($"style=\"fill:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationFill)}%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationBorder)}%,transparent);filter:{style.Geometry.NarrationShadow}\"/>");
+            if (figCaption)
+                // Editorial's figure caption: no filled/bordered bar (a solid surface-filled box reads
+                // as a black block on a dark page, at odds with the serif "Fig. N —" identity). Instead a
+                // transparent surface with a single hairline rule above the caption — the print-figure
+                // separator that matches the sequence caption. The bullet dot + serif text carry the rest.
+                sb.Append($"<line class=\"beck-narration-rule\" x1=\"{N(barLeft)}\" y1=\"{N(barTop)}\" x2=\"{N(barLeft + barW)}\" y2=\"{N(barTop)}\" ")
+                  .Append($"style=\"stroke:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationBorder)}%,var(--beck-text-faint));stroke-width:{N(style.Geometry.HairlineStroke)}\"/>");
+            else
+                sb.Append($"<rect class=\"beck-narration-bar\" x=\"{N(barLeft)}\" y=\"{N(barTop)}\" width=\"{N(barW)}\" height=\"{N(barH)}\" rx=\"{N(style.Geometry.NarrationRadius)}\" ")
+                  .Append($"style=\"fill:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationFill)}%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationBorder)}%,transparent);filter:{style.Geometry.NarrationShadow}\"/>");
             sb.Append($"<circle cx=\"{N(left + dotR)}\" cy=\"{N(midY)}\" r=\"{N(dotR)}\" style=\"fill:currentColor\" opacity=\"0.55\"/>");
             for (int k = 0; k < lines.Count; k++)
                 sb.Append($"<text class=\"beck-narration-text\" x=\"{N(textCx)}\" y=\"{N(firstY + k * lineHt)}\" text-anchor=\"middle\" dominant-baseline=\"central\" ")

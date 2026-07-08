@@ -2,9 +2,9 @@ namespace Beck;
 
 /// <summary>
 /// The <c>minimal</c> built-in style (Phase 3, mock 1c): a sober flat "no design" look — hairline
-/// strokes, no card/narration drop-shadows, a restrained neutral token table, and motion that stays
-/// present but understated (no packet bloom, no activation glow, quieter ripple/impact/working-ring
-/// peaks). Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every
+/// strokes, no card/narration drop-shadows, a restrained low-chroma token table, and motion that
+/// stays present but understated (no packet bloom, no activation glow, impact + working rings gated
+/// off entirely, quieter ripple peaks). Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every
 /// feature (shapes, groups, icons, packets, trails, sequence choreography, state/class diagrams,
 /// scrub, reduced motion, light/dark) stays fully available — only the rendering is toned down.
 /// </summary>
@@ -20,6 +20,12 @@ public static class MinimalStyle
         // drop-shadow that classic uses to imply depth — the hairline border alone must read as
         // the card edge. Everything else keeps classic's token *names* and host-ramp indirection,
         // only the fallback literal/ramp step shifts.
+        //
+        // Restrained neutral accent table: the accent LITERALS are remapped to low-chroma,
+        // slate-leaning tones so a standalone minimal diagram (no host palette) reads muted and
+        // sober rather than as lightly-detuned classic. Only the last-resort literal changes — every
+        // token keeps its var(--color-X, literal) chain, so a host that defines --color-* / --beck-*
+        // still wins at full saturation. The indirection stays sacred; only the default detunes.
         var light = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
@@ -29,11 +35,11 @@ public static class MinimalStyle
             ("--beck-text", "var(--color-base-800, #1e293b)"),
             ("--beck-text-muted", "var(--color-base-500, #64748b)"),
             ("--beck-text-faint", "var(--color-base-400, #94a3b8)"),
-            ("--beck-primary", "var(--color-primary-600, #175ddc)"),
-            ("--beck-success", "var(--color-emerald-500, #10b981)"),
-            ("--beck-warn", "var(--color-amber-500, #f59e0b)"),
-            ("--beck-danger", "var(--color-red-500, #ef4444)"),
-            ("--beck-info", "var(--color-violet-500, #8b5cf6)"),
+            ("--beck-primary", "var(--color-primary-600, #5b6b88)"),
+            ("--beck-success", "var(--color-emerald-500, #5f9080)"),
+            ("--beck-warn", "var(--color-amber-500, #bd9350)"),
+            ("--beck-danger", "var(--color-red-500, #c06b6b)"),
+            ("--beck-info", "var(--color-violet-500, #8279aa)"),
             ("--beck-neutral", "var(--color-base-400, #94a3b8)"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {c.Mix.GroupBorder.ToString(System.Globalization.CultureInfo.InvariantCulture)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
@@ -98,6 +104,18 @@ public static class MinimalStyle
             PacketRingFactor = 0.2,
             GlowEnabled = false,
             EffectAmplitude = 0.4,
+            // Spec: impact/working rings OFF. EffectAmplitude only *scales* the rings' peaks (0.4 is a
+            // faint hollow ring, not "off"); this hard-gates them so no impact or working ring renders
+            // at all — the packets, trails, pulses, and status pills still animate, understated.
+            RingsEnabled = false,
+            // Raise the sequence-storytelling dim floor. On the dark token set the dimmed message
+            // edges (var(--beck-edge) = base-700) and the activation bar's gradient tail (0.35 stop)
+            // drop to near-invisible at classic's 0.15/0.25 floors — a static viewer can't read the
+            // resting flow. Lift the line + activation floors so dimmed scenery stays faintly legible
+            // while the reveal still swells each active row to full opacity (clear storytelling
+            // contrast remains). Uniform across themes — light only gains a touch more presence.
+            DimLine = 0.3,
+            DimAct = 0.4,
         };
 
         return c with

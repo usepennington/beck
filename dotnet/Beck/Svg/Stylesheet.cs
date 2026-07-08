@@ -120,7 +120,12 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-lifeline{{stroke-width:{Sw(geo.LifelineStroke)};stroke-dasharray:{strokes.LifelineDash};}}");
         sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) {P(mix.ActivationGlow)}%, transparent));}}");
         sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ChipStroke)}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
-        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.MsgText)}%, var(--beck-text));}}");
+        // Message labels honour the MsgText role's uppercase flag (blueprint's mono-uppercase
+        // annotations, consistent with its edge/group/band labels). MsgText is a mono role, so
+        // uppercasing is width-invariant — the measured chip still fits. Classic's MsgText is
+        // non-uppercase → nothing appended → byte-identical.
+        string mtCase = style.Typography.Roles.Of(Text.FontRole.MsgText).Uppercase ? "text-transform:uppercase;" : "";
+        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.MsgText)}%, var(--beck-text));{mtCase}}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-chip{{stroke:none;}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-text,{scope} .beck-msg-text--bare{{fill:var(--beck-text-muted);}}");
         sb.Append($"{scope} .beck-band-box{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.BandFill)}%, transparent);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.BandStroke)}%, transparent);stroke-width:{Sw(geo.BandBoxStroke)};stroke-dasharray:{strokes.GroupDash};}}");
