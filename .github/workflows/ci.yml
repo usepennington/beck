@@ -1,7 +1,7 @@
-# PR / push validation: typecheck + build the TypeScript engine, then build the whole .NET
-# solution (the package, the authoring sample, and the docs site against Pennington from NuGet).
-# This is the guardrail that catches a docs/Pennington version mismatch or an engine break before
-# the deploy and publish workflows run.
+# PR / push validation: build the whole .NET solution (the Beck engine, Beck.Skia, the tests,
+# the authoring sample, and the docs site against Pennington from NuGet) and run the test suite.
+# This is the guardrail that catches an engine regression or a docs/Pennington version mismatch
+# before the deploy and publish workflows run.
 name: CI
 
 on:
@@ -19,18 +19,6 @@ jobs:
         with:
           fetch-depth: 0   # MinVer reads git history when projects build in Release
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install JS deps
-        run: npm ci
-      - name: Typecheck the engine
-        run: npm run typecheck
-      - name: Build the engine bundle
-        run: npm run build:lib
-
       # NOTE: keep these as bare versions — inline comments inside the block scalar are parsed as
       # part of the version string and break setup-dotnet.
       - name: Setup .NET
@@ -42,3 +30,6 @@ jobs:
 
       - name: Build solution
         run: dotnet build Beck.slnx -c Release
+
+      - name: Test
+        run: dotnet test dotnet/Beck.Tests/Beck.Tests.csproj -c Release --no-build

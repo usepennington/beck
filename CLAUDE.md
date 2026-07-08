@@ -5,58 +5,62 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Beck turns a declarative **YAML** description into a beautiful, animated diagram ("Mermaid, but
-sexy"). Every document declares a root `type:` — `architecture` (the layered node/edge graph),
-`sequence`, `state`, or `class` — sharing one meta/flow/theming system (untyped documents render
-as architecture with a console deprecation warning; docs never show the untyped form). One repo
-produces two artifacts joined by the YAML schema contract:
+sexy") — **rendered entirely in C#, server-side**. `BeckSvg.Render(yaml)` emits a single
+self-contained, self-animating inline `<svg>`: layout, routing, and the full flow choreography
+(packets, trails, highlights, status pills, narration captions, sequence dimming) are baked into
+CSS animations inside the SVG. There is no client JavaScript, no GSAP, no hydration, and no npm
+toolchain anywhere in the repo.
 
-- **A TypeScript engine** (`src/`) — built with Vite, runs in the browser.
-- **A single .NET NuGet package** (`dotnet/Beck`) — a Razor Class Library that *embeds the prebuilt
-  engine* as a static web asset **and** contains `Beck.Authoring`, a C# API that emits Beck YAML
-  from code. There is no npm package and no CDN distribution; the package is the only shipping unit.
+Every document declares a root `type:` — `architecture` (the layered node/edge graph), `sequence`,
+`state`, or `class` — sharing one meta/flow/theming system (untyped documents render as
+architecture with a one-time deprecation warning). The shipping units are two NuGet packages:
 
-The intended consumer is a Pennington (`b:\penn`) docs site: include one script, write a ` ```beck `
-fenced block, get a diagram. The packaging pattern is modeled on `b:\dewey`'s `DeweySearch.Web`.
+- **`Beck`** (`dotnet/Beck`) — the engine (`Beck.Rendering.*` namespaces: model → measure → layout
+  → route → svg → animate) **plus** the authoring API (`Beck` namespace: `DiagramBuilder` family
+  emitting Beck YAML from code). Only dependency: YamlDotNet.
+- **`Beck.Skia`** (`dotnet/Beck.Skia`) — optional exact text measurement (SkiaSharp + HarfBuzzSharp
+  shaping over user-supplied font files). Never mandatory; the engine defaults to an embedded
+  Inter/IBM Plex Mono metrics table.
+
+The intended consumer is a Pennington (`b:\penn`) docs site: reference the package, render
+` ```beck ` fences to SVG at build time (see `docs/Beck.Docs/BeckSvgPreprocessor.cs` for the
+canonical integration). The docs site's interactive playground runs this same engine compiled to
+WebAssembly (`docs/Beck.Docs.Client`).
 
 ## Commands
 
 ```bash
-npm install
-npm run dev          # Vite playground: sample picker, live YAML editor, light/dark toggle
-npm run typecheck    # tsc --noEmit (run this after any src/ change — strict, noUnusedLocals)
-npm run build        # typecheck + build the playground to dist/
-npm run build:lib    # build the IIFE engine bundle INTO dotnet/Beck/wwwroot/beck.global.js
-BECK_FORMAT=esm npm run build:lib   # optional ESM build to dist-lib/ (not used by the package)
+dotnet build Beck.slnx                                   # everything (engine, tests, docs site)
+dotnet test dotnet/Beck.Tests/Beck.Tests.csproj          # the full gate: model/layout/route golden
+                                                         #   parity, card sizing, render smoke tests
+dotnet run --project dotnet/Beck.Sample -c Release       # emit a sample diagram's YAML to stdout
+dotnet pack dotnet/Beck/Beck.csproj -c Release -o <out>  # version comes from `v*` git tags (MinVer)
+
+dotnet run --project docs/Beck.Docs                      # docs site dev server (diagrams render live)
+dotnet run --project docs/Beck.Docs -- build             # static docs build to docs/Beck.Docs/output
 ```
 
-```bash
-# .NET (SDK 9/10/11 present; package targets net8.0)
-dotnet run --project dotnet/Beck.Sample -c Release   # emit a sample diagram's YAML to stdout
-dotnet build dotnet/Beck/Beck.csproj -c Release
-dotnet pack  dotnet/Beck/Beck.csproj -c Release -o <out>   # Node-free; ships the committed wwwroot asset
-```
+The engine targets net8.0; the docs site runs net10.0 (SDK pinned by `global.json`).
 
-There is **no automated test suite**. Verify visually by running `npm run dev`, or headlessly via the
-Playwright MCP against `vite preview` / a static server (see "Verifying" below).
+## The rendering pipeline (the core of `dotnet/Beck`)
 
-## The rendering pipeline (the core of `src/`)
-
-Each stage is a near-pure function with an explicit contract; `core.ts` orchestrates them:
+Each stage is a near-pure function with an explicit contract; `BeckSvg.cs` orchestrates them:
 
 ```
-YAML → model/ (parse → validate+defaults; buildModel dispatches on root `type:` to the
-       architecture / sequence / state / class builders — sequence.ts, state.ts, classes.ts)
-     → measure (render cards off-flow, read getBoundingClientRect)
-     → layout/ (per type: layered.ts — Sugiyama-lite: rank → order(+virtual nodes) → coords;
-       groups = recursive compound sub-layout — each group is laid out then fed to its parent as one
-       sized super-node, so groups nest and span ranks; `layoutLayer` is the group-free engine,
-       `layeredLayout` the recursive driver. sequence.ts — fixed grid: participant columns, message
-       rows, request/reply activation-bar pairing)
-     → route/ (auto orthogonal step-round edges + obstacle avoidance; route/sequence.ts draws
-       lifelines/activation bars/section bands + message paths) → SVG overlay
-     → render/ (position DOM via transform, group boxes; node shapes: card, state pill, start/end
-       pseudo-states, class compartment card)
-     → animate/ (compile flow → GSAP timeline; play on scroll-into-view)
+YAML → Model/    (YamlDotNet node tree → coerce → validate+defaults; buildModel dispatches on the
+                  root `type:` to the architecture / sequence / state / class builders)
+     → Text/     (ITextMeasurer → CardSizer box-model math → SizeMap; InterMetricsMeasurer is the
+                  embedded zero-dependency default, SkiaTextMeasurer the exact plug-in)
+     → Layout/   (per type: LayeredLayout — Sugiyama-lite: rank → order(+virtual nodes) → coords;
+                  groups = recursive compound sub-layout, each group laid out then fed to its parent
+                  as one sized super-node. SequenceLayout — fixed grid: participant columns, message
+                  rows, request/reply activation-bar pairing)
+     → Route/    (OrthogonalRouter: auto step-round edges + obstacle avoidance; SequencePainter
+                  draws lifelines/activation bars/section bands + message paths; LabelPlacer)
+     → Svg/      (node shape templates, group boxes, markers, icons, the theming <style> block)
+     → Animate/  (ScheduleBuilder simulates the flow script into absolute-time tracks; CssCompiler
+                  emits shared-cycle percentage-window @keyframes; Easing samples analytic Penner
+                  eases into CSS linear() functions)
 ```
 
 State and class diagrams compile onto the layered engine in their model builders (states→pill
@@ -65,62 +69,66 @@ nodes, transitions→edges; classes→compartment-card nodes, relations→edges 
 diagrams have their own layout+router but reuse everything else; their derived flow pins each
 packet to its row via the flow step's `edge` id (many messages share one from/to pair).
 
-`mountModel(root, model, opts)` in `src/core.ts` runs all of this and returns a `DiagramHandle`
-(`play/pause/reset/seek/setTheme/relayout/destroy/ready`). `renderDiagram(host, yaml, opts)` is the
-light-DOM convenience; `<beck-diagram>` (`src/embed/element.ts`) is the custom element, which also
-renders in light DOM (via `renderDiagram`) so host CSS reaches it; `src/embed/hydrate.ts` scans
-`code.language-beck` blocks and is the Pennington/Markdig integration.
+`the-bad-idea.md` is the full design spec for this engine (constants, algorithms, the CSS
+compilation model) — consult it before changing layout/route/animate internals.
 
 ## Load-bearing invariants (violating these breaks things subtly)
 
-- **The model fills every default.** `src/model/validate.ts` turns raw YAML into a `DiagramModel`
-  where nothing is optional and accents/colors are already CSS values. Downstream stages never see
-  raw input — add new fields by giving them a default here, not by handling `undefined` later.
-- **Colors are CSS variables, never hardcoded hex.** Components consume only `--beck-*` tokens
-  (defined in `src/embed/styles.css`), which default to the host site's `--color-*` palette with a
-  literal fallback. Light/dark is *only* `[data-theme="dark"]` redefining those vars — there is no
-  per-theme JS and no `.dark { …hex… }`. This is why a diagram adopts the host page's colors.
-  Animations that need a concrete color call `resolveColor()` (`src/util/color.ts`), which probes the
-  computed value of a var inside the root.
-- **GSAP is loaded from a CDN at runtime, never bundled.** `src/animate/runtime.ts` dynamic-imports
-  it. Everything else imports GSAP **types only** (`typeof import('gsap')`), so it stays out of the
-  bundle. `prefers-reduced-motion` (or `animate: false`) renders the static frame and never loads it.
-  Do not add a static `import ... from 'gsap'`.
-- **Every edge exposes one continuous `SVGPathElement`.** The animation layer (`packet`/`trail`)
-  samples it with `getPointAtLength`/`getTotalLength`. The router must keep producing a single path
-  per edge.
-- **Shared DOM class vocabulary.** `render/` writes `.beck-node` / `.beck-status` /
-  `.beck-status-inline` and `animate/` queries them. Renaming one side silently breaks the other.
-- **Router anchoring is rank-aware.** In a layered layout, cross-rank edges must travel along the
-  primary axis even when a wide fan-out makes them more horizontal (`primaryHorizontal` →
-  `autoSides` in `src/route/orthogonal.ts`). Picking sides by raw dx/dy alone sends fan-out edges
-  detouring around nodes.
-- **CSS ships inside the JS.** `src/styles.ts` does `import css from './embed/styles.css?inline'`;
-  the element injects that string into its shadow root (and `renderDiagram` into the document head).
-  No separate stylesheet, no build-time CSS placeholder.
+- **The model fills every default.** `Model/` turns raw YAML into a `DiagramModel` where nothing is
+  optional and accents/colors are already CSS values. Downstream stages never see raw input — add
+  new fields by giving them a default there, not by handling null later.
+- **Colors are CSS variables, never hardcoded hex.** The SVG consumes only `--beck-*` tokens, which
+  default to the host site's `--color-*` palette with a literal fallback. Light/dark is *only*
+  `[data-theme="dark"]` (plus the `prefers-color-scheme` hook) redefining those vars — no per-theme
+  rendering. This is why a diagram adopts the host page's colors. Effects that need a derived color
+  emit `color-mix(...)` expressions, never resolved literals.
+- **All animation is compiled, never executed.** The schedule is a deterministic simulation of the
+  flow script; every animated element gets a whole-cycle-duration CSS animation whose action
+  occupies a percentage window, so dozens of elements loop in lockstep forever. Instant events are
+  paired keyframes 0.01% apart. Don't introduce per-element `animation-delay` chains — they drift
+  across iterations.
+- **All motion CSS lives inside `@media (prefers-reduced-motion: no-preference)`** — including
+  initial dim/hide states. Reduced-motion users get the fully-revealed static frame.
+- **Deterministic output.** Same YAML + same options → byte-identical SVG. Ids, class scoping, and
+  keyframe names derive from an 8-char content hash — never a counter, timestamp, or RNG. Every
+  number-to-string uses `CultureInfo.InvariantCulture`; coordinates round to 2 decimals.
+- **Every edge is one continuous `<path>`.** Trails and packets (CSS `offset-path`) ride the edge's
+  single path; the router must keep producing one path per edge.
+- **Router anchoring is rank-aware.** Cross-rank edges must travel along the primary axis even when
+  a wide fan-out makes them more horizontal (`AutoSides` in `Route/OrthogonalRouter.cs`). Picking
+  sides by raw dx/dy alone sends fan-out edges detouring around nodes. Off-canvas edge routes
+  (negative path coordinates) are the signature of a routing regression.
+- **Measured widths guard the typography.** Every `<text>` whose width fed layout carries
+  `textLength` + `lengthAdjust`, so a font mismatch squeezes glyphs instead of breaking layout.
+  Change card box-model math only alongside the card-sizing tests.
+- **The frozen goldens are the reference.** `dotnet/Beck.Tests/Goldens` + `Corpus` were extracted
+  from the original TypeScript engine (deleted from the repo; it lives in git history before this
+  restructure). They are regression anchors — regenerate them only from the C# engine itself, and
+  only when a change is *intentionally* visual.
 
-## The single-package model (`dotnet/Beck`)
+## Authoring API ↔ schema contract
 
-- `npm run build:lib` writes the **committed** `dotnet/Beck/wwwroot/beck.global.js`. The Razor SDK
-  packs `wwwroot/**` as a static web asset served at `_content/Beck/beck.global.js`, so `dotnet pack`
-  needs no Node. **After changing the engine, run `npm run build:lib` and commit the regenerated
-  bundle**, or the package ships stale JS. (`dist/` and `dist-lib/` are gitignored; the wwwroot copy
-  is intentionally committed.)
-- `Beck.Authoring` (`dotnet/Beck/Authoring/`) is a dependency-free fluent builder family — one per
-  diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
-  `ClassDiagramBuilder` + its reflection `FromTypes`), sharing `MetaOptions` — that emits YAML via
-  a tiny hand-rolled `YamlWriter` (no YamlDotNet). The C# enums map to schema tokens in
-  `Tokens.Of(...)` (note `EdgeCurve.StepRound` → `"step-round"`, `Direction` stays uppercase). When
-  you add a YAML field, update **both** `src/model/` (the parser) and the matching C# builder.
-- The RCL pulls in a `Microsoft.AspNetCore.App` framework reference (Razor SDK). That's fine for web
-  hosts; it's the only reason a pure-console consumer of `Beck.Authoring` rides the ASP.NET shared
-  framework. Split the authoring lib into its own classlib only if that becomes a real constraint.
+`dotnet/Beck/Authoring/` (namespace `Beck`) is a dependency-free fluent builder family — one per
+diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
+`ClassDiagramBuilder` + its reflection `FromTypes`), sharing `MetaOptions` — that emits YAML via a
+tiny hand-rolled `YamlWriter` (no YamlDotNet). The C# enums map to schema tokens in `Tokens.Of(...)`
+(note `EdgeCurve.StepRound` → `"step-round"`, `Direction` stays uppercase). **When you add a YAML
+field, update both `Model/` (the parser) and the matching builder** — they are two encodings of one
+schema.
+
+## Docs site (`docs/Beck.Docs`)
+
+Pennington site. ` ```beck ` fences render to SVG at build time through `BeckSvgPreprocessor`
+(flags: ` ```beck,static ` and ` ```beck,scrub `; ` ```beck:symbol ` reads YAML from a file). Razor
+pages use the `<BeckDiagram Yaml=...>` component — same shared `BeckDiagramRenderer` singleton
+(one `SkiaTextMeasurer` over the site's IBM Plex files). The playground is a Blazor WASM island
+(`Beck.Docs.Client`) running the engine with a canvas-based measurer. `wwwroot/js/site.js` is page
+chrome only (theme toggle, copy buttons, nav) — it must never grow rendering responsibilities.
 
 ## Verifying
 
-The fastest real check is headless render via the Playwright MCP: serve the playground
-(`npx vite preview --port <p>` after `npm run build`) or a static page that includes
-`dotnet/Beck/wwwroot/beck.global.js` with a `code.language-beck` block, then screenshot and inspect
-the DOM (`.beck-node-wrap` transforms, `.beck-overlay path` route data). Define `--color-*` vars on
-the test page to confirm host-palette adoption. Always check for off-canvas edge routes (negative
-path coordinates) — that's the signature of a routing regression.
+`dotnet test` is the primary gate. For visual checks, run the docs site (`dotnet run --project
+docs/Beck.Docs`) and inspect pages, or render a YAML file to SVG in a scratch page and screenshot
+it headlessly via the Playwright MCP. Define `--color-*` vars on a test page to confirm
+host-palette adoption; toggle `data-theme="dark"` to check both themes. Always check for
+off-canvas edge routes (negative path coordinates) — the signature of a routing regression.

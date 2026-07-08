@@ -1,0 +1,296 @@
+@* The interactive playground island: rendered in the browser (WebAssembly) inside the
+   static-SSR /playground page (Components/Pages/Playground.razor in the host). Kept
+   non-routable so the host's Pennington crawler owns the /playground route and emits it
+   statically; this component just supplies the in-browser interactivity. *@
+@rendermode InteractiveWebAssembly
+@inject HttpClient Http
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="h-[calc(100vh-62px)] flex flex-col">
+    <div class="flex items-center gap-3 px-5 py-[9px] border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
+        @* Examples: a rich grouped dropdown. Open/close/select are component state; each
+           item fetches its sample's YAML from the site's /examples over HttpClient. *@
+        <div id="pg-examples" class="pg-dd @(_open == Dd.Examples ? "is-open" : "")">
+            <button type="button" class="pg-dd-trigger" @onclick="ToggleExamples" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Examples)">
+                <span class="pg-dd-value">@_exampleLabel</span>
+                <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            @if (_open == Dd.Examples)
+            {
+                <div class="pg-dd-panel" role="listbox" aria-label="Example diagrams">
+                    @foreach (var group in ExampleGroups)
+                    {
+                        <div class="pg-dd-group">
+                            <div class="pg-dd-group-label">@group.Label</div>
+                            @foreach (var ex in group.Items)
+                            {
+                                <button type="button" class="pg-dd-item" role="option" @onclick="() => LoadExample(ex)">
+                                    <span class="pg-dd-item-main">
+                                        <span class="pg-dd-item-title">@ex.Label</span>
+                                        <span class="pg-dd-item-desc">@ex.Desc</span>
+                                    </span>
+                                    <span class="pg-pill" data-type="@group.Type">@group.Glyph @group.Short</span>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* Colour scheme: recolours the live diagram by overriding its --beck-* tokens
+           on #pg-host[data-scheme] (see BrandStyling). Pure CSS — setting the attribute is
+           enough, no re-render. "Default" keeps the site palette and the light/dark toggle. *@
+        <div id="pg-scheme" class="pg-dd ml-auto @(_open == Dd.Scheme ? "is-open" : "")">
+            <button type="button" class="pg-dd-trigger" @onclick="ToggleScheme" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Scheme)">
+                <span class="pg-swatch" data-scheme="@_scheme"></span>
+                <span class="pg-dd-value">@_schemeLabel</span>
+                <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            @if (_open == Dd.Scheme)
+            {
+                <div class="pg-dd-panel pg-dd-panel--right" role="listbox" aria-label="Colour scheme">
+                    @foreach (var s in Schemes)
+                    {
+                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_scheme == s.Value)" @onclick="() => SelectScheme(s)">
+                            <span class="pg-swatch" data-scheme="@s.Value"></span>
+                            <span class="pg-dd-item-title">@s.Label</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @* A transparent full-viewport layer so a click anywhere outside an open panel closes
+       it. Sits below the panel (z-index) so panel items stay clickable. *@
+    @if (_open != Dd.None)
+    {
+        <div class="pg-dd-backdrop" @onclick="CloseDropdowns"></div>
+    }
+
+    <div class="flex-1 grid grid-cols-2 min-h-0 max-md:grid-cols-1 max-md:grid-rows-2">
+        <div class="flex flex-col min-h-0 border-r border-base-200 dark:border-base-800">
+            <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-base-50 dark:bg-base-900">system.beck.yaml</div>
+            <textarea class="pg-editor" spellcheck="false" aria-label="Beck YAML source"
+                      @bind="_yaml" @bind:event="oninput" @bind:after="ScheduleRender"></textarea>
+        </div>
+        <div class="flex flex-col min-h-0">
+            <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-white dark:bg-base-950">
+                preview
+                <span class="inline-flex items-center gap-1.5 font-mono text-[11px] text-primary-700 dark:text-primary-400 ml-auto"><span class="h-[7px] w-[7px] rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse"></span>live</span>
+            </div>
+            @* Center with the host's auto margins (see #pg-host in BrandStyling), not
+               `items-center`: a flex item taller than this pane would be centered by
+               `align-items:center` with its top pushed above the scroll origin (an
+               unreachable clip). Auto margins center when there's room and collapse to
+               the top on overflow, keeping the title scrollable. *@
+            <div class="dot-grid flex-1 min-h-0 overflow-auto p-6 flex pg-preview-canvas">
+                <div id="pg-host" class="w-full" data-scheme="@_scheme">
+                    @if (_svg.Length > 0)
+                    {
+                        <div class="beck-embed">@((MarkupString)_svg)</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex items-center gap-4 px-5 py-[7px] border-t border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 font-mono text-[11.5px] text-base-400 dark:text-base-500">
+        <span id="pg-status" class="@(_ok ? "ok" : "err")">@_statusText</span>
+        <span id="pg-nodes">@_nodeCount nodes</span>
+        <span id="pg-edges">@_edgeCount edges</span>
+        <span class="ml-auto">Rendered live by Beck</span>
+    </div>
+</div>
+
+@code {
+    // ---- editor + render state ----------------------------------------------
+    private string _yaml = InitialYaml;
+    private string _svg = "";
+    private bool _ok = true;
+    private string _statusText = "✓ valid";
+    private int _nodeCount, _edgeCount;
+
+    // Debounce the live re-render: typing fires oninput per keystroke, but a full
+    // layout+route+SVG pass (and its restarting animation) shouldn't run mid-word.
+    private CancellationTokenSource? _debounce;
+
+    // ---- toolbar state ------------------------------------------------------
+    private enum Dd { None, Examples, Scheme }
+    private Dd _open = Dd.None;
+    private string _exampleLabel = "Load an example…";
+    private string _scheme = "default";
+    private string _schemeLabel = "Default";
+
+    // Ask for the site's IBM Plex families (rewrites --beck-font); glyphs are measured in the
+    // browser via canvas measureText (CanvasTextMeasurer), so card sizing matches exactly what
+    // the browser draws. Measurer is wired up on the first client render (below).
+    private static readonly BeckFontSpec Font = new()
+    {
+        Family = "IBM Plex Sans",
+        MonoFamily = "IBM Plex Mono",
+        Files = new Dictionary<int, string>(),
+    };
+    private SvgRenderOptions? _options;
+
+    // Render only happens in the browser: measurement needs canvas, which doesn't exist during
+    // server prerender. Prerender emits the chrome (toolbar/editor); the diagram appears once
+    // WASM boots, the shim is present, and the IBM Plex faces have loaded.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _options = new SvgRenderOptions { Font = Font, Measurer = new CanvasTextMeasurer((IJSInProcessRuntime)JS) };
+        await JS.InvokeVoidAsync("beckMeasure.fontsReady");
+        RenderNow();
+        StateHasChanged();
+    }
+
+    // Debounced editor render. @bind:after fires after each oninput has updated _yaml;
+    // we then wait out a quiet window before the (relatively expensive) render.
+    private async Task ScheduleRender()
+    {
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+        var cts = _debounce = new CancellationTokenSource();
+        try { await Task.Delay(250, cts.Token); }
+        catch (OperationCanceledException) { return; }
+        RenderNow();
+    }
+
+    // Render _yaml to SVG in the browser. On a bad document keep the last good diagram
+    // (matching the old JS playground) and surface the error in the status bar only.
+    private void RenderNow()
+    {
+        if (_options is null) return; // measurer not wired until the first client render
+        try
+        {
+            BeckRenderInfo info = BeckSvg.RenderWithInfo(_yaml, _options);
+            _svg = info.Svg;
+            _nodeCount = info.NodeCount;
+            _edgeCount = info.EdgeCount;
+            _ok = true;
+            _statusText = "✓ valid";
+        }
+        catch (BeckYamlException ex)
+        {
+            _ok = false;
+            _statusText = "✗ " + (ex.Line is { } n ? $"line {n}: " : "") + FirstLine(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _ok = false;
+            _statusText = "✗ " + FirstLine(ex.Message);
+        }
+    }
+
+    private static string FirstLine(string s)
+    {
+        int nl = s.IndexOf('\n');
+        return nl < 0 ? s : s[..nl];
+    }
+
+    // ---- dropdowns ----------------------------------------------------------
+    private void ToggleExamples() => _open = _open == Dd.Examples ? Dd.None : Dd.Examples;
+    private void ToggleScheme() => _open = _open == Dd.Scheme ? Dd.None : Dd.Scheme;
+    private void CloseDropdowns() => _open = Dd.None;
+
+    private async Task LoadExample(Ex ex)
+    {
+        _open = Dd.None;
+        _exampleLabel = ex.Label;
+        try
+        {
+            // Src is a site path like "/examples/x.beck.yaml"; fetch it relative to the app
+            // base so it resolves on a GitHub Pages sub-path deploy too (HttpClient.BaseAddress
+            // is the app base, which already includes any sub-path prefix).
+            _yaml = await Http.GetStringAsync(ex.Src.TrimStart('/'));
+            RenderNow();
+        }
+        catch (Exception e)
+        {
+            _ok = false;
+            _statusText = "✗ could not load example: " + FirstLine(e.Message);
+        }
+    }
+
+    // The scheme is pure CSS (--beck-* overrides keyed off #pg-host[data-scheme]); setting
+    // the attribute recolours the diagram — including CSS-var-driven animation packets —
+    // with no re-render.
+    private void SelectScheme(Scheme s)
+    {
+        _open = Dd.None;
+        _scheme = s.Value;
+        _schemeLabel = s.Label;
+    }
+
+    public void Dispose()
+    {
+        _debounce?.Cancel();
+        _debounce?.Dispose();
+    }
+
+    private const string InitialYaml = """
+        type: architecture
+        meta:
+          title: Checkout flow
+          direction: TB
+        nodes:
+          - { id: web, title: Storefront, kind: user }
+          - { id: api, title: Checkout API, kind: gateway }
+          - { id: pay, title: Payments }
+          - { id: ledger, title: Ledger, kind: db }
+        edges:
+          - { from: web, to: api }
+          - { from: api, to: pay }
+          - { from: pay, to: ledger, label: record }
+        """;
+
+    // One place for the example list: title, one-line description, and the YAML to
+    // load. Grouped by diagram type so the picker can section + pill each entry.
+    private sealed record Ex(string Label, string Desc, string Src);
+    private sealed record ExGroup(string Type, string Label, string Glyph, string Short, Ex[] Items);
+
+    private static readonly ExGroup[] ExampleGroups =
+    {
+        new("architecture", "Architecture", "⬡", "arch", new[]
+        {
+            new Ex("Microservices platform", "An API gateway fronting independent services", "/examples/microservices.beck.yaml"),
+            new Ex("Event-driven orders", "Synchronous intake, asynchronous fulfilment", "/examples/event-driven.beck.yaml"),
+            new Ex("AI agent loop", "Plan, call tools in parallel, then synthesise", "/examples/agent-loop.beck.yaml"),
+            new Ex("RAG answer pipeline", "Embed a question, retrieve against it, then answer", "/examples/rag-pipeline.beck.yaml"),
+            new Ex("Streaming analytics", "Clickstream ingest, windowed processing, live serving", "/examples/streaming-analytics.beck.yaml"),
+            new Ex("Edge to cluster", "From the edge network down to the compute cluster", "/examples/cloud-infra.beck.yaml"),
+            new Ex("Zero-trust access", "Every request authorised before it reaches a service", "/examples/zero-trust.beck.yaml"),
+            new Ex("Incident response", "A metric breaches, an alert fires, on-call is paged", "/examples/incident-response.beck.yaml"),
+            new Ex("Deploy pipeline", "Commit to production through CI/CD stages", "/examples/cicd.beck.yaml"),
+            new Ex("Webhook delivery", "A delivery fails, then a retry succeeds — narrated by captions", "/examples/webhook-retry.beck.yaml"),
+            new Ex("Nested groups", "Nested boundaries via recursive compound layout", "/examples/nested-groups.beck.yaml"),
+        }),
+        new("sequence", "Sequence", "▷", "seq", new[]
+        {
+            new Ex("Checkout", "Payment capture and persistence, narrated by captions", "/examples/checkout-sequence.beck.yaml"),
+            new Ex("OAuth login", "Authorization-code flow with PKCE", "/examples/oauth-login.beck.yaml"),
+        }),
+        new("state", "State", "◈", "state", new[]
+        {
+            new Ex("Order lifecycle", "Placed through to delivered, narrated by captions", "/examples/order-lifecycle.beck.yaml"),
+            new Ex("Circuit breaker", "Closed, open and half-open transitions", "/examples/circuit-breaker.beck.yaml"),
+        }),
+        new("class", "Class", "▤", "class", new[]
+        {
+            new Ex("Domain model", "Entities and relations in an order domain", "/examples/domain-model.beck.yaml"),
+            new Ex("Payment gateways", "A gateway interface with provider implementations", "/examples/payment-gateways.beck.yaml"),
+        }),
+    };
+
+    private sealed record Scheme(string Value, string Label);
+    private static readonly Scheme[] Schemes =
+    {
+        new("default", "Default"),
+        new("monokai", "Monokai"),
+        new("one-dark", "One Dark"),
+        new("hot-dog", "Hot Dog Stand"),
+    };
+}

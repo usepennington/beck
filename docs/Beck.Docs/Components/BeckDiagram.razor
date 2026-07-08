@@ -1,0 +1,31 @@
+@using Beck.Rendering
+@inject BeckDiagramRenderer Renderer
+
+@((MarkupString)_html)
+
+@code {
+    // Renders a Beck diagram to a static, self-animating inline SVG at build time via the
+    // pure-C# engine — the Razor-page counterpart to the ```beck markdown fence (both call the
+    // shared BeckDiagramRenderer). No client JS. Used by the homepage hero.
+    [Parameter, EditorRequired] public string Yaml { get; set; } = "";
+    [Parameter] public AnimationMode Animation { get; set; } = AnimationMode.Full;
+
+    /// <summary>Extra classes on the wrapper (defaults to the shared <c>beck-embed</c> frame).</summary>
+    [Parameter] public string Class { get; set; } = "beck-embed";
+
+    private string _html = "";
+
+    protected override void OnParametersSet()
+    {
+        try
+        {
+            string svg = Renderer.Render(Yaml, Animation).Svg;
+            _html = $"<div class=\"{Class}\">{svg}</div>";
+        }
+        catch (Exception ex)
+        {
+            _html = $"<div class=\"beck-embed beck-embed--error\"><pre><code>"
+                  + System.Net.WebUtility.HtmlEncode(ex.Message) + "</code></pre></div>";
+        }
+    }
+}

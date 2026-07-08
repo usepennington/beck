@@ -20,7 +20,9 @@ To stay on-theme, give nodes and edges an **accent token** rather than a raw col
 wwwroot/examples/guides/theme-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/theme-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/theme-01.beck.yaml
+```
 
 The left card tracks your theme; the right one will not budge when the page switches to dark. Reach for a raw colour only when you genuinely want a fixed, off-palette swatch.
 
@@ -32,9 +34,9 @@ By default `meta.theme` is `auto`, which follows the host page. Set it to `light
 wwwroot/examples/guides/theme-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/theme-02.beck.yaml" mode="auto" animate="false"></beck-diagram>
-
-You can also set the mode imperatively when you mount the engine yourself: `<beck-diagram mode="light|dark|auto">`, or `window.Beck.renderDiagram(host, yaml, { theme })`. A live handle exposes `setTheme(mode)` if you want to flip it after render.
+```beck:symbol,static
+wwwroot/examples/guides/theme-02.beck.yaml
+```
 
 ## Override a token site-wide
 
@@ -67,7 +69,9 @@ To change just one card rather than a token, set `surface` and `textColor` on th
 wwwroot/examples/guides/theme-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/theme-03.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/theme-03.beck.yaml
+```
 
 ## Pennington and MonorailCSS
 

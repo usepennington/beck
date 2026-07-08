@@ -19,7 +19,9 @@ To wrap a set of nodes in a labelled boundary, add an entry to the top-level `gr
 wwwroot/examples/guides/groups-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/groups-01.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/groups-01.beck.yaml
+```
 
 The group box sizes itself around its members and spans whatever ranks they land on. `accent` takes the same tokens as a node — `primary`, `info`, `neutral` and so on — and defaults to `neutral`.
 
@@ -31,7 +33,9 @@ If you would rather declare membership on the node instead of listing every id i
 wwwroot/examples/guides/groups-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/groups-02.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/groups-02.beck.yaml
+```
 
 Mix the two styles freely — list some members on the group and pin the rest with `node.group`.
 
@@ -43,7 +47,9 @@ A member may itself be a **group** id, so groups compose to any depth. A nested 
 wwwroot/examples/guides/groups-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/groups-03.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/groups-03.beck.yaml
+```
 
 Here `vpc` lists two group ids as its members, so `webtier` and `datasubnet` render as boxes inside the VPC boundary.
 
@@ -55,7 +61,9 @@ An edge's `from` or `to` may target a group id instead of a node id, drawing the
 wwwroot/examples/guides/groups-04.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/groups-04.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/groups-04.beck.yaml
+```
 
 > [!NOTE]
 > Membership is a tree: each node or group has at most one parent. A node cannot belong to two groups, a group cannot contain itself, and there are no cycles.

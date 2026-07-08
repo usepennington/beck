@@ -8,7 +8,7 @@ uid: docs.reference.yaml
 
 A Beck document is a YAML mapping that opens with a root `type:` declaring what kind of diagram it
 is. The type picks the layout engine and the top-level keys; everything else — theming, animation,
-fenced-block hydration — is shared. Only ids are required; every other field has a default, filled
+fenced-block rendering — is shared. Only ids are required; every other field has a default, filled
 in before the diagram is laid out.
 
 | `type` | what it draws | top-level keys |

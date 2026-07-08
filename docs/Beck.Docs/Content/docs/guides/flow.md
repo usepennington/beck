@@ -20,7 +20,9 @@ If you write no `flow` block at all, Beck animates anyway — and what it derive
 wwwroot/examples/guides/flow-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-01.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-01.beck.yaml
+```
 
 Reach for an explicit `flow` when topological order does not match the story you want to tell.
 
@@ -34,7 +36,9 @@ The workhorse step is `packet`, which sends one dot along an edge. Give it a `fr
 wwwroot/examples/guides/flow-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-02.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-02.beck.yaml
+```
 
 > [!NOTE]
 > `meta.loop: false` forces `flow.repeat: 0`, so the sequence plays once and stops. `meta.animate: false` skips the runtime entirely and renders a static frame.
@@ -47,7 +51,9 @@ Every packet inherits motion from its edge's `kind` — size, speed, glow, and e
 wwwroot/examples/guides/flow-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-03.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-03.beck.yaml
+```
 
 See the [flow reference](/docs/reference/flow) for the full list of knobs and ease names.
 
@@ -59,7 +65,9 @@ A `burst` fires several packets in waves. Set `count` for the number of waves an
 wwwroot/examples/guides/flow-04.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-04.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-04.beck.yaml
+```
 
 Each wave broadcasts a dot to every target in the list, so `count: 4` over three workers sends twelve dots in total.
 
@@ -78,7 +86,9 @@ Here is a tiny build-then-fail story: the build node goes to work, the tests run
 wwwroot/examples/guides/flow-05.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-05.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-05.beck.yaml
+```
 
 ## Persistent edge effects
 
@@ -91,7 +101,9 @@ Two steps change a connector — an edge, message, transition, or relation — u
 wwwroot/examples/guides/flow-06.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-06.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-06.beck.yaml
+```
 
 ## Narrate the story
 
@@ -103,7 +115,9 @@ walks the viewer through the animation in words. Drop a `narrate` between the st
 wwwroot/examples/guides/flow-08.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-08.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-08.beck.yaml
+```
 
 The shorthand `narrate: <text>` is all you usually need — the caption's hold time is computed from
 its length, so a longer line lingers longer. When you want more control, use the full form and set
@@ -148,11 +162,13 @@ A handful of steps shape timing rather than visuals:
 wwwroot/examples/guides/flow-07.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/flow-07.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/flow-07.beck.yaml
+```
 
 ## Respect reduced motion
 
-When a visitor has `prefers-reduced-motion` set, or you author `meta.animate: false` (or `<beck-diagram animate="false">`), Beck renders the static frame and never loads the motion runtime. Write your flow for the animated case — the static fallback is automatic, so you never script two versions.
+When a visitor has `prefers-reduced-motion` set, or you author `meta.animate: false`, Beck renders the static frame instead. Write your flow for the animated case — the static fallback is automatic, so you never script two versions.
 
 ## Next steps
 

@@ -19,7 +19,9 @@ To draw a line, add an edge with a `from` and a `to`. Both must reference a decl
 wwwroot/examples/guides/edges-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-01.beck.yaml
+```
 
 ## Give an edge meaning
 
@@ -34,7 +36,9 @@ Set `kind` to convey what the connection *is*. Each kind carries a default line 
 wwwroot/examples/guides/edges-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-02.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-02.beck.yaml
+```
 
 ## Force a line style
 
@@ -44,7 +48,9 @@ If you want a solid or dashed line regardless of kind, set `style` directly. Thi
 wwwroot/examples/guides/edges-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-03.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-03.beck.yaml
+```
 
 ## Choose a curve
 
@@ -58,7 +64,9 @@ The `curve` controls the routing shape:
 wwwroot/examples/guides/edges-04.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-04.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-04.beck.yaml
+```
 
 ## Arrowheads
 
@@ -68,7 +76,9 @@ Set `arrow` to control which ends are tipped: `end` (default), `start`, `both`, 
 wwwroot/examples/guides/edges-05.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-05.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-05.beck.yaml
+```
 
 ## Colour an edge
 
@@ -78,7 +88,9 @@ Use `color` to override the edge's tint. Pass an accent token (`primary`, `succe
 wwwroot/examples/guides/edges-06.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-06.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-06.beck.yaml
+```
 
 > [!TIP]
 > Prefer tokens over raw colours so your edges adapt when the diagram switches theme. See [Match your theme and colours](/docs/guides/theme).
@@ -95,7 +107,9 @@ Beck auto-routes edges and the default is usually right, so reach for this only 
 wwwroot/examples/guides/edges-07.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-07.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-07.beck.yaml
+```
 
 ## Draw to a whole group
 
@@ -105,7 +119,9 @@ An edge's `from` or `to` may be a **group id** as well as a node id. Beck routes
 wwwroot/examples/guides/edges-08.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/edges-08.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/edges-08.beck.yaml
+```
 
 See [Group related nodes](/docs/guides/groups) for how membership and nesting work.
 

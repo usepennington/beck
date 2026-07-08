@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -7,13 +7,13 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>Beck</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- Enum members in this API are self-descriptive; don't require doc comments on each. -->
+    <!-- Not every internal helper carries an XML doc; only the public surface must. -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <PackageId>Beck</PackageId>
     <!-- Version comes from the latest `v*` git tag via MinVer (see dotnet/Directory.Build.props). -->
-    <Description>Declarative, animated architecture diagrams from YAML. Ships the prebuilt Beck client as a static web asset (served at _content/Beck/beck.global.js) that hydrates fenced ```beck code blocks in Pennington or any Markdig-based site, plus a dependency-free .NET authoring API (DiagramBuilder) for emitting Beck YAML from code.</Description>
-    <PackageTags>diagram;architecture;yaml;pennington;static-web-assets;svg;animation</PackageTags>
+    <Description>Declarative, animated architecture diagrams from YAML — rendered entirely server-side in C#. Turns Beck YAML into a single self-animating inline &lt;svg&gt;: layout, routing, and the full flow choreography are baked into CSS animations inside the SVG, so consumers ship no JavaScript. Includes a dependency-free authoring API (DiagramBuilder) for emitting Beck YAML from code. Pair with Beck.Skia for exact font measurement.</Description>
+    <PackageTags>diagram;architecture;yaml;svg;static;animation;css;pennington</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
@@ -21,11 +21,15 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <!--
-    The client is built from the TypeScript engine by `npm run build:lib`, which
-    writes wwwroot/beck.global.js. That committed asset is what the Razor SDK packs
-    as a static web asset, so `dotnet pack` never needs Node. Regenerate + commit it
-    when the engine source changes.
-  -->
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The parity/golden tests exercise the pure porting internals directly. -->
+    <InternalsVisibleTo Include="Beck.Tests" />
+    <!-- The Skia measurer needs the shared FontRole metrics table. -->
+    <InternalsVisibleTo Include="Beck.Skia" />
+  </ItemGroup>
 
 </Project>

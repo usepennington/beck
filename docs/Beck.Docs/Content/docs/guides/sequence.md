@@ -21,7 +21,9 @@ column can look like a database:
 wwwroot/examples/guides/sequence-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/sequence-01.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/sequence-01.beck.yaml
+```
 
 A few things happened automatically there:
 
@@ -51,7 +53,9 @@ chapter a long interaction. Give it an `accent` to color the band and its floati
 wwwroot/examples/guides/sequence-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/sequence-02.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/sequence-02.beck.yaml
+```
 
 ## Async messages
 
@@ -62,7 +66,9 @@ motion — right for fire-and-forget events and queue deliveries:
 wwwroot/examples/guides/sequence-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/sequence-03.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/sequence-03.beck.yaml
+```
 
 ## Narrate the exchange
 
@@ -74,7 +80,9 @@ that message fires. Caption a few key steps to walk a reader through the convers
 wwwroot/examples/guides/sequence-04.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/sequence-04.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/sequence-04.beck.yaml
+```
 
 Notes only drive the *derived* flow — if you script a `flow:` yourself, narrate it with `narrate`
 steps instead. Pace or disable the captions with `meta.narrate`. See [Narrate the

@@ -21,7 +21,9 @@ transition *from* `"[*]"` draws the entry dot, one *to* `"[*]"` draws the exit b
 wwwroot/examples/guides/state-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/state-01.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/state-01.beck.yaml
+```
 
 ## Refining states
 
@@ -33,7 +35,9 @@ forward counterparts automatically:
 wwwroot/examples/guides/state-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/state-02.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/state-02.beck.yaml
+```
 
 ## Self-transitions
 
@@ -43,7 +47,9 @@ A transition from a state to itself draws a compact loop — retries, heartbeats
 wwwroot/examples/guides/state-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/state-03.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/state-03.beck.yaml
+```
 
 ## Scripting the animation
 

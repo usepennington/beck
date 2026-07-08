@@ -2,13 +2,11 @@
 #
 # The site serves under the repository sub-path https://<user>.github.io/<repo>/, so the Pennington
 # build needs a matching base URL (derived from the repo name) to rewrite internal anchors, CSS, JS,
-# and data URLs under /<repo>/. The Beck engine reads that same base from <body data-base-url> to
-# prefix the links it renders client-side.
+# and data URLs under /<repo>/.
 #
 # Build notes:
-#   - The site embeds the Beck engine (the committed wwwroot/beck.global.js, served by the RCL at
-#     _content/Beck/beck.global.js). We rebuild it from the TypeScript source first (npm run
-#     build:lib) so a deploy always ships the latest engine, even if the committed copy lagged.
+#   - Every diagram renders at build time via the pure-C# engine (BeckSvgPreprocessor); the
+#     interactive playground ships as a Blazor WebAssembly island. No Node toolchain.
 #   - global.json pins the .NET 10 SDK; the Beck package targets net8.0, so install both.
 #   - Pennington is restored from NuGet (no local b:\penn checkout needed).
 #   - Pennington emits underscore folders (_content/, _framework/); the .nojekyll marker stops
@@ -37,18 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # MinVer reads git history when the Beck RCL builds in Release
-
-      # Rebuild the engine bundle from TypeScript so the deployed site embeds the latest src/.
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install JS deps
-        run: npm ci
-      - name: Build the engine bundle
-        run: npm run build:lib   # writes dotnet/Beck/wwwroot/beck.global.js
+          fetch-depth: 0   # MinVer reads git history when the Beck engine builds in Release
 
       # 10.0.x SDK (pinned by global.json) builds the docs; 8.0.x covers the net8.0 Beck package
       # the docs reference. NOTE: keep these as bare versions — inline comments inside the block
