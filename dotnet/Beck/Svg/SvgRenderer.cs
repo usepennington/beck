@@ -263,6 +263,14 @@ internal static class SvgRenderer
         string accentStyle = $"--beck-accent:{node.Accent}";
         if (node.Surface != null) accentStyle += $";--beck-node-bg:{node.Surface}";
         if (node.TextColor != null) accentStyle += $";--beck-text:{node.TextColor}";
+        // A linked node wraps in an SVG <a> so the whole card is clickable; the wrapper
+        // sits outside the fx group so effect transforms don't disturb the hit area.
+        if (node.Href != null)
+        {
+            sb.Append($"<a href=\"{SvgWriter.Attr(node.Href)}\"");
+            if (node.Target != null) sb.Append($" target=\"{SvgWriter.Attr(node.Target)}\"");
+            sb.Append('>');
+        }
         // bn{idx} lets the animation compiler target this node's fx wrapper; the inner
         // .beck-fx-node isolates effect transforms (scale/shake) from the positioning
         // translate so pulses/highlights/fails bounce the card in place (§10.2).
@@ -286,6 +294,7 @@ internal static class SvgRenderer
         }
 
         sb.Append("</g></g>");
+        if (node.Href != null) sb.Append("</a>");
         return sb.ToString();
     }
 
