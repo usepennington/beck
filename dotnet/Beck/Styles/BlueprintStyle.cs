@@ -18,13 +18,14 @@ namespace Beck;
 /// tables, so it theme-adapts and a host <c>--color-*</c>/<c>--beck-*</c> override still wins. Edge
 /// dashing rides the existing single continuous <c>&lt;path&gt;</c> per edge (a stroke treatment
 /// only), so routing/packets/trails are untouched.</para>
-/// <para>Deferred to Phase 4 (with the same reasoning Terminal used for its bracket affordance):
-/// <em>dimension ticks on group boxes</em> and <em>uppercase node titles</em>. Ticks need new artwork
-/// markup in the group emitter (the <c>StyleArtwork.Blueprint</c> branch new-designs.md reserves), and
-/// uppercasing node titles/subtitles would desync the measured box from the rendered run because the
-/// embedded measurer resolves roles through the static <see cref="FontRoles"/> table, not the style's —
-/// real card-sizing/measurement surgery, not a data tweak. Label typography (edge + group labels) is
-/// safe here: edge labels carry a <c>textLength</c> guard that pins the run to its measured box, and
+/// <para><em>Dimension ticks on group boxes</em> ship via the <see cref="StyleArtwork.Blueprint"/>
+/// branch in the group-box painter (a subtle top-edge dimension line + perpendicular witness ticks,
+/// token-coloured through <c>--beck-dimension</c>, gated by <see cref="StyleGeometry.DimensionTick"/>).
+/// Still deferred: <em>uppercase node titles</em> — uppercasing titles/subtitles is safe for
+/// <em>measurement</em> now (the style's <see cref="FontRoles"/> table feeds <c>CardSizer</c>), but
+/// blueprint keeps titles mixed-case as a deliberate design choice (the mono-uppercase treatment is
+/// reserved for the annotation label roles — edge/group/band/message labels — where it reads as
+/// draughting callouts rather than shouting every card). Edge labels carry a <c>textLength</c> guard;
 /// group labels are already uppercased at the render site.</para>
 /// </remarks>
 public static class BlueprintStyle
@@ -62,6 +63,9 @@ public static class BlueprintStyle
             ("--beck-accent", "var(--beck-primary)"),
             // Faint graph-paper line colour — kept low so the grid reads as a surface, not chrome.
             ("--beck-grid", "color-mix(in srgb, var(--beck-primary) 12%, transparent)"),
+            // Dimension-line colour — a touch stronger than the grid so the group ticks read as an
+            // annotation, but still a subtle primary tint (no resolved literal in shape CSS).
+            ("--beck-dimension", "color-mix(in srgb, var(--beck-primary) 32%, transparent)"),
         });
 
         // Dark overrides only (layered over the light block, which is always emitted first): lighter
@@ -78,6 +82,7 @@ public static class BlueprintStyle
             ("--beck-edge", "color-mix(in srgb, var(--beck-primary) 46%, var(--color-base-700, #30363d))"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-primary) 14%, var(--color-base-800, #21262d))"),
             ("--beck-grid", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 15%, transparent)"),
+            ("--beck-dimension", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 34%, transparent)"),
         });
 
         // The faint graph-paper grid: two token-coloured 1px gradients (horizontal + vertical rules) on
@@ -100,6 +105,9 @@ public static class BlueprintStyle
             NarrationRadius = 4,
             BandRadius = 4,
             SurfaceBackground = grid,
+            // Dimension ticks on group boxes (the StyleArtwork.Blueprint gate below reads this): the
+            // dimension rule sits 9px above each group's top edge with 3px witness overshoot.
+            DimensionTick = 9,
         };
 
         StyleStrokes strokes = c.Strokes with
@@ -139,6 +147,10 @@ public static class BlueprintStyle
             Geometry = geo,
             Strokes = strokes,
             Typography = typography,
+            // Group-box dimension lines (the technical-drawing measured-length annotation). The
+            // group-box painter branches on this; nodes/edges/ghosts are untouched, so every shape,
+            // variant, packet, marker, and diagram type stays exactly as the CSS/token layer renders it.
+            Artwork = StyleArtwork.Blueprint,
         };
     }
 

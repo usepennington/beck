@@ -52,7 +52,7 @@ internal sealed class SequencePainter
             SectionBand b = layout.Bands[i];
             sb.Append($"<g class=\"beck-band\" data-band=\"{i}\" style=\"--beck-accent:{SvgWriter.Attr(b.Accent)}\">");
             sb.Append($"<rect class=\"beck-band-box\" x=\"{N(b.X)}\" y=\"{N(b.Y)}\" width=\"{N(b.W)}\" height=\"{N(b.H)}\" rx=\"{N(_style.Geometry.BandRadius)}\"/>");
-            double lw = _m.Measure(b.Label, FontRole.BandLabel).Width;
+            double lw = _m.Measure(b.Label, FontRole.BandLabel, bandSpec).Width;
             sb.Append(Chip(b.X + 24 + lw / 2, b.Y, b.Label.ToUpperInvariant(), lw, "beck-band-chip", "beck-band-label", 10, 4,
                 "font-family:var(--beck-font-mono)", bandSpec.SizePx, bandSpec.Weight, $"letter-spacing:{SvgWriter.Ls(bandSpec.LetterSpacingEm)}"));
             sb.Append("</g>");
@@ -98,6 +98,9 @@ internal sealed class SequencePainter
                 string selfD = StepRound.RoundedPath(poly, 9);
                 sb.Append(MsgPath(edge, selfD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, selfD));
+                // Metro station dots at the self-loop's two lifeline anchors (over the line).
+                sb.Append(Artwork.Station(_style, sx, row.Y, edge.Color));
+                sb.Append(Artwork.Station(_style, sx, row.Y + 22, edge.Color));
                 if (!string.IsNullOrEmpty(edge.Label))
                     sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"{N(msgSpec.SizePx)}\" font-weight=\"{P(msgSpec.Weight)}\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
             }
@@ -109,9 +112,12 @@ internal sealed class SequencePainter
                 string msgD = $"M {N(x1)} {N(row.Y)} L {N(x2)} {N(row.Y)}";
                 sb.Append(MsgPath(edge, msgD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, msgD));
+                // Metro station dots at each message's two endpoints (over the line).
+                sb.Append(Artwork.Station(_style, x1, row.Y, edge.Color));
+                sb.Append(Artwork.Station(_style, x2, row.Y, edge.Color));
                 if (!string.IsNullOrEmpty(edge.Label))
                 {
-                    double mw = _m.Measure(edge.Label!, FontRole.MsgText).Width;
+                    double mw = _m.Measure(edge.Label!, FontRole.MsgText, msgSpec).Width;
                     sb.Append(Chip((x1 + x2) / 2, row.Y - 17, edge.Label!, mw, "beck-msg-chip", "beck-msg-text", 10, 4,
                         "font-family:var(--beck-font-mono)", msgSpec.SizePx, msgSpec.Weight, null));
                 }

@@ -35,9 +35,17 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     public bool IsApproximate => false;
 
     /// <inheritdoc />
-    public TextMetrics Measure(string text, FontRole role)
+    public TextMetrics Measure(string text, FontRole role) => Measure(text, FontRoles.Of(role));
+
+    /// <inheritdoc />
+    public TextMetrics Measure(string text, FontRole role, FontRoleSpec spec) => Measure(text, spec);
+
+    /// <summary>The exact-measurement primitive: shape <paramref name="text"/> against
+    /// <paramref name="spec"/> (the caller resolves role → spec, classic or style-remapped). Uppercase
+    /// specs shape the transformed string, so a style that uppercases a role widens its measured box.</summary>
+    public TextMetrics Measure(string text, FontRoleSpec spec)
     {
-        FontRoleSpec s = FontRoles.Of(role);
+        FontRoleSpec s = spec;
         string t = s.Uppercase ? text.ToUpperInvariant() : text;
 
         lock (_gate)

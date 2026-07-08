@@ -30,9 +30,17 @@ public sealed class EmbeddedMetricsMeasurer : ITextMeasurer
     public static EmbeddedMetricsMeasurer For(MetricsFont font) => Cache[(int)font];
 
     /// <inheritdoc />
-    public TextMetrics Measure(string text, FontRole role)
+    public TextMetrics Measure(string text, FontRole role) => Measure(text, FontRoles.Of(role));
+
+    /// <inheritdoc />
+    public TextMetrics Measure(string text, FontRole role, FontRoleSpec spec) => Measure(text, spec);
+
+    /// <summary>The measurement primitive: size <paramref name="text"/> against <paramref name="spec"/>
+    /// (the caller resolves the role → spec, classic or style-remapped). Uppercase specs measure the
+    /// transformed string, so a style that uppercases a role widens its measured box.</summary>
+    public TextMetrics Measure(string text, FontRoleSpec spec)
     {
-        FontRoleSpec s = FontRoles.Of(role);
+        FontRoleSpec s = spec;
         string t = s.Uppercase ? text.ToUpperInvariant() : text;
         double size = s.SizePx;
 

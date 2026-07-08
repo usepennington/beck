@@ -41,8 +41,26 @@ public readonly record struct TextMetrics(double Width, double Ascent, double De
 /// </summary>
 public interface ITextMeasurer
 {
-    /// <summary>Measure <paramref name="text"/> as rendered at <paramref name="role"/>.</summary>
+    /// <summary>Measure <paramref name="text"/> as rendered at <paramref name="role"/>, using the
+    /// <em>classic</em> typography for that role (<see cref="FontRoles.Of"/>). Kept as the primitive
+    /// every existing (and third-party) measurer implements.</summary>
     TextMetrics Measure(string text, FontRole role);
+
+    /// <summary>
+    /// Measure <paramref name="text"/> at <paramref name="role"/> using <paramref name="spec"/> as the
+    /// concrete typography — the <em>active style's</em> resolved <see cref="FontRoleSpec"/> (from
+    /// <see cref="FontRoleTable.Of"/>) rather than the classic <see cref="FontRoles.Of"/>. This is the
+    /// seam that lets a style remap a role's weight/size/family/letter-spacing/case and have the
+    /// <em>measured</em> box (and its <c>textLength</c> guard) match what actually renders, not a
+    /// classic-sized box the guard would then squeeze glyphs into.
+    /// <para>Source-compatible default: a measurer that does not override this ignores the override and
+    /// measures the classic <paramref name="role"/>. The engine's own measurers
+    /// (<see cref="EmbeddedMetricsMeasurer"/>, <c>Beck.Skia.SkiaTextMeasurer</c>) override it to honour
+    /// <paramref name="spec"/>; the small residual delta under a non-overriding measurer is absorbed by
+    /// the <c>textLength</c> guard exactly as an approximate measurer's is. For classic input
+    /// (<paramref name="spec"/> == <c>FontRoles.Of(role)</c>) it is byte-identical to the two-arg call.</para>
+    /// </summary>
+    TextMetrics Measure(string text, FontRole role, FontRoleSpec spec) => Measure(text, role);
 
     /// <summary>
     /// True when this measurer <em>approximates</em> widths from an embedded metrics table rather

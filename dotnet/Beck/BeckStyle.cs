@@ -17,6 +17,113 @@ public enum PacketGlyph
     Ring,
     /// <summary>A centred square/block — terminal's identity glyph.</summary>
     Square,
+    /// <summary>An elongated rounded-rect capsule oriented along the path — metro's train packet.</summary>
+    Train,
+}
+
+/// <summary>
+/// The node-chrome shape family a style draws — the engine-internal-but-data selector
+/// (<see cref="BeckStyle.Artwork"/>) new-designs.md reserves for shape variations that can't be
+/// expressed through CSS/tokens alone. It is a small closed vocabulary, <em>not</em> a public
+/// interface: a style picks one of these values and the shape emitters branch on it, so custom
+/// user styles compose an existing artwork (keeping determinism + the no-injected-markup
+/// guarantee) rather than supplying arbitrary geometry. <see cref="Plain"/> is classic and every
+/// CSS/token-only style — byte-identical.
+/// </summary>
+public enum StyleArtwork
+{
+    /// <summary>Straight rounded rects and true circles — classic and every non-artwork style.</summary>
+    Plain,
+
+    /// <summary>
+    /// Neo-brutalist: every card/pill/class node keeps its straight rect (so all token-driven
+    /// fill/stroke/filter still apply), but gains a <em>solid, blur-free, token-coloured offset
+    /// shadow rect</em> drawn <em>behind</em> it — the hard "sticker" lift. The shadow is a plain
+    /// <c>&lt;rect class="beck-shadow"&gt;</c> offset down-right by
+    /// <see cref="StyleGeometry.ShadowOffset"/> px, filled through <c>var(--beck-shadow, …)</c> so it
+    /// theme-adapts and never emits a resolved literal; it rides inside the same
+    /// <c>.beck-fx-node</c> wrapper as the card, so pulses/highlights move card and shadow together.
+    /// Group boxes, ghost nodes, and start/end pseudo-states are deliberately <em>not</em> shadowed
+    /// (a solid slab behind a dashed/transparent shape reads as noise). Static — nothing animates at
+    /// rest; the offset is baked geometry, not motion.
+    /// </summary>
+    Brutalist,
+
+    /// <summary>
+    /// Hand-drawn (sketch): node rects/pills/class cards, group boxes, and start/end pseudo-state
+    /// circles become subtly-wobbly closed <c>&lt;path&gt;</c>s whose jitter is baked into the path
+    /// geometry — deterministic from the content hash + node id, so the same input wobbles the same
+    /// way forever and nothing animates continuously. The paths keep the same <c>class</c> as the
+    /// rects they replace, so every token-driven fill/stroke/filter still applies; edges stay exact
+    /// straight router paths (edge wobble is deferred to protect the one-path/offset-path contract).
+    /// </summary>
+    Sketch,
+
+    /// <summary>
+    /// 2.5D slabs (extrude): every card/pill/class node keeps its straight rounded rect (so all
+    /// token-driven fill/stroke/filter still applies), but gains two <em>solid depth faces</em> —
+    /// a right and a bottom parallelogram — drawn <em>behind</em> it, offset down-right by
+    /// <see cref="StyleGeometry.DepthOffset"/> px as if the light source were top-left. The faces are
+    /// filled through <c>var(--beck-depth-right, …)</c> / <c>var(--beck-depth-bottom, …)</c> tokens
+    /// (a darker <c>color-mix</c> of the node surface), so they theme-adapt and never emit a resolved
+    /// literal; they ride inside the same <c>.beck-fx-node</c> wrapper as the card, so a press-down
+    /// (<see cref="StyleMotion.PressDown"/>) moves card and faces together toward the base. Depth is
+    /// <em>static</em> — nothing bobs at rest; the offset is baked geometry, not motion. Group boxes,
+    /// ghost nodes, and start/end pseudo-states are deliberately <em>not</em> extruded (a solid slab
+    /// behind a dashed/transparent/hollow shape reads as noise). A <c>0</c> offset (classic, and every
+    /// non-extrude style) emits no faces — byte-identical.
+    /// </summary>
+    Extruded,
+
+    /// <summary>
+    /// PCB / circuit board (circuit): every card/pill/class node keeps its straight rounded rect (so
+    /// all token-driven fill/stroke/filter still applies) but gains short decorative <em>pin stubs</em>
+    /// — small rects protruding from its left and right edges like a DIP chip package — drawn
+    /// <em>behind</em> it and filled through <c>var(--beck-pin, …)</c> so only the outer sliver shows
+    /// past the node's opaque fill. The pin count/spacing derive deterministically from the node's own
+    /// height (no RNG, no measurement jitter); group boxes / ghosts / start-end pseudo-states are
+    /// deliberately left bare (pins on a hollow/dashed shape read as noise). In addition the
+    /// <em>edge</em> emitter drops a small <em>via dot</em> (<c>&lt;circle class="beck-via"&gt;</c>,
+    /// filled through <c>var(--beck-via, …)</c>) at every genuine bend of an edge's already-computed
+    /// route polyline — the elbow where a right-angle trace turns — read from the existing route
+    /// geometry in the SVG layer with the router untouched and the edge still one continuous
+    /// <c>&lt;path&gt;</c>. Straight/curved edges (no interior bend) and short nodes simply show fewer
+    /// decorations. Every other style (classic included) emits neither pins nor vias — byte-identical.
+    /// </summary>
+    Circuit,
+
+    /// <summary>
+    /// Transit map (metro): the diagram reads as a subway map. Nodes keep their straight rounded rect
+    /// (so all token-driven fill/stroke/filter still applies) and edges stay one continuous
+    /// <c>&lt;path&gt;</c>, but the style pairs thick round-capped edge strokes
+    /// (<see cref="StyleGeometry.EdgeStroke"/>) with a small <em>station dot</em> dropped at each
+    /// edge's two <em>anchor endpoints</em> — a filled circle
+    /// (<c>&lt;circle class="beck-station"&gt;</c>, radius <see cref="StyleGeometry.StationRadius"/>)
+    /// with a contrasting ring, drawn <em>over</em> the line: the fill is the token surface
+    /// (<c>var(--beck-station-fill, var(--beck-surface))</c>, the "white station") and the ring takes
+    /// the edge's own colour so each transit line's stations match its hue. The dots are read straight
+    /// off the already-computed route geometry (the polyline's first/last point in the architecture
+    /// router, the message endpoints in the sequence painter) — the router is untouched and the dots
+    /// are additional sibling elements, never a split edge path. Deterministic (geometry only, no RNG);
+    /// a <c>0</c> <see cref="StyleGeometry.StationRadius"/> (classic, and every non-metro style) emits
+    /// no stations — byte-identical. Metro pairs this with the <see cref="Beck.PacketGlyph.Train"/>
+    /// packet glyph, but the two are independent seams.
+    /// </summary>
+    Metro,
+
+    /// <summary>
+    /// Technical drawing (blueprint): every node keeps its straight rounded rect (so all token-driven
+    /// fill/stroke/filter still applies) and edges stay one continuous <c>&lt;path&gt;</c>, but each
+    /// <em>group box</em> gains a subtle <em>dimension line</em> along its top edge — a thin extension
+    /// rule offset above the edge, joined to the box's two top corners by short perpendicular witness
+    /// ticks (the classic drafted-drawing measured-length annotation). Emitted only in the group-box
+    /// painter, so nodes/edges/ghosts are untouched; drawn only when
+    /// <see cref="StyleGeometry.DimensionTick"/> is non-zero. Token-coloured through
+    /// <c>var(--beck-dimension, …)</c> so it theme-adapts and never emits a resolved literal, and read
+    /// purely from the already-computed group rect (no router involvement). Every other style (classic
+    /// included) emits no dimension lines — byte-identical.
+    /// </summary>
+    Blueprint,
 }
 
 /// <summary>
@@ -59,6 +166,14 @@ public sealed record BeckStyle
 
     /// <summary>Effect durations, sequence-dim ratios, and effect stroke widths.</summary>
     public required StyleMotion Motion { get; init; }
+
+    /// <summary>
+    /// The node-chrome shape family (<see cref="StyleArtwork.Plain"/> rects/circles vs.
+    /// <see cref="StyleArtwork.Sketch"/> wobbly hand-drawn paths). Defaults to
+    /// <see cref="StyleArtwork.Plain"/>, so classic and every CSS/token-only style stay byte-identical
+    /// without setting it. Consumed by internal branches in the shape emitters, never as public markup.
+    /// </summary>
+    public StyleArtwork Artwork { get; init; } = StyleArtwork.Plain;
 
     /// <summary>
     /// The reference style: constructed from the engine's exact historical literals. This is the
@@ -311,6 +426,32 @@ public sealed record StyleTypography
     /// byte-identical.
     /// </summary>
     public bool NarrationFigureCaption { get; init; }
+
+    /// <summary>
+    /// A string prepended to every primary node title (card/pill/class/ghost) — terminal's
+    /// <c>[bracketed]</c> label affordance is <c>TitlePrefix = "["</c>, <c>TitleSuffix = "]"</c>. The
+    /// decoration is applied by <see cref="DecorateTitle"/> at both the <em>measurement</em> boundary
+    /// (<c>CardSizer</c> sizes the box for the bracketed run) and the render boundary (the same
+    /// bracketed run is drawn and word-wrapped), so the measured box and the rendered <c>textLength</c>
+    /// guard stay matched — the brackets widen the card, they never overflow it. Subtitles, status
+    /// pills, the diagram title/subtitle, edge/group/sequence labels, and class members are left
+    /// undecorated. <c>""</c> (classic, and every style that doesn't set it) prepends/appends nothing —
+    /// byte-identical. The prefix/suffix are emitted as <c>&lt;text&gt;</c> content (XML-escaped), never
+    /// into the <c>&lt;style&gt;</c> block, so they carry no CSS-injection surface.
+    /// </summary>
+    public string TitlePrefix { get; init; } = "";
+
+    /// <summary>The string appended to every primary node title; see <see cref="TitlePrefix"/>.</summary>
+    public string TitleSuffix { get; init; } = "";
+
+    /// <summary>
+    /// Wrap a node title in <see cref="TitlePrefix"/>/<see cref="TitleSuffix"/> (terminal's brackets).
+    /// A no-op returning <paramref name="title"/> unchanged when neither is set (classic — so the
+    /// measured and rendered strings are byte-identical to today). Called at every title measurement
+    /// <em>and</em> render site so the two stay in lockstep.
+    /// </summary>
+    public string DecorateTitle(string title) =>
+        TitlePrefix.Length == 0 && TitleSuffix.Length == 0 ? title : TitlePrefix + title + TitleSuffix;
 }
 
 /// <summary>Named, fixed <c>color-mix(in srgb, …)</c> percentages (whole numbers).</summary>
@@ -459,6 +600,18 @@ public sealed record StyleMotion
     public int? TrailSteps { get; init; }
 
     /// <summary>
+    /// When set, the travelling packet glyph's own advance along its edge (the <c>offset-distance</c>
+    /// track) uses a <c>steps(n)</c> timing function instead of its per-edge-kind ease — the packet
+    /// hops the edge in <c>n</c> discrete, mechanical jumps ("stepped flow motion", brutalist's
+    /// identity), extending the terminal <see cref="TrailSteps"/> trail-only seam to the moving glyph
+    /// itself. When <see cref="TrailSteps"/> is unset the trail reveal follows this stepped ease too
+    /// (they share the packet's timing function), so a style can hard-step both from one knob. Only
+    /// the flow effect steps — nothing animates at rest. <c>null</c> (classic, and every style that
+    /// doesn't set it) leaves the packet on its smooth per-edge-kind ease, unchanged.
+    /// </summary>
+    public int? PacketSteps { get; init; }
+
+    /// <summary>
     /// Multiplier on the sequence-storytelling reveal ramp durations — the fade-in windows that
     /// draw each message row, chip, and section band up from its dimmed state as the flow reaches it
     /// (<c>CssCompiler.SequenceChoreoCss</c>). A value <c>&gt; 1</c> stretches those windows so the
@@ -469,6 +622,17 @@ public sealed record StyleMotion
     /// doesn't set it) reproduces the exact historical 0.25s/0.4s ramps — byte-identical.
     /// </summary>
     public double SequenceRevealScale { get; init; } = 1.0;
+
+    /// <summary>
+    /// When <c>true</c> (extrude's identity), a node's active-effect transform (pulse / highlight
+    /// peak) <em>presses down toward its depth faces</em> — a small <c>translate(2px,2px)</c> dip
+    /// instead of the classic <c>translateY(-2px) scale(1.04)</c> lift — so a 2.5D slab reads as
+    /// being pushed into the page rather than floating up. Compiled into the same shared-cycle
+    /// transform keyframes (no <c>animation-delay</c>); the fail shake is orthogonal and unchanged.
+    /// <c>false</c> (classic, and every style that doesn't set it) keeps the historical lift —
+    /// byte-identical.
+    /// </summary>
+    public bool PressDown { get; init; }
 }
 
 /// <summary>Corner radii, stroke widths, border insets, and the card box-model constants.</summary>
@@ -539,6 +703,67 @@ public sealed record StyleGeometry
     /// style that doesn't set it) emits nothing and stays byte-identical.
     /// </summary>
     public string SurfaceBackground { get; init; } = "";
+
+    /// <summary>
+    /// The down-right offset (px) of the neo-brutalist hard shadow rect drawn behind each card/pill/
+    /// class node under <see cref="StyleArtwork.Brutalist"/>. Only consumed when the style's
+    /// <see cref="BeckStyle.Artwork"/> is <see cref="StyleArtwork.Brutalist"/>; a <c>0</c> (classic,
+    /// and every non-brutalist style) emits no shadow element — byte-identical. Typical brutalist
+    /// value is 4–6.
+    /// </summary>
+    public double ShadowOffset { get; init; } = 0;
+
+    /// <summary>
+    /// The down-right offset (px) of the two 2.5D depth faces drawn behind each card/pill/class node
+    /// under <see cref="StyleArtwork.Extruded"/> — the apparent slab thickness, with the light source
+    /// read as top-left. Only consumed when the style's <see cref="BeckStyle.Artwork"/> is
+    /// <see cref="StyleArtwork.Extruded"/>; a <c>0</c> (classic, and every non-extrude style) emits no
+    /// faces — byte-identical. Typical extrude value is 6-8.
+    /// </summary>
+    public double DepthOffset { get; init; } = 0;
+
+    /// <summary>
+    /// The length (px) a decorative chip pin stub protrudes past a card/pill/class node's left/right
+    /// edge under <see cref="StyleArtwork.Circuit"/>. Only consumed when the style's
+    /// <see cref="BeckStyle.Artwork"/> is <see cref="StyleArtwork.Circuit"/>; a <c>0</c> (classic, and
+    /// every non-circuit style) emits no pins — byte-identical. Typical circuit value is 5-7.
+    /// </summary>
+    public double PinLength { get; init; } = 0;
+
+    /// <summary>The thickness (px) of a circuit chip pin stub (its short dimension). Only in play under
+    /// <see cref="StyleArtwork.Circuit"/> with a non-zero <see cref="PinLength"/>.</summary>
+    public double PinThickness { get; init; } = 2.4;
+
+    /// <summary>The nominal vertical spacing (px) between adjacent circuit chip pins: the node's pin
+    /// count per side is <c>clamp(round(height / PinPitch), 2, 6)</c>, so a taller chip grows more pins
+    /// deterministically. Only in play under <see cref="StyleArtwork.Circuit"/>.</summary>
+    public double PinPitch { get; init; } = 24;
+
+    /// <summary>The radius (px) of a circuit via dot dropped at each edge-route bend under
+    /// <see cref="StyleArtwork.Circuit"/>. Only consumed when the style's <see cref="BeckStyle.Artwork"/>
+    /// is <see cref="StyleArtwork.Circuit"/>; every other style emits no vias — byte-identical.</summary>
+    public double ViaRadius { get; init; } = 2.6;
+
+    /// <summary>The radius (px) of a metro station dot dropped at each edge's two anchor endpoints under
+    /// <see cref="StyleArtwork.Metro"/>. Only consumed when the style's <see cref="BeckStyle.Artwork"/>
+    /// is <see cref="StyleArtwork.Metro"/>; a <c>0</c> (classic, and every non-metro style) emits no
+    /// stations — byte-identical. Typical metro value is 4-5 (large enough that its white fill shows
+    /// past the thick line stroke).</summary>
+    public double StationRadius { get; init; } = 0;
+
+    /// <summary>The ring stroke width (px) of a metro station dot. Only in play under
+    /// <see cref="StyleArtwork.Metro"/> with a non-zero <see cref="StationRadius"/>.</summary>
+    public double StationRing { get; init; } = 2;
+
+    /// <summary>
+    /// The offset (px) of a blueprint group-box <em>dimension line</em> above the group's top edge, and
+    /// the length of the two perpendicular witness ticks that join it back to the box corners. Only
+    /// consumed when the style's <see cref="BeckStyle.Artwork"/> is <see cref="StyleArtwork.Blueprint"/>;
+    /// a <c>0</c> (classic, and every non-blueprint style) emits no dimension lines — byte-identical.
+    /// Typical blueprint value is 8-10 (small enough that the annotation stays clear of the group's own
+    /// on-edge label and never runs off the always-positive canvas above the well-margined group boxes).
+    /// </summary>
+    public double DimensionTick { get; init; } = 0;
 
     // ---- insets (derived from NodeStroke — the single source of truth) ----
     /// <summary>Render inset per side: half the node stroke, so a centre-aligned stroke stays inside

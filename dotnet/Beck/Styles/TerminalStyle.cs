@@ -10,15 +10,15 @@ namespace Beck;
 /// scrub, reduced motion, light/dark) stays fully available — only the rendering changes.
 /// </summary>
 /// <remarks>
-/// Deliberately <em>not</em> shipped: scanlines and a blinking cursor (both explicitly excluded by
-/// the design brief) and the <c>[bracketed]</c> node-title affordance from the original mock. The
-/// bracket treatment would need the title text measured *with* its brackets — <c>CardSizer</c>
-/// and every card/pill/class title emission site in <c>SvgRenderer</c> currently measure and render
-/// the same <c>node.Title</c> string verbatim, so adding a per-style text decoration correctly (not
-/// just at render time, which would desync <c>textLength</c> from the measured box) means touching
-/// shared measurement code across several call sites — real card-sizing surgery, not a cheap text
-/// tweak. That is Phase-4 artwork territory (see new-designs.md's <c>StyleArtwork</c> discussion);
-/// deferred there rather than risking the "measured widths guard the typography" invariant here.
+/// The <c>[bracketed]</c> node-title affordance is data-driven through
+/// <see cref="StyleTypography.TitlePrefix"/>/<see cref="StyleTypography.TitleSuffix"/>: the
+/// style-scoped measurement seam decorates the title <em>before</em> <c>CardSizer</c> sizes the box
+/// <em>and</em> before the renderer draws/word-wraps it, so the brackets add width to the card without
+/// desyncing the <c>textLength</c> guard — the "measured widths guard the typography" invariant is
+/// upheld, not risked. Applied to every primary node title (card/pill/class/ghost); subtitles, status
+/// pills, and labels stay bare. Deliberately <em>not</em> shipped: scanlines and a blinking cursor,
+/// both explicitly excluded by the design brief — the identity is carried by mono type, square
+/// packets, hard-step trails, and the brackets instead.
 /// </remarks>
 public static class TerminalStyle
 {
@@ -38,6 +38,13 @@ public static class TerminalStyle
         var typography = c.Typography with
         {
             SansFamily = c.Typography.MonoFamily,
+            // The [bracketed] label affordance: every primary node title (card/pill/class/ghost) renders
+            // as "[Title]". Applied via StyleTypography.DecorateTitle at both the measurement boundary
+            // (CardSizer sizes the box for the bracketed run) and the render boundary (the same bracketed
+            // run is drawn + word-wrapped), so the brackets widen the card and the textLength guard stays
+            // matched — no desync. Subtitles/status/labels stay bare.
+            TitlePrefix = "[",
+            TitleSuffix = "]",
         };
 
         // --beck-accent is an explicit green default (not classic's alias to --beck-primary), and

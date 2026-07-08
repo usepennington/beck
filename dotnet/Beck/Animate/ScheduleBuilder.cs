@@ -314,6 +314,7 @@ internal static class ScheduleBuilder
         Beck.PacketGlyph.Dot => PacketShape.Dot,
         Beck.PacketGlyph.Ring => PacketShape.Ring,
         Beck.PacketGlyph.Square => PacketShape.Square,
+        Beck.PacketGlyph.Train => PacketShape.Train,
         _ => null,
     };
 

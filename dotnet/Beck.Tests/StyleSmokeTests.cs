@@ -25,6 +25,11 @@ public sealed class StyleSmokeTests
         new object[] { BlueprintStyle.Instance },
         new object[] { GlowStyle.Instance },
         new object[] { EditorialStyle.Instance },
+        new object[] { BrutalistStyle.Instance },
+        new object[] { SketchStyle.Instance },
+        new object[] { ExtrudeStyle.Instance },
+        new object[] { CircuitStyle.Instance },
+        new object[] { MetroStyle.Instance },
     };
 
     public static IEnumerable<object[]> StyledDiagrams() =>
