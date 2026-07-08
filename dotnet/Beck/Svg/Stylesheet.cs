@@ -11,51 +11,18 @@ namespace Beck.Rendering.Svg;
 /// </summary>
 internal static class Stylesheet
 {
-    // Light token table — verbatim from styles.css:16-49.
-    private static readonly (string Name, string Value)[] LightTokens =
-    {
-        ("--beck-surface", "var(--color-base-50, #ffffff)"),
-        ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
-        ("--beck-node-border", "var(--color-base-200, #e2e8f0)"),
-        ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.05), 0 4px 12px rgb(0 0 0 / 0.06)"),
-        ("--beck-text", "var(--color-base-800, #1e293b)"),
-        ("--beck-text-muted", "var(--color-base-500, #64748b)"),
-        ("--beck-text-faint", "var(--color-base-400, #94a3b8)"),
-        ("--beck-primary", "var(--color-primary-600, #175ddc)"),
-        ("--beck-success", "var(--color-emerald-500, #10b981)"),
-        ("--beck-warn", "var(--color-amber-500, #f59e0b)"),
-        ("--beck-danger", "var(--color-red-500, #ef4444)"),
-        ("--beck-info", "var(--color-violet-500, #8b5cf6)"),
-        ("--beck-neutral", "var(--color-base-400, #94a3b8)"),
-        ("--beck-group-border", "color-mix(in srgb, var(--beck-neutral) 45%, transparent)"),
-        ("--beck-group-label", "var(--beck-text-muted)"),
-        ("--beck-edge", "var(--color-base-300, #cbd5e1)"),
-        ("--beck-packet", "var(--beck-primary)"),
-        ("--beck-icon-bg", "var(--color-base-100, #f1f5f9)"),
-        ("--beck-accent", "var(--beck-primary)"),
-    };
+    private static string Sw(double n) => SvgWriter.Num(n);
 
-    // The nine dark overrides — styles.css:54-62.
-    private static readonly (string Name, string Value)[] DarkTokens =
-    {
-        ("--beck-surface", "var(--color-base-950, #0d1117)"),
-        ("--beck-node-bg", "var(--color-base-900, #161b22)"),
-        ("--beck-node-border", "var(--color-base-700, #30363d)"),
-        ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.4)"),
-        ("--beck-text", "var(--color-base-50, #f0f6fc)"),
-        ("--beck-text-muted", "var(--color-base-400, #8b949e)"),
-        ("--beck-text-faint", "var(--color-base-500, #6e7681)"),
-        ("--beck-edge", "var(--color-base-700, #30363d)"),
-        ("--beck-icon-bg", "var(--color-base-800, #21262d)"),
-    };
-
-    public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme)
+    public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style)
     {
         var sb = new StringBuilder();
         string scope = $".b-{h}";
+        StyleGeometry geo = style.Geometry;
+        StyleMix mix = style.Mix;
+        StyleStrokes strokes = style.Strokes;
 
         // ---- stratum 1: tokens ----
-        void Block(string selector, (string, string)[] tokens)
+        void Block(string selector, IReadOnlyList<(string Name, string Value)> tokens)
         {
             sb.Append(selector).Append('{');
             foreach (var (name, value) in tokens) sb.Append(name).Append(':').Append(value).Append(';');
@@ -64,20 +31,22 @@ internal static class Stylesheet
             sb.Append('}');
         }
 
+        var light = style.LightTokens.Entries;
+        var dark = style.DarkTokens.Entries;
         switch (theme)
         {
             case ThemeMode.Light:
-                Block(scope, LightTokens);
+                Block(scope, light);
                 break;
             case ThemeMode.Dark:
-                Block(scope, LightTokens);
-                Block(scope, DarkTokens);
+                Block(scope, light);
+                Block(scope, dark);
                 break;
             default: // auto — both host-controlled and standalone hooks
-                Block(scope, LightTokens);
-                Block($"[data-theme='dark'] {scope}", DarkTokens);
+                Block(scope, light);
+                Block($"[data-theme='dark'] {scope}", dark);
                 sb.Append("@media (prefers-color-scheme: dark){");
-                Block($":root:not([data-theme='light']) {scope}", DarkTokens);
+                Block($":root:not([data-theme='light']) {scope}", dark);
                 sb.Append('}');
                 break;
         }
@@ -86,22 +55,26 @@ internal static class Stylesheet
         sb.Append(scope).Append("{font-family:var(--beck-font);}");
         // fx-node wrapper: effect transforms (scale/shake) pivot on the card centre.
         sb.Append($"{scope} .beck-fx-node{{transform-box:fill-box;transform-origin:center;}}");
-        sb.Append($"{scope} .beck-packet-label{{font-family:var(--beck-font-mono);font-size:11px;font-weight:600;}}");
+        // Packet-label CSS (mono 11px 600) sourced from Typography.PacketLabel — deliberately
+        // distinct from the FontRoles.PacketLabel measurement spec (sans 10.56); the label is never
+        // measured, so the rendered type stands on its own style seam.
+        var pl = style.Typography.PacketLabel;
+        sb.Append($"{scope} .beck-packet-label{{font-family:{(pl.Mono ? "var(--beck-font-mono)" : "var(--beck-font)")};font-size:{Sw(pl.SizePx)}px;font-weight:{pl.Weight};}}");
 
         // node card
         sb.Append($"{scope} .beck-node{{")
           .Append("fill:var(--beck-node-bg);")
-          .Append("stroke:color-mix(in srgb, var(--beck-accent) 32%, var(--beck-node-border));")
-          .Append("stroke-width:1.5;")
-          .Append("filter:drop-shadow(0 1px 3px rgb(0 0 0/.05)) drop-shadow(0 4px 12px rgb(0 0 0/.06));")
+          .Append($"stroke:color-mix(in srgb, var(--beck-accent) {mix.NodeStroke}%, var(--beck-node-border));")
+          .Append($"stroke-width:{Sw(geo.NodeStroke)};")
+          .Append($"filter:{geo.NodeShadow};")
           .Append("}");
-        sb.Append($"[data-theme='dark'] {scope} .beck-node,@media (prefers-color-scheme:dark){{:root:not([data-theme='light']) {scope} .beck-node}}{{filter:drop-shadow(0 1px 3px rgb(0 0 0/.3)) drop-shadow(0 4px 14px rgb(0 0 0/.4));}}");
-        sb.Append($"{scope} .beck-node--external{{stroke-dasharray:5 4;}}");
+        sb.Append($"[data-theme='dark'] {scope} .beck-node,@media (prefers-color-scheme:dark){{:root:not([data-theme='light']) {scope} .beck-node}}{{filter:{geo.NodeShadowDark};}}");
+        sb.Append($"{scope} .beck-node--external{{stroke-dasharray:{strokes.NodeDash};}}");
         sb.Append($"{scope} .beck-node--subtle{{opacity:.72;}}");
-        sb.Append($"{scope} .beck-node--ghost{{fill:transparent;stroke-dasharray:5 4;filter:none;}}");
+        sb.Append($"{scope} .beck-node--ghost{{fill:transparent;stroke-dasharray:{strokes.NodeDash};filter:none;}}");
 
         // icon chip
-        sb.Append($"{scope} .beck-icon-chip{{fill:color-mix(in srgb, var(--beck-accent) 15%, var(--beck-icon-bg));}}");
+        sb.Append($"{scope} .beck-icon-chip{{fill:color-mix(in srgb, var(--beck-accent) {mix.IconChip}%, var(--beck-icon-bg));}}");
         sb.Append($"{scope} .beck-node--ghost .beck-icon-chip{{fill:transparent;}}");
         sb.Append($"{scope} .beck-icon{{color:var(--beck-accent);}}");
 
@@ -111,42 +84,42 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-status-inline{{fill:var(--beck-accent);}}");
 
         // status pill
-        sb.Append($"{scope} .beck-status-bg{{fill:color-mix(in srgb, var(--beck-accent) 14%, transparent);}}");
+        sb.Append($"{scope} .beck-status-bg{{fill:color-mix(in srgb, var(--beck-accent) {mix.StatusPill}%, transparent);}}");
         sb.Append($"{scope} .beck-status-text{{fill:var(--beck-accent);}}");
 
         // group
-        sb.Append($"{scope} .beck-group{{fill:none;stroke:var(--beck-group-border);stroke-width:1.5;stroke-dasharray:6 6;}}");
+        sb.Append($"{scope} .beck-group{{fill:none;stroke:var(--beck-group-border);stroke-width:{Sw(geo.GroupStroke)};stroke-dasharray:{strokes.GroupDash};}}");
         sb.Append($"{scope} .beck-group-label-bg{{fill:var(--beck-surface);}}");
         sb.Append($"{scope} .beck-group-label{{fill:var(--beck-group-label);}}");
 
         // state pills reuse the card treatment; start/end pseudo-states
         sb.Append($"{scope} .beck-node--start{{fill:var(--beck-text-muted);}}");
-        sb.Append($"{scope} .beck-node--end{{fill:none;stroke:var(--beck-text-muted);stroke-width:2;}}");
+        sb.Append($"{scope} .beck-node--end{{fill:none;stroke:var(--beck-text-muted);stroke-width:{Sw(geo.EndNodeStroke)};}}");
         sb.Append($"{scope} .beck-end-dot{{fill:var(--beck-text-muted);}}");
 
         // class compartment card
-        sb.Append($"{scope} .beck-class-head{{fill:color-mix(in srgb, var(--beck-accent) 10%, transparent);}}");
-        sb.Append($"{scope} .beck-class-head-border{{stroke:color-mix(in srgb, var(--beck-accent) 28%, var(--beck-node-border));stroke-width:1;}}");
-        sb.Append($"{scope} .beck-class-divider{{stroke:var(--beck-node-border);stroke-width:1;}}");
+        sb.Append($"{scope} .beck-class-head{{fill:color-mix(in srgb, var(--beck-accent) {mix.ClassHead}%, transparent);}}");
+        sb.Append($"{scope} .beck-class-head-border{{stroke:color-mix(in srgb, var(--beck-accent) {mix.ClassHeadBorder}%, var(--beck-node-border));stroke-width:{Sw(geo.HairlineStroke)};}}");
+        sb.Append($"{scope} .beck-class-divider{{stroke:var(--beck-node-border);stroke-width:{Sw(geo.HairlineStroke)};}}");
         sb.Append($"{scope} .beck-class-stereo{{fill:var(--beck-text-muted);}}");
         sb.Append($"{scope} .beck-class-title{{fill:var(--beck-text);}}");
         sb.Append($"{scope} .beck-class-field{{fill:var(--beck-text-muted);}}");
         sb.Append($"{scope} .beck-class-method{{fill:var(--beck-text);}}");
 
         // sequence scenery
-        sb.Append($"{scope} .beck-lifeline{{stroke-width:2;stroke-dasharray:6 7;}}");
-        sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) 45%, transparent));}}");
-        sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) 40%, transparent);stroke-width:1;}}");
-        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) 34%, var(--beck-text));}}");
+        sb.Append($"{scope} .beck-lifeline{{stroke-width:{Sw(geo.LifelineStroke)};stroke-dasharray:{strokes.LifelineDash};}}");
+        sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) {mix.ActivationGlow}%, transparent));}}");
+        sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) {mix.ChipStroke}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
+        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {mix.MsgText}%, var(--beck-text));}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-chip{{stroke:none;}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-text,{scope} .beck-msg-text--bare{{fill:var(--beck-text-muted);}}");
-        sb.Append($"{scope} .beck-band-box{{fill:color-mix(in srgb, var(--beck-accent) 5%, transparent);stroke:color-mix(in srgb, var(--beck-accent) 30%, transparent);stroke-width:1.5;stroke-dasharray:6 6;}}");
-        sb.Append($"{scope} .beck-band-chip{{fill:var(--beck-surface);stroke:color-mix(in srgb, var(--beck-accent) 40%, transparent);stroke-width:1;}}");
-        sb.Append($"{scope} .beck-band-label{{fill:color-mix(in srgb, var(--beck-accent) 70%, var(--beck-text));}}");
+        sb.Append($"{scope} .beck-band-box{{fill:color-mix(in srgb, var(--beck-accent) {mix.BandFill}%, transparent);stroke:color-mix(in srgb, var(--beck-accent) {mix.BandStroke}%, transparent);stroke-width:{Sw(geo.BandBoxStroke)};stroke-dasharray:{strokes.GroupDash};}}");
+        sb.Append($"{scope} .beck-band-chip{{fill:var(--beck-surface);stroke:color-mix(in srgb, var(--beck-accent) {mix.ChipStroke}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
+        sb.Append($"{scope} .beck-band-label{{fill:color-mix(in srgb, var(--beck-accent) {mix.BandLabel}%, var(--beck-text));}}");
 
         // edges + labels
-        sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}}");
-        sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:3px;stroke-linejoin:round;}}");
+        sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:round;stroke-linejoin:round;}}");
+        sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:{geo.EdgeLabelHalo};stroke-linejoin:round;}}");
 
         // title block
         sb.Append($"{scope} .beck-title{{fill:var(--beck-text);}}");

@@ -17,12 +17,14 @@ internal sealed class LabelPlacer
     private readonly List<Rect> _obstacles;
     private readonly double _w, _h;
     private readonly List<Rect> _placed = new();
+    private readonly FontRoleSpec _edgeLabel;
 
-    public LabelPlacer(IEnumerable<Rect> nodeRects, double width, double height)
+    public LabelPlacer(IEnumerable<Rect> nodeRects, double width, double height, BeckStyle style)
     {
         _obstacles = nodeRects.ToList();
         _w = width;
         _h = height;
+        _edgeLabel = style.Typography.Roles.Of(FontRole.EdgeLabel);
     }
 
     private static string N(double n) => SvgWriter.Num(n);
@@ -32,13 +34,13 @@ internal sealed class LabelPlacer
     {
         double w = m.Measure(text, FontRole.EdgeLabel).Width;
         if (w <= 0) w = text.Length * 7;
-        double h = 11.2; // edge-label ink height ≈ font size
+        double h = _edgeLabel.SizePx; // edge-label ink height ≈ font size
         double hw = w / 2 + LabelPadX, hh = h / 2 + LabelPadY;
         List<Rect> all = _placed.Count > 0 ? _obstacles.Concat(_placed).ToList() : _obstacles;
         Box box = ChooseLabelBox(points, hw, hh, all, otherLines, PolylineMidpoint(points));
         double tx = box.Anchor == "start" ? box.Cx - w / 2 : box.Anchor == "end" ? box.Cx + w / 2 : box.Cx;
         _placed.Add(new Rect(box.Cx - box.Hw, box.Cy - box.Hh, box.Hw * 2, box.Hh * 2));
-        return $"<text class=\"beck-edge-label\" x=\"{I(tx)}\" y=\"{I(box.Cy)}\" text-anchor=\"{box.Anchor}\" dominant-baseline=\"central\" font-size=\"11.2\" font-weight=\"500\" textLength=\"{N(w)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(text)}</text>";
+        return $"<text class=\"beck-edge-label\" x=\"{I(tx)}\" y=\"{I(box.Cy)}\" text-anchor=\"{box.Anchor}\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{_edgeLabel.Weight}\" textLength=\"{N(w)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(text)}</text>";
     }
 
     public string EndLabel(IReadOnlyList<Point> points, string text, bool atStart, ITextMeasurer m)
@@ -53,7 +55,7 @@ internal sealed class LabelPlacer
         double w = m.Measure(text, FontRole.EdgeLabel).Width;
         double hw = text.Length * 3.5 + 3;
         _placed.Add(new Rect(px - hw, py - 7, hw * 2, 14));
-        return $"<text class=\"beck-edge-label\" x=\"{I(px)}\" y=\"{I(py)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"11.2\" font-weight=\"500\" textLength=\"{N(w)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(text)}</text>";
+        return $"<text class=\"beck-edge-label\" x=\"{I(px)}\" y=\"{I(py)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{_edgeLabel.Weight}\" textLength=\"{N(w)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(text)}</text>";
     }
 
     private double BoxGap(Box box, Rect r)
