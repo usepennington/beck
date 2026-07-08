@@ -24,7 +24,7 @@
     <PackageVersion Include="BlazorMonaco" Version="3.5.0" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Beck: pure-C# SVG renderer (the-bad-idea.md). YamlDotNet is its only runtime
+    <!-- Beck: pure-C# SVG renderer. YamlDotNet is its only runtime
          dependency; SkiaSharp/HarfBuzzSharp back the optional Beck.Skia
          exact-measurement plug-in. -->
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />

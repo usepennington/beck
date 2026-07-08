@@ -69,9 +69,6 @@ nodes, transitions→edges; classes→compartment-card nodes, relations→edges 
 diagrams have their own layout+router but reuse everything else; their derived flow pins each
 packet to its row via the flow step's `edge` id (many messages share one from/to pair).
 
-`the-bad-idea.md` is the full design spec for this engine (constants, algorithms, the CSS
-compilation model) — consult it before changing layout/route/animate internals.
-
 ## Load-bearing invariants (violating these breaks things subtly)
 
 - **The model fills every default.** `Model/` turns raw YAML into a `DiagramModel` where nothing is

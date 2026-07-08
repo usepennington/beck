@@ -31,7 +31,7 @@ builder.Services.AddPennington(penn =>
 builder.Services.AddSingleton<BeckDiagramRenderer>();
 
 // Render ```beck fences to static, self-animating inline SVG at build time via the
-// pure-C# engine (the-bad-idea.md, M10) — content diagrams need no client JS. Priority
+// pure-C# engine — content diagrams need no client JS. Priority
 // 500 beats the tree-sitter source-embed preprocessor; every other fence is deferred.
 builder.Services.AddSingleton<Pennington.Markdown.Extensions.ICodeBlockPreprocessor, BeckSvgPreprocessor>();
 
