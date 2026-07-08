@@ -62,6 +62,7 @@ internal static class Defaults
             [PacketShape.Dot] = null,
             [PacketShape.Circle] = 12,
             [PacketShape.Ring] = 12,
+            [PacketShape.Square] = 12,
         };
 
     /// <summary>Per-edge-kind packet motion: radius, speed, glow, and ease token.</summary>

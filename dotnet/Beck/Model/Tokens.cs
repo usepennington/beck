@@ -29,7 +29,9 @@ internal enum EdgeKind { Data, Control, Async, Dependency }
 
 internal enum PacketEase { Linear, Smooth, Accelerate, Decelerate, Expo, Sine, Steps, Bounce }
 
-internal enum PacketShape { Dot, Circle, Ring }
+// Square is not an author-facing token (no YAML/authoring-API value maps to it) — it exists only
+// as a StyleMotion.PacketGlyph default a style can pick for the "block packet" identity (terminal).
+internal enum PacketShape { Dot, Circle, Ring, Square }
 
 internal enum Side { Top, Bottom, Left, Right }
 

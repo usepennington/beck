@@ -9,7 +9,7 @@ namespace Beck.Rendering.Animate;
 /// everything else is sampled into a CSS <c>linear()</c> timing function at
 /// adaptive points, visually indistinguishable from GSAP (§9.3/§10).
 /// </summary>
-internal sealed record Ease(string Token, Func<double, double> Fn)
+internal sealed record Ease(string Token, Func<double, double> Fn, int Steps = 12)
 {
     public bool IsLinear => Token == "none";
     public bool IsSteps => Token.StartsWith("steps", StringComparison.Ordinal);
@@ -45,6 +45,11 @@ internal static class Easing
             t == 0 ? 0 : t == 1 ? 1 : a * Math.Pow(2, -10 * t) * Math.Sin((t - s) * (2 * Math.PI) / p) + 1);
     }
 
+    /// <summary>A <c>steps(n)</c> ease with an arbitrary step count (mirrors <see cref="Steps12"/>,
+    /// which is just <c>StepsN(12)</c>) — used by <see cref="StyleMotion.TrailSteps"/> for a
+    /// style-chosen hard-cut trail reveal.</summary>
+    public static Ease StepsN(int n) => new($"steps({n})", t => Math.Floor(t * n) / Math.Max(1, n), Math.Max(1, n));
+
     private static double BounceOutFn(double t)
     {
         const double n1 = 7.5625, d1 = 2.75;
@@ -72,7 +77,7 @@ internal static class Easing
     public static string ToCss(Ease e)
     {
         if (e.IsLinear) return "linear";
-        if (e.IsSteps) return "steps(12)";
+        if (e.IsSteps) return $"steps({e.Steps})";
         return Sample(e.Fn);
     }
 

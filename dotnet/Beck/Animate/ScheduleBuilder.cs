@@ -164,7 +164,7 @@ internal static class ScheduleBuilder
                 string? hopLabel = i == chain.Count - 2 ? label : null;
 
                 PacketKindStyle ks = Defaults.PacketKindStyle[fe.Kind];
-                PacketShape shape = k.Shape ?? PacketShape.Dot;
+                PacketShape shape = k.Shape ?? StyleGlyph(motion.PacketGlyph) ?? PacketShape.Dot;
                 double size = k.Size ?? Defaults.PacketShapeSize[shape] ?? ks.Size;
                 double speed = k.Speed ?? ks.Speed;
                 bool glow = k.Glow ?? ks.Glow;
@@ -306,6 +306,16 @@ internal static class ScheduleBuilder
 
     private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>
         accentOf.TryGetValue(node, out string? a) ? a : "var(--beck-primary)";
+
+    /// <summary>Maps the public, style-scoped <see cref="Beck.PacketGlyph"/> to the internal
+    /// per-hop <see cref="PacketShape"/> the schedule/compiler actually render.</summary>
+    private static PacketShape? StyleGlyph(Beck.PacketGlyph? glyph) => glyph switch
+    {
+        Beck.PacketGlyph.Dot => PacketShape.Dot,
+        Beck.PacketGlyph.Ring => PacketShape.Ring,
+        Beck.PacketGlyph.Square => PacketShape.Square,
+        _ => null,
+    };
 
     /// <summary>The landing point of a hop: the path's end (forward) or start (reversed).</summary>
     private static (double X, double Y) EndPoint(string d, bool reversed)

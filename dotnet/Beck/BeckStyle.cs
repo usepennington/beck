@@ -3,6 +3,23 @@ using Beck.Rendering.Text;
 namespace Beck;
 
 /// <summary>
+/// The packet glyph a style prefers by default (<see cref="StyleMotion.PacketGlyph"/>) — a small,
+/// public, style-scoped vocabulary distinct from the per-packet author-facing
+/// <see cref="Beck.PacketShape"/> (<c>Dot|Circle|Ring</c>), since a style-level default may pick a
+/// shape no individual flow step can yet author. <c>Train</c> (metro's elongated capsule packet) is
+/// Phase-4 artwork and intentionally not a member here yet.
+/// </summary>
+public enum PacketGlyph
+{
+    /// <summary>The classic filled circle.</summary>
+    Dot,
+    /// <summary>A stroked (unfilled) ring.</summary>
+    Ring,
+    /// <summary>A centred square/block — terminal's identity glyph.</summary>
+    Square,
+}
+
+/// <summary>
 /// The complete visual-styling seam for a Beck diagram: every value that used to be a
 /// hardcoded literal in the renderer, grouped into data-only sub-records. Phase 1 introduces
 /// this record and its <see cref="Classic"/> instance (today's exact look) with no visual
@@ -137,6 +154,7 @@ public sealed record BeckStyle
             // is a separate, presently-unreferenced encoding kept verbatim in the token tables).
             NodeShadow = "drop-shadow(0 1px 3px rgb(0 0 0/.05)) drop-shadow(0 4px 12px rgb(0 0 0/.06))",
             NodeShadowDark = "drop-shadow(0 1px 3px rgb(0 0 0/.3)) drop-shadow(0 4px 14px rgb(0 0 0/.4))",
+            NarrationShadow = "drop-shadow(0 4px 12px rgb(0 0 0/.06))",
 
             // border insets are derived from NodeStroke (see StyleGeometry) — no independent literal.
 
@@ -219,6 +237,8 @@ public sealed record BeckStyle
             RingStroke = 2.5,
             PacketRingMin = 2.5,
             PacketRingFactor = 0.28,
+            GlowEnabled = true,
+            EffectAmplitude = 1.0,
         };
 
         return new BeckStyle
@@ -263,6 +283,15 @@ public sealed record StyleTypography
     public required FontRoleTable Roles { get; init; }
 
     /// <summary>
+    /// The embedded metrics table the default measurer sizes against — picked to match
+    /// <see cref="SansFamily"/> so layout stays correct with no font dependency. Defaults to
+    /// <see cref="MetricsFont.Inter"/> (classic). Only steers the built-in fallback measurer: an
+    /// explicit <see cref="Rendering.SvgRenderOptions.Measurer"/> (e.g. Skia) overrides it. Mono roles resolve
+    /// against the shared IBM Plex Mono coverage regardless of this key.
+    /// </summary>
+    public MetricsFont MetricsFont { get; init; } = MetricsFont.Inter;
+
+    /// <summary>
     /// The packet-label CSS typography (the <c>.beck-packet-label</c> rule). This is the rendered
     /// typography for flow packet labels; it is intentionally separate from the
     /// <see cref="FontRole.PacketLabel"/> entry in <see cref="Roles"/>, which is a measurement spec
@@ -270,6 +299,18 @@ public sealed record StyleTypography
     /// type here.
     /// </summary>
     public required FontRoleSpec PacketLabel { get; init; }
+
+    /// <summary>
+    /// When <c>true</c> (editorial's textbook-figure identity), the narration caption bar renders as a
+    /// numbered figure caption: each beat's text is prefixed with a deterministic <c>Fig. N — </c>
+    /// (<c>N</c> is the 1-based beat order, derived from content so it is stable across renders) and
+    /// the caption text is set in serif <em>italic</em>. The prefix is prepended <em>before</em> the
+    /// narration word-wrap/measurement, so the measured and rendered strings stay identical (no
+    /// <c>textLength</c> desync — narration text is centred and un-guarded either way). <c>false</c>
+    /// (classic, and every style that doesn't set it) emits the caption verbatim and upright —
+    /// byte-identical.
+    /// </summary>
+    public bool NarrationFigureCaption { get; init; }
 }
 
 /// <summary>Named, fixed <c>color-mix(in srgb, …)</c> percentages (whole numbers).</summary>
@@ -318,6 +359,28 @@ public sealed record StyleStrokes
     public required string EdgeDash { get; init; }
     /// <summary>Animated stream-overlay marching dash (the flow "stream" edge effect).</summary>
     public required string StreamDash { get; init; }
+
+    /// <summary>
+    /// When <c>true</c>, <em>every</em> architecture/sequence edge carries <see cref="EdgeDash"/> on
+    /// its base <c>.beck-edge</c> stroke by default (blueprint's technical-drawing dashed lines), not
+    /// only edges the author marked <c>style: dashed</c>. Purely a stroke treatment — the edge stays
+    /// one continuous <c>&lt;path&gt;</c>, so packets/trails (which ride that path via
+    /// <c>offset-path</c>) and routing are untouched. <c>false</c> (classic, and every style that
+    /// doesn't set it) leaves the base edge solid and byte-identical.
+    /// </summary>
+    public bool DashedEdges { get; init; }
+
+    /// <summary>
+    /// When <c>true</c> (glow's luminous edges), a single <c>&lt;linearGradient&gt;</c> — defined once
+    /// in the diagram <c>&lt;defs&gt;</c> with an id scoped by the 8-char content hash
+    /// (<c>beck-edge-grad-{hash}</c>) and stops built from <c>color-mix</c> over the <c>--beck-*</c>
+    /// tokens (no resolved literals) — paints edges that use the <em>default</em> edge colour
+    /// (<c>var(--beck-edge)</c>). Author-coloured edges keep their explicit colour, and every edge is
+    /// still one continuous <c>&lt;path&gt;</c>, so packets/trails/markers and routing are untouched.
+    /// <c>false</c> (classic, and every style that doesn't set it) emits no gradient and paints edges
+    /// flat — byte-identical.
+    /// </summary>
+    public bool GradientEdges { get; init; }
 }
 
 /// <summary>Effect durations, sequence-dim ratios, and effect stroke widths.</summary>
@@ -345,6 +408,45 @@ public sealed record StyleMotion
     public required double PacketRingMin { get; init; }
     /// <summary>Ring packet stroke width as a fraction of packet size.</summary>
     public required double PacketRingFactor { get; init; }
+    /// <summary>Whether a packet's authored <c>glow: true</c> applies the Gaussian-blur filter.
+    /// Off styles still render the packet dot/ring itself — only the decorative bloom is
+    /// suppressed, so the packet feature stays fully available.</summary>
+    public required bool GlowEnabled { get; init; }
+    /// <summary>Uniform amplitude multiplier (0–1 typical) on the peak opacity/stroke-width of the
+    /// ripple, highlight/fail border-glow, impact-ring, and working-ring effects — a single dial for
+    /// "motion stays but understated" styles. <c>1.0</c> reproduces classic's exact peaks.</summary>
+    public required double EffectAmplitude { get; init; }
+
+    /// <summary>
+    /// The default packet glyph a style prefers when the author's flow step doesn't request one —
+    /// a third fallback tier under the author's explicit <c>packet.shape</c>: <c>k.Shape ??
+    /// style.Motion.PacketGlyph ?? Dot</c> (mapped through <see cref="PacketGlyph"/> at the schedule
+    /// boundary, since a style-level default may pick a glyph no individual packet step can yet
+    /// author, e.g. <see cref="Beck.PacketGlyph.Square"/>). <c>null</c> (classic, and every style
+    /// that doesn't set this) leaves the existing two-tier <c>k.Shape ?? Dot</c> resolution untouched.
+    /// </summary>
+    public PacketGlyph? PacketGlyph { get; init; }
+
+    /// <summary>
+    /// When set, the packet <em>trail</em>'s reveal (the <c>beck-trail</c> stroke-dashoffset track)
+    /// uses a <c>steps(n)</c> timing function instead of the packet's own ease — a blocky, hard-cut
+    /// reveal ("hard-step trails", terminal's identity) instead of a smooth wipe. The travelling
+    /// packet glyph keeps its normal per-edge-kind ease; only the trail reveal steps. <c>null</c>
+    /// (classic) leaves the trail using the packet's ease, unchanged.
+    /// </summary>
+    public int? TrailSteps { get; init; }
+
+    /// <summary>
+    /// Multiplier on the sequence-storytelling reveal ramp durations — the fade-in windows that
+    /// draw each message row, chip, and section band up from its dimmed state as the flow reaches it
+    /// (<c>CssCompiler.SequenceChoreoCss</c>). A value <c>&gt; 1</c> stretches those windows so the
+    /// scenery draws on slowly and softly (editorial's textbook-figure reveal) — the <em>existing</em>
+    /// sequence-reveal choreography with a longer ease, not a new mechanism. Only the reveal ramp
+    /// lengthens; the initial dims, hold, and finale are unchanged, and the whole track stays compiled
+    /// onto the shared cycle (no <c>animation-delay</c>). <c>1.0</c> (classic, and every style that
+    /// doesn't set it) reproduces the exact historical 0.25s/0.4s ramps — byte-identical.
+    /// </summary>
+    public double SequenceRevealScale { get; init; } = 1.0;
 }
 
 /// <summary>Corner radii, stroke widths, border insets, and the card box-model constants.</summary>
@@ -393,6 +495,19 @@ public sealed record StyleGeometry
     public required string NodeShadow { get; init; }
     /// <summary>Card drop-shadow filter (dark override).</summary>
     public required string NodeShadowDark { get; init; }
+    /// <summary>Narration-bar drop-shadow filter (a CSS <c>filter</c> value, e.g. <c>none</c> to
+    /// turn it off).</summary>
+    public required string NarrationShadow { get; init; }
+
+    /// <summary>
+    /// Extra CSS declarations painted onto the diagram's root <c>&lt;svg&gt;</c> box (the scope
+    /// selector) — blueprint's faint graph-paper grid via a token-driven <c>background-image</c>. The
+    /// value is a raw declaration list (e.g. <c>background-image:…;background-size:…;</c>) appended
+    /// inside the root rule after <c>font-family</c>; keep colours in <c>var(--beck-*)</c> tokens so it
+    /// theme-adapts and never emits a resolved literal into shape CSS. <c>""</c> (classic, and every
+    /// style that doesn't set it) emits nothing and stays byte-identical.
+    /// </summary>
+    public string SurfaceBackground { get; init; } = "";
 
     // ---- insets (derived from NodeStroke — the single source of truth) ----
     /// <summary>Render inset per side: half the node stroke, so a centre-aligned stroke stays inside
