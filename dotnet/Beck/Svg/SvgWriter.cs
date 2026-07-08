@@ -9,6 +9,10 @@ internal static class SvgWriter
     /// <summary>Format a coordinate: 2-decimal, JS <c>Math.round</c>, invariant culture.</summary>
     public static string Num(double n) => Js.Str(Js.Round(n * 100) / 100);
 
+    /// <summary>Format a letter-spacing em value as a CSS length (e.g. 0.04 → <c>0.04em</c>,
+    /// -0.02 → <c>-0.02em</c>). Prints the em value directly (shortest round-trippable).</summary>
+    public static string Ls(double em) => Js.Str(em) + "em";
+
     /// <summary>Escape text content (&amp;, &lt;, &gt;).</summary>
     public static string Text(string s)
     {

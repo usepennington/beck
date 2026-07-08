@@ -18,6 +18,9 @@ public readonly record struct FontRoleSpec(
 /// </summary>
 public static class FontRoles
 {
+    /// <summary>The classic role table, wrapping <see cref="Of"/> — the single source of truth
+    /// for both measurement (which calls <see cref="Of"/> directly) and rendering (which reads
+    /// through a style's <see cref="FontRoleTable"/>). A custom style supplies its own table.</summary>
     public static FontRoleSpec Of(FontRole role) => role switch
     {
         FontRole.CardTitle       => new(false, 600, 14,    0,     false),
@@ -40,4 +43,26 @@ public static class FontRoles
         FontRole.Narration       => new(false, 400, 14.72, 0,     false),
         _ => throw new ArgumentOutOfRangeException(nameof(role)),
     };
+}
+
+/// <summary>
+/// A style-scoped resolver from <see cref="FontRole"/> to <see cref="FontRoleSpec"/>. The classic
+/// table delegates to <see cref="FontRoles.Of"/> (no data duplicated; the measurement path is
+/// unchanged); a custom style constructs one from its own spec map. Keeping the role table behind
+/// this indirection lets rendering read style-scoped typography without touching
+/// <see cref="ITextMeasurer"/> — the card sizer resolves roles around measurement calls.
+/// </summary>
+public sealed class FontRoleTable
+{
+    private readonly Func<FontRole, FontRoleSpec> _resolve;
+
+    /// <summary>Wrap an arbitrary resolver (the classic table passes <see cref="FontRoles.Of"/>).</summary>
+    public FontRoleTable(Func<FontRole, FontRoleSpec> resolve) => _resolve = resolve;
+
+    /// <summary>Build a table from an explicit spec map (custom styles).</summary>
+    public FontRoleTable(IReadOnlyDictionary<FontRole, FontRoleSpec> specs) =>
+        _resolve = role => specs.TryGetValue(role, out var s) ? s : throw new ArgumentOutOfRangeException(nameof(role));
+
+    /// <summary>Resolve a role's concrete typography.</summary>
+    public FontRoleSpec Of(FontRole role) => _resolve(role);
 }

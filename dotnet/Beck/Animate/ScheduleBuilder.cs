@@ -93,12 +93,11 @@ internal sealed record Schedule(
 /// </summary>
 internal static class ScheduleBuilder
 {
-    // Effect sub-timeline lengths (seconds) — must match effects.ts so the schedule
-    // duration lands where GSAP's tl.duration() would.
-    private const double PulseDur = 0.6, HighlightDur = 0.7, FailDur = 1.0;
-
-    public static Schedule Build(DiagramModel model, IReadOnlyList<FlowEdge> edges)
+    public static Schedule Build(DiagramModel model, IReadOnlyList<FlowEdge> edges, StyleMotion motion)
     {
+        // Effect sub-timeline lengths (seconds) — from the style so the schedule duration and the
+        // compiler's keyframe windows stay in lockstep (they read the same fields).
+        double PulseDur = motion.PulseDur, HighlightDur = motion.HighlightDur, FailDur = motion.FailDur;
         FlowModel flow = model.Flow;
         var packets = new List<PacketHop>();
         var cards = new List<CardFx>();

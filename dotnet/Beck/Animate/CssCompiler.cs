@@ -25,6 +25,8 @@ internal sealed class CssCompiler
     private readonly string _h;
     private readonly Schedule _s;
     private readonly IReadOnlyList<NodeBox> _boxes;
+    private readonly StyleMotion _motion;
+    private readonly StyleStrokes _strokes;
     private readonly SeqChoreo? _choreo;
     private readonly bool _scrub;
     private readonly double _t;
@@ -32,11 +34,13 @@ internal sealed class CssCompiler
     private readonly string _cyc;
     private bool _needGlow;
 
-    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes, SeqChoreo? choreo = null, bool scrub = false)
+    public CssCompiler(Schedule schedule, string hash, IReadOnlyList<NodeBox> boxes, StyleMotion motion, StyleStrokes strokes, SeqChoreo? choreo = null, bool scrub = false)
     {
         _s = schedule;
         _h = hash;
         _boxes = boxes;
+        _motion = motion;
+        _strokes = strokes;
         _choreo = choreo;
         _scrub = scrub;
         _t = schedule.Duration + schedule.RepeatDelay;
@@ -68,16 +72,16 @@ internal sealed class CssCompiler
             string col = SvgWriter.Attr(c.Color);
             string box = $"x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\"";
             if (c.Kind == CardFxKind.Pulse)
-                sb.Append($"<rect class=\"brip{j}-{_h}\" {box} stroke-width=\"2\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+                sb.Append($"<rect class=\"brip{j}-{_h}\" {box} stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
             else // highlight / fail — a glowing border overlay
-                sb.Append($"<rect class=\"bgl{j}-{_h}\" {box} stroke-width=\"2\" opacity=\"0\" style=\"filter:drop-shadow(0 0 6px {c.Color})\"/>");
+                sb.Append($"<rect class=\"bgl{j}-{_h}\" {box} stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"filter:drop-shadow(0 0 6px {c.Color})\"/>");
         }
 
         // impact rings (the `impact` knob) — expanding ring at each landing point.
         for (int j = 0; j < _s.Impacts.Count; j++)
         {
             ImpactFx im = _s.Impacts[j];
-            sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"2.5\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+            sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
         }
 
         // edge overlays: activate (solid recolor) + stream (marching dashes).
@@ -86,9 +90,9 @@ internal sealed class CssCompiler
             EdgeFx ef = _s.Edges[j];
             string col = SvgWriter.Attr(ef.Color);
             if (ef.Kind == EdgeFxKind.Activate)
-                sb.Append($"<path class=\"bact{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"2\" opacity=\"0\"/>");
+                sb.Append($"<path class=\"bact{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\"/>");
             else
-                sb.Append($"<path class=\"bstr{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"2.5\" stroke-dasharray=\"5 9\" opacity=\"0\"/>");
+                sb.Append($"<path class=\"bstr{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" stroke-dasharray=\"{_strokes.StreamDash}\" opacity=\"0\"/>");
         }
 
         // working breathing rings (card bounds; the pulse expands via stroke-width).
@@ -104,7 +108,7 @@ internal sealed class CssCompiler
         {
             PacketHop p = _s.Packets[i];
             double off = p.Reversed ? -p.Length : p.Length;
-            sb.Append($"<path class=\"beck-trail bt{i}-{_h}\" d=\"{p.D}\" fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"2\" ")
+            sb.Append($"<path class=\"beck-trail bt{i}-{_h}\" d=\"{p.D}\" fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" ")
               .Append($"style=\"stroke-dasharray:{Nm(p.Length)};stroke-dashoffset:{Nm(off)}\"/>");
         }
         // packet dots
@@ -112,7 +116,7 @@ internal sealed class CssCompiler
         {
             PacketHop p = _s.Packets[i];
             string fillStroke = p.Shape == PacketShape.Ring
-                ? $"fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"{Nm(Math.Max(2.5, p.Size * 0.28))}\""
+                ? $"fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"{Nm(Math.Max(_motion.PacketRingMin, p.Size * _motion.PacketRingFactor))}\""
                 : $"fill=\"{SvgWriter.Attr(p.Color)}\"";
             string glow = p.Glow ? $" filter=\"url(#beck-glow-{_h})\"" : "";
             if (p.Glow) _needGlow = true;
@@ -196,18 +200,16 @@ internal sealed class CssCompiler
     }
 
     // ---- sequence storytelling: dim the scenery, reveal each row as its packet fires ----
-    private const double DimLine = 0.15, DimLabel = 0.35, DimAct = 0.25, DimBand = 0.45;
-
     private void SequenceChoreoCss(StringBuilder sb)
     {
         if (_choreo is null) return;
         double finaleAt = Math.Max(0, _s.Duration - 0.75);
 
         // initial dims (the whole block is motion-guarded by the caller).
-        sb.Append($".b-{_h} .beck-msg path{{opacity:{G(DimLine)};}}");
-        sb.Append($".b-{_h} .beck-msg-chip,.b-{_h} .beck-msg-text{{opacity:{G(DimLabel)};}}");
-        sb.Append($".b-{_h} .beck-band{{opacity:{G(DimBand)};}}");
-        sb.Append($".b-{_h} .beck-activation{{opacity:{G(DimAct)};}}");
+        sb.Append($".b-{_h} .beck-msg path{{opacity:{G(_motion.DimLine)};}}");
+        sb.Append($".b-{_h} .beck-msg-chip,.b-{_h} .beck-msg-text{{opacity:{G(_motion.DimLabel)};}}");
+        sb.Append($".b-{_h} .beck-band{{opacity:{G(_motion.DimBand)};}}");
+        sb.Append($".b-{_h} .beck-activation{{opacity:{G(_motion.DimAct)};}}");
 
         // first departure + arrival per message edge.
         var revealAt = new Dictionary<string, (double At, double Arr)>();
@@ -218,10 +220,10 @@ internal sealed class CssCompiler
         foreach (var (id, t) in revealAt)
         {
             string esc = id.Replace("\"", "\\\"");
-            RevealTrack(sb, $"kchl{idx}-{_h}", $".b-{_h} .beck-msg[data-msg=\"{esc}\"] path", DimLine, t.At, 0.25, finaleAt);
+            RevealTrack(sb, $"kchl{idx}-{_h}", $".b-{_h} .beck-msg[data-msg=\"{esc}\"] path", _motion.DimLine, t.At, 0.25, finaleAt);
             RevealTrack(sb, $"kcht{idx}-{_h}",
                 $".b-{_h} .beck-msg[data-msg=\"{esc}\"] .beck-msg-chip,.b-{_h} .beck-msg[data-msg=\"{esc}\"] .beck-msg-text",
-                DimLabel, t.At, 0.25, finaleAt);
+                _motion.DimLabel, t.At, 0.25, finaleAt);
             idx++;
         }
 
@@ -236,7 +238,7 @@ internal sealed class CssCompiler
 
         // section bands: light up in phase order.
         for (int i = 0; i < _choreo.BandCount && i < _s.Phases.Count; i++)
-            RevealTrack(sb, $"kchb{i}-{_h}", $".b-{_h} .beck-band[data-band=\"{i}\"]", DimBand, _s.Phases[i], 0.4, finaleAt);
+            RevealTrack(sb, $"kchb{i}-{_h}", $".b-{_h} .beck-band[data-band=\"{i}\"]", _motion.DimBand, _s.Phases[i], 0.4, finaleAt);
     }
 
     // dim -> (reveal to 1 over revealDur at revealAt) -> hold -> (finale back to dim over 0.6s)
@@ -258,17 +260,17 @@ internal sealed class CssCompiler
         string kf = $"kcha{i}-{_h}";
         double e = 0.01;
         sb.Append($".b-{_h} .beck-activation[data-bar=\"{i}\"]{{animation:{kf} {_cyc};}}");
-        sb.Append($"@keyframes {kf}{{0%{{opacity:{G(DimAct)};}}");
+        sb.Append($"@keyframes {kf}{{0%{{opacity:{G(_motion.DimAct)};}}");
         if (startSec is { } ss)
         {
             double s = Pct(ss), se = Pct(ss + 0.3);
-            if (s > e) sb.Append($"{P(s - e)}%{{opacity:{G(DimAct)};}}");
-            sb.Append($"{P(s)}%{{opacity:{G(DimAct)};}}{P(se)}%{{opacity:1;}}");
+            if (s > e) sb.Append($"{P(s - e)}%{{opacity:{G(_motion.DimAct)};}}");
+            sb.Append($"{P(s)}%{{opacity:{G(_motion.DimAct)};}}{P(se)}%{{opacity:1;}}");
         }
         double fadeAt = endSec ?? finaleSec;
         double fs = Pct(fadeAt), fe = Pct(fadeAt + 0.35);
-        sb.Append($"{P(fs)}%{{opacity:1;}}{P(fe)}%{{opacity:{G(DimAct)};}}");
-        sb.Append($"100%{{opacity:{G(DimAct)};}}}}");
+        sb.Append($"{P(fs)}%{{opacity:1;}}{P(fe)}%{{opacity:{G(_motion.DimAct)};}}");
+        sb.Append($"100%{{opacity:{G(_motion.DimAct)};}}}}");
     }
 
     private static string G(double n) => n.ToString("0.##", CultureInfo.InvariantCulture);
@@ -414,7 +416,7 @@ internal sealed class CssCompiler
             CardFx c = _s.Cards[j];
             if (Box(c.Node) is null) continue;
             if (c.Kind == CardFxKind.Pulse) RippleCss(sb, j, c.Start);
-            else GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? 0.7 : 1.0);
+            else GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? _motion.HighlightDur : _motion.FailDur);
         }
 
         // impact rings
@@ -432,12 +434,12 @@ internal sealed class CssCompiler
                 case CardFxKind.Pulse:
                     pts.Add((s, "none", Easing.BackOut(3)));
                     pts.Add((s + 0.18, "translateY(-2px) scale(1.04)", Easing.ElasticOut(1, 0.5)));
-                    pts.Add((s + 0.6, "none", null));
+                    pts.Add((s + _motion.PulseDur, "none", null));
                     break;
                 case CardFxKind.Highlight:
                     pts.Add((s, "none", Easing.BackOut(2)));
                     pts.Add((s + 0.21, "translateY(-2px) scale(1.04)", Easing.ElasticOut(1, 0.4)));
-                    pts.Add((s + 0.7, "none", null));
+                    pts.Add((s + _motion.HighlightDur, "none", null));
                     break;
                 case CardFxKind.Fail:
                     pts.Add((s + 0.12, "none", null));

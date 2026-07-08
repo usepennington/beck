@@ -17,15 +17,17 @@ internal sealed class SequencePainter
     private readonly string _hash;
     private readonly Markers _markers;
     private readonly ITextMeasurer _m;
+    private readonly BeckStyle _style;
     private readonly StringBuilder _defs = new();
     private readonly Dictionary<string, string> _actFills = new();
     private int _gradSeq;
 
-    public SequencePainter(string hash, Markers markers, ITextMeasurer measurer)
+    public SequencePainter(string hash, Markers markers, ITextMeasurer measurer, BeckStyle style)
     {
         _hash = hash;
         _markers = markers;
         _m = measurer;
+        _style = style;
     }
 
     /// <summary>Gradient defs (appended to the document <c>&lt;defs&gt;</c>).</summary>
@@ -40,16 +42,18 @@ internal sealed class SequencePainter
     public string Render(DiagramModel model, SequenceLayoutResult layout)
     {
         var sb = new StringBuilder();
+        FontRoleSpec bandSpec = _style.Typography.Roles.Of(FontRole.BandLabel);
+        FontRoleSpec msgSpec = _style.Typography.Roles.Of(FontRole.MsgText);
 
         // ---- section bands (behind everything) ----
         for (int i = 0; i < layout.Bands.Count; i++)
         {
             SectionBand b = layout.Bands[i];
             sb.Append($"<g class=\"beck-band\" data-band=\"{i}\" style=\"--beck-accent:{SvgWriter.Attr(b.Accent)}\">");
-            sb.Append($"<rect class=\"beck-band-box\" x=\"{N(b.X)}\" y=\"{N(b.Y)}\" width=\"{N(b.W)}\" height=\"{N(b.H)}\" rx=\"14\"/>");
+            sb.Append($"<rect class=\"beck-band-box\" x=\"{N(b.X)}\" y=\"{N(b.Y)}\" width=\"{N(b.W)}\" height=\"{N(b.H)}\" rx=\"{N(_style.Geometry.BandRadius)}\"/>");
             double lw = _m.Measure(b.Label, FontRole.BandLabel).Width;
             sb.Append(Chip(b.X + 24 + lw / 2, b.Y, b.Label.ToUpperInvariant(), lw, "beck-band-chip", "beck-band-label", 10, 4,
-                "font-family:var(--beck-font-mono)", 9.92, 700, "letter-spacing:0.14em"));
+                "font-family:var(--beck-font-mono)", bandSpec.SizePx, bandSpec.Weight, $"letter-spacing:{SvgWriter.Ls(bandSpec.LetterSpacingEm)}"));
             sb.Append("</g>");
         }
 
@@ -94,7 +98,7 @@ internal sealed class SequencePainter
                 sb.Append(MsgPath(edge, selfD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, selfD));
                 if (!string.IsNullOrEmpty(edge.Label))
-                    sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"10.88\" font-weight=\"500\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
+                    sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"{N(msgSpec.SizePx)}\" font-weight=\"{msgSpec.Weight}\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
             }
             else
             {
@@ -108,7 +112,7 @@ internal sealed class SequencePainter
                 {
                     double mw = _m.Measure(edge.Label!, FontRole.MsgText).Width;
                     sb.Append(Chip((x1 + x2) / 2, row.Y - 17, edge.Label!, mw, "beck-msg-chip", "beck-msg-text", 10, 4,
-                        "font-family:var(--beck-font-mono)", 10.88, 500, null));
+                        "font-family:var(--beck-font-mono)", msgSpec.SizePx, msgSpec.Weight, null));
                 }
             }
             sb.Append("</g>");
@@ -120,8 +124,8 @@ internal sealed class SequencePainter
     private string MsgPath(EdgeModel edge, string d)
     {
         var sb = new StringBuilder();
-        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(edge.Kind)}\" d=\"{d}\" style=\"stroke:{SvgWriter.Attr(edge.Color)}\" stroke-width=\"2\"");
-        if (edge.Style == EdgeStyle.Dashed) sb.Append(" stroke-dasharray=\"7 5\"");
+        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(edge.Kind)}\" d=\"{d}\" style=\"stroke:{SvgWriter.Attr(edge.Color)}\" stroke-width=\"{SvgWriter.Num(_style.Geometry.MessageStroke)}\"");
+        if (edge.Style == EdgeStyle.Dashed) sb.Append($" stroke-dasharray=\"{_style.Strokes.EdgeDash}\"");
         if ((edge.MarkerEnd ?? (edge.Arrow is ArrowEnds.End or ArrowEnds.Both ? MarkerShape.Arrow : (MarkerShape?)null)) is { } m)
             sb.Append($" marker-end=\"url(#{_markers.Ensure(edge.Color, m)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(edge.Id)}\"/>");
