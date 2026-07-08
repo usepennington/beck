@@ -18,6 +18,10 @@
          WebAssembly render-mode wiring (not in the shared framework). -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.9" />
+    <!-- Monaco (the VS Code editor) for the playground: schema-aware YAML completions /
+         hover, driven from C# off Beck.BeckSchema. Ships Monaco as static web assets under
+         _content/BlazorMonaco/, which flow into the host's static export. -->
+    <PackageVersion Include="BlazorMonaco" Version="3.5.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Beck: pure-C# SVG renderer (the-bad-idea.md). YamlDotNet is its only runtime

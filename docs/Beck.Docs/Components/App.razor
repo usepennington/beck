@@ -57,6 +57,15 @@
         </NotFound>
     </Router>
 
+    @* Monaco (the playground editor): its interop shim + loader + editor bundle, served as
+       static web assets by the BlazorMonaco package referenced through Beck.Docs.Client.
+       Must precede the Blazor script so the editor JS is present when the WASM island boots. *@
+    <script src="_content/BlazorMonaco/jsInterop.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+    @* Reports the site theme to the playground editor so it can flip beck/beck-dark. *@
+    <script src="/js/beck-editor.js" defer></script>
+
     @* Blazor runtime: boots the interactive-server circuit that backs the /playground
        component (server-side C# diagram rendering). Harmless on the static pages — they
        carry no interactive components — and on the static export it simply never connects. *@

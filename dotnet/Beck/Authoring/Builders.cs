@@ -4,7 +4,11 @@ using System.Linq;
 
 namespace Beck;
 
-/// <summary>Fluent builder for a diagram node.</summary>
+/// <summary>
+/// Configures a single node inside a <c>Node(id, n => …)</c> callback. Every
+/// method returns the same builder, so calls chain. Unset fields fall back to
+/// the node kind's defaults.
+/// </summary>
 public sealed class NodeBuilder
 {
     private readonly string _id;
@@ -38,22 +42,22 @@ public sealed class NodeBuilder
     /// <summary>Set a named icon key or raw inline <c>&lt;svg&gt;</c> markup.</summary>
     public NodeBuilder Icon(string icon) { _icon = icon; return this; }
 
-    /// <summary>Set the node archetype (default <see cref="NodeKind.Service"/>).</summary>
+    /// <summary>Set the node archetype (default <see cref="NodeKind.Service"/>) — picks an icon, accent, and shape.</summary>
     public NodeBuilder Kind(NodeKind kind) { _kind = kind; return this; }
 
-    /// <summary>Set the visual weight.</summary>
+    /// <summary>Set the visual weight: <see cref="NodeVariant.Solid"/>, <see cref="NodeVariant.Subtle"/>, or <see cref="NodeVariant.Ghost"/>.</summary>
     public NodeBuilder Variant(NodeVariant variant) { _variant = variant; return this; }
 
     /// <summary>Set the initial status-pill text.</summary>
     public NodeBuilder Status(string status) { _status = status; return this; }
 
-    /// <summary>Set the accent to a semantic token.</summary>
+    /// <summary>Set the accent to a semantic token (follows the theme).</summary>
     public NodeBuilder Accent(AccentToken token) { _accent = Tokens.Of(token); return this; }
 
-    /// <summary>Set the accent to a raw color (e.g. a hex string).</summary>
+    /// <summary>Set the accent to a raw CSS color (a hex string, say).</summary>
     public NodeBuilder Accent(string color) { _accent = color; return this; }
 
-    /// <summary>Fix the card width in pixels (prevents reflow on status change).</summary>
+    /// <summary>Fix the card width in pixels (prevents reflow on a status change).</summary>
     public NodeBuilder Width(int px) { _width = px; return this; }
 
     /// <summary>Force the node into a specific layout rank.</summary>
@@ -68,10 +72,10 @@ public sealed class NodeBuilder
     /// <summary>Make the card a link. Pass <c>target: "_blank"</c> to open in a new tab.</summary>
     public NodeBuilder Link(string href, string? target = null) { _href = href; _target = target; return this; }
 
-    /// <summary>Override the card background (a CSS color).</summary>
+    /// <summary>Override the card background (a raw CSS color).</summary>
     public NodeBuilder Surface(string color) { _surface = color; return this; }
 
-    /// <summary>Override the card text color (a CSS color).</summary>
+    /// <summary>Override the card text color (a raw CSS color).</summary>
     public NodeBuilder TextColor(string color) { _textColor = color; return this; }
 
     internal string ToFlow()
@@ -96,7 +100,10 @@ public sealed class NodeBuilder
     }
 }
 
-/// <summary>Fluent builder for a node group (a labelled, boxed cluster).</summary>
+/// <summary>
+/// Configures a labelled, boxed cluster inside a <c>Group(id, g => …)</c>
+/// callback. Members may be node ids or other group ids, so groups nest.
+/// </summary>
 public sealed class GroupBuilder
 {
     private readonly string _id;
@@ -109,19 +116,19 @@ public sealed class GroupBuilder
     /// <summary>The group's id.</summary>
     internal string Id => _id;
 
-    /// <summary>Set the group label.</summary>
+    /// <summary>Set the group label (defaults to the id).</summary>
     public GroupBuilder Label(string label) { _label = label; return this; }
 
-    /// <summary>Add member node ids.</summary>
+    /// <summary>Add member node (or group) ids.</summary>
     public GroupBuilder Members(params string[] ids) { _members.AddRange(ids); return this; }
 
-    /// <summary>Add a single member node id.</summary>
+    /// <summary>Add a single member id.</summary>
     public GroupBuilder Member(string id) { _members.Add(id); return this; }
 
-    /// <summary>Set the accent to a semantic token.</summary>
+    /// <summary>Tint the box + label with a semantic token.</summary>
     public GroupBuilder Accent(AccentToken token) { _accent = Tokens.Of(token); return this; }
 
-    /// <summary>Set the accent to a raw color.</summary>
+    /// <summary>Tint the box + label with a raw CSS color.</summary>
     public GroupBuilder Accent(string color) { _accent = color; return this; }
 
     internal string ToFlow()
@@ -134,7 +141,10 @@ public sealed class GroupBuilder
     }
 }
 
-/// <summary>Fluent builder for an edge between two nodes (or groups).</summary>
+/// <summary>
+/// Configures one edge inside an <c>Edge(from, to, e => …)</c> callback.
+/// Endpoints may be node ids or group ids.
+/// </summary>
 public sealed class EdgeBuilder
 {
     private readonly string _from;
@@ -164,19 +174,19 @@ public sealed class EdgeBuilder
     /// <summary>Set the edge label.</summary>
     public EdgeBuilder Label(string label) { _label = label; return this; }
 
-    /// <summary>Set the line style.</summary>
+    /// <summary>Set the line style: <see cref="EdgeStyle.Solid"/> or <see cref="EdgeStyle.Dashed"/>.</summary>
     public EdgeBuilder Style(EdgeStyle style) { _style = style; return this; }
 
-    /// <summary>Set the routing curve.</summary>
+    /// <summary>Set the routing curve: <see cref="EdgeCurve.StepRound"/> (default), <see cref="EdgeCurve.Straight"/>, or <see cref="EdgeCurve.S"/>.</summary>
     public EdgeBuilder Curve(EdgeCurve curve) { _curve = curve; return this; }
 
-    /// <summary>Set the semantic edge kind (defaults color + style).</summary>
+    /// <summary>Set the semantic kind (defaults color + style): <see cref="EdgeKind.Data"/>, <see cref="EdgeKind.Control"/>, <see cref="EdgeKind.Async"/>, or <see cref="EdgeKind.Dependency"/>.</summary>
     public EdgeBuilder Kind(EdgeKind kind) { _kind = kind; return this; }
 
-    /// <summary>Set the stroke to a semantic token.</summary>
+    /// <summary>Set the stroke to a semantic token (follows the theme).</summary>
     public EdgeBuilder Color(AccentToken token) { _color = Tokens.Of(token); return this; }
 
-    /// <summary>Set the stroke to a raw color.</summary>
+    /// <summary>Set the stroke to a raw CSS color.</summary>
     public EdgeBuilder Color(string color) { _color = color; return this; }
 
     /// <summary>Toggle the arrowhead (default on). <c>false</c> draws no arrows.</summary>

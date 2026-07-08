@@ -1,63 +1,93 @@
 @page "/"
+@using Pennington.Highlighting
 
 <PageTitle>Beck — animated diagrams from YAML</PageTitle>
 
-<section class="mx-auto max-w-[1240px] px-8 pt-[78px] pb-[60px] grid grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)] gap-[52px] items-center max-[820px]:grid-cols-1 max-[820px]:pt-12">
-    <div>
-        <div class="font-mono text-xs uppercase tracking-[0.15em] text-primary-700 dark:text-primary-400 mb-5">Diagrams as code · for .NET</div>
-        <h1 class="text-[54px] font-semibold leading-[1.04] tracking-[-0.025em] mb-5 text-base-900 dark:text-base-50">Nice looking software diagrams</h1>
-        <p class="text-lg leading-relaxed text-base-600 dark:text-base-400 mb-[30px] max-w-[460px]">
-            Describe your system once in a few lines of YAML. Beck handles layout, routing, and
-            styling — and renders animated architecture, sequence, state, and class diagrams as
-            static, self-animating SVG. No client-side JavaScript, no runtime, nothing to hydrate.
-        </p>
-        <div class="flex gap-3 mb-[26px]">
-            <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400" href="/docs/tutorials/first-diagram">Get started <span class="font-mono">→</span></a>
-            <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-transparent border border-base-300 dark:border-base-700 text-base-900 dark:text-base-50 hover:bg-base-50 dark:hover:bg-base-900" href="/playground">Open playground</a>
+<section class="mx-auto max-w-[1240px] px-8 pt-[78px] pb-[60px] max-[820px]:pt-12">
+    <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-16 gap-y-8 items-end mb-11 max-[900px]:grid-cols-1">
+        <div>
+            <div class="font-mono text-xs uppercase tracking-[0.15em] text-primary-700 dark:text-primary-400 mb-5">Diagrams as code · for .NET</div>
+            <h1 class="text-[50px] font-semibold leading-[1.05] tracking-[-0.025em] mb-4 text-base-900 dark:text-base-50 max-[900px]:text-[40px]">Nice looking software diagrams</h1>
+            <p class="text-lg leading-relaxed text-base-600 dark:text-base-400 max-w-[620px]">
+                Write your architecture, sequence, state, or class diagram in a few lines of YAML.
+                Beck lays it out, routes the edges, and renders an animated SVG — at build time,
+                with no JavaScript on the page.
+            </p>
         </div>
-        <div class="inline-flex items-center gap-3 bg-base-50 dark:bg-base-900 border border-base-200 dark:border-base-800 rounded-[10px] px-[14px] py-[11px] font-mono text-[13.5px]">
-            <span class="text-primary-700 dark:text-primary-400">$</span>
-            <span>dotnet add package Beck</span>
-            <span class="ml-1.5 text-base-400 dark:text-base-500 border-l border-base-200 dark:border-base-800 pl-3 cursor-pointer" data-copy="dotnet add package Beck">copy</span>
+        <div class="flex flex-col gap-4 items-start pb-1">
+            <div class="flex gap-3">
+                <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400" href="/docs/tutorials/first-diagram">Get started <span class="font-mono">→</span></a>
+                <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-transparent border border-base-300 dark:border-base-700 text-base-900 dark:text-base-50 hover:bg-base-50 dark:hover:bg-base-900" href="/playground">Open playground</a>
+            </div>
+            <div class="inline-flex items-center gap-3 bg-base-50 dark:bg-base-900 border border-base-200 dark:border-base-800 rounded-[10px] px-[14px] py-[11px] font-mono text-[13.5px]">
+                <span class="text-primary-700 dark:text-primary-400">$</span>
+                <span>dotnet add package Beck</span>
+                <span class="ml-1.5 text-base-400 dark:text-base-500 border-l border-base-200 dark:border-base-800 pl-3 cursor-pointer" data-copy="dotnet add package Beck">copy</span>
+            </div>
         </div>
     </div>
 
-    @* The hero is a real Beck render: a scripted launch-countdown flow, rendered to a static,
-       self-animating SVG at build time by the pure-C# engine (no client JS). *@
-    <div class="border border-base-200 dark:border-base-800 rounded-2xl bg-white dark:bg-base-900 shadow-[0_12px_40px_-16px_rgba(20,45,35,0.12)] overflow-hidden">
+    @* The hero is the pitch made literal: the YAML on the left is the exact source of the SVG on
+       the right, rendered at build time by the pure-C# engine (no client JS). *@
+    <div class="2xl:-mx-32 border border-base-200 dark:border-base-800 rounded-2xl bg-white dark:bg-base-900 shadow-[0_12px_40px_-16px_rgba(20,45,35,0.12)] overflow-hidden">
         <div class="flex items-center gap-2 px-[14px] py-[11px] border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
             <span class="h-[11px] w-[11px] rounded-full bg-[#e6685b]"></span><span class="h-[11px] w-[11px] rounded-full bg-[#e0b341]"></span><span class="h-[11px] w-[11px] rounded-full bg-[#5fb866]"></span>
             <span class="ml-1.5 font-mono text-[11.5px] text-base-400 dark:text-base-500">launch-sequence.beck.yaml</span>
+            <span class="ml-auto font-mono text-[11.5px] text-base-400 dark:text-base-500 max-[560px]:hidden">BeckSvg.Render(yaml)</span>
         </div>
-        <div class="dot-grid p-6 flex items-center justify-center min-h-[430px]">
-            <BeckDiagram Yaml="@HeroYaml" Class="beck-embed beck-embed--bare w-full" />
+        <div class="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] max-[900px]:grid-cols-1">
+            <div class="relative border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 max-[900px]:h-[280px] max-[900px]:border-r-0 max-[900px]:border-b">
+                <pre class="absolute inset-0 overflow-auto m-0 p-5 font-mono text-xs leading-[1.6] text-base-600 dark:text-base-400">@HighlightYaml(HeroYaml)</pre>
+            </div>
+            <div class="dot-grid p-6 flex items-center justify-center min-h-[430px]">
+                <BeckDiagram Yaml="@HeroYaml" Class="beck-embed beck-embed--bare w-full" />
+            </div>
         </div>
         <div class="px-[14px] py-[10px] border-t border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 font-mono text-[11.5px] text-base-400 dark:text-base-500 text-center">
-            this animation is a static SVG — pure CSS, zero JavaScript. view source.
+            the yaml on the left is the animation on the right — a static SVG, pure CSS, zero JavaScript. view source.
         </div>
     </div>
 </section>
 
-<section class="mx-auto max-w-[1240px] px-8 pt-[18px] pb-16 grid grid-cols-4 gap-6 max-[1020px]:grid-cols-2 max-[640px]:grid-cols-1">
-    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
-        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">yaml</div>
-        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Plain YAML, real diagrams</h3>
-        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">List your nodes and edges — or participants, states, and classes. Beck takes care of layout, edge routing, grouping, and theming automatically.</p>
-    </div>
-    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
-        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">svg</div>
-        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Zero client JavaScript</h3>
-        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">Diagrams render at build time to self-contained SVG, animated with pure CSS. No engine to ship, no hydration — they play even with scripts disabled.</p>
-    </div>
-    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
-        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">git</div>
-        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Lives in your repo</h3>
-        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">Diagrams are text. Review them in pull requests, diff every change, and never let architecture docs drift again.</p>
-    </div>
-    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
-        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">C#</div>
-        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">.NET native</h3>
-        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">Author diagrams from C# with <span class="font-mono text-[13px]">Beck.Authoring</span>, or render them live in any ASP.NET site.</p>
+<section class="mx-auto max-w-[1240px] px-8 pt-[18px] pb-16">
+    <h2 class="text-2xl font-semibold tracking-[-0.02em] mb-6 text-base-900 dark:text-base-50">Why you might want this</h2>
+    <div class="overflow-x-auto border border-base-200 dark:border-base-800 rounded-xl bg-white dark:bg-base-900">
+        <table class="w-full text-left border-collapse text-[14.5px] leading-relaxed">
+            <tbody class="divide-y divide-base-200 dark:divide-base-800">
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 w-[240px] whitespace-nowrap max-[640px]:whitespace-normal">One inline SVG out</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">Layout, edge routing, and the whole animation are compiled into a single self-contained <span class="font-mono text-[13px]">&lt;svg&gt;</span>. The motion is plain CSS keyframes — it plays with JavaScript disabled.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">No npm, no client runtime</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">Everything happens in C# at render time. There is no bundler, no node toolchain, and nothing to hydrate — <span class="font-mono text-[13px]">dotnet build</span> is the whole pipeline.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">Picks up your site's colors</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">Every color in the SVG is a CSS variable with a fallback. Drop a diagram into your site and it adopts your palette — dark mode included — without re-rendering anything.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">Deterministic output</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">Same YAML in, byte-identical SVG out. Committed diagrams diff cleanly in pull requests instead of churning on every build.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">Four diagram types</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">Architecture, sequence, state, and class diagrams share one schema for titles, theming, and flow animation — learn it once.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">Author from C# too</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">A fluent builder API emits the same YAML, and <span class="font-mono text-[13px]">ClassDiagramBuilder.FromTypes</span> reflects a class diagram straight out of your assemblies.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">Runs wherever .NET runs</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">Render at build time in a static site, per-request in ASP.NET, or in the browser — the playground on this site is the same engine compiled to WebAssembly.</td>
+                </tr>
+                <tr>
+                    <th scope="row" class="align-top font-semibold text-base-900 dark:text-base-50 px-6 py-4 whitespace-nowrap max-[640px]:whitespace-normal">One dependency</th>
+                    <td class="px-6 py-4 text-base-600 dark:text-base-400">The <span class="font-mono text-[13px]">Beck</span> package depends only on YamlDotNet. Text measurement uses embedded font metrics; add <span class="font-mono text-[13px]">Beck.Skia</span> if you want exact SkiaSharp measurement with your own fonts.</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </section>
 
@@ -80,6 +110,13 @@
 <Footer />
 
 @code {
+
+    private MarkupString HighlightYaml(string str)
+    {
+        var highlighter = new TextMateHighlighter(new TextMateLanguageRegistry());
+        return (MarkupString) highlighter.Highlight(str, "yaml");
+    }
+    
     // The hero diagram: a rocket launch scripted with an explicit flow, chosen to exercise
     // nearly every effect the renderer has — burst, working, stream, status swaps, a ring
     // packet with impact, parallel beats, and the narration bar carrying the countdown.

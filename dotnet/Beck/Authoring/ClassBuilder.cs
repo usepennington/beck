@@ -11,9 +11,9 @@ namespace Beck;
 /// <summary>
 /// Builds a <c>type: class</c> Beck diagram — UML class cards (name, fields,
 /// methods) joined by inheritance / composition / association relations.
-/// <see cref="AddTypes"/> generates cards and relations straight from CLR types
-/// via reflection, so a docs page can render an always-current domain model:
-/// <c>ClassDiagramBuilder.FromTypes(typeof(Order), typeof(Customer)).ToFence()</c>.
+/// Build cards by hand with <see cref="Class(string, Action{ClassBuilder})"/>, or reflect
+/// real CLR types with <see cref="FromTypes"/> so the diagram can never drift
+/// from the code: <c>ClassDiagramBuilder.FromTypes(typeof(Order), typeof(Customer)).ToFence()</c>.
 /// </summary>
 /// <example>
 /// <code>
@@ -40,7 +40,13 @@ public sealed class ClassDiagramBuilder
     /// <summary>Create a class diagram with a title.</summary>
     public ClassDiagramBuilder(string title) => _meta.Title = title;
 
-    /// <summary>Create a class diagram from CLR types (see <see cref="AddTypes"/>).</summary>
+    /// <summary>
+    /// Reflect CLR types into cards and infer the relations among them — base
+    /// types become <c>inherits</c>, interfaces <c>implements</c>, property
+    /// types labelled associations (collections get a <c>*</c> multiplicity),
+    /// enums «enum» cards. Types outside the set are ignored, so the diagram
+    /// stays scoped to what you pass in.
+    /// </summary>
     public static ClassDiagramBuilder FromTypes(params Type[] types) => new ClassDiagramBuilder().AddTypes(types);
 
     /// <summary>Set the diagram title.</summary>
@@ -49,16 +55,16 @@ public sealed class ClassDiagramBuilder
     /// <summary>Set the diagram subtitle.</summary>
     public ClassDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
 
-    /// <summary>Set the layout direction.</summary>
+    /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default) reads the hierarchy top-down.</summary>
     public ClassDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
-    /// <summary>Set the theme mode.</summary>
+    /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
     public ClassDiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
 
-    /// <summary>Enable or disable animation.</summary>
+    /// <summary>Enable or disable the flow animation.</summary>
     public ClassDiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
 
-    /// <summary>Enable or disable looping.</summary>
+    /// <summary>Loop the flow (default) or play it through once.</summary>
     public ClassDiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container.</summary>
@@ -76,7 +82,7 @@ public sealed class ClassDiagramBuilder
         return this;
     }
 
-    /// <summary>Tune layout spacing.</summary>
+    /// <summary>Tune layout spacing: rank gap (along the hierarchy), node gap (across), and corner radius (px).</summary>
     public ClassDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
         if (rank is { } r) _meta.SpacingRank = r;
@@ -85,7 +91,7 @@ public sealed class ClassDiagramBuilder
         return this;
     }
 
-    /// <summary>Add a class card, configured via a builder callback.</summary>
+    /// <summary>Add a class card and configure it via <see cref="ClassBuilder"/> — name, stereotype, fields, methods.</summary>
     public ClassDiagramBuilder Class(string id, Action<ClassBuilder>? configure = null)
     {
         var c = new ClassBuilder(id);
@@ -94,14 +100,14 @@ public sealed class ClassDiagramBuilder
         return this;
     }
 
-    /// <summary>Add a class card with a display name.</summary>
+    /// <summary>The terse overload: add a class card with a display name.</summary>
     public ClassDiagramBuilder Class(string id, string name)
     {
         _classes.Add(new ClassBuilder(id).Name(name));
         return this;
     }
 
-    /// <summary>Add a namespace box around member classes.</summary>
+    /// <summary>Add a labelled boundary — a namespace or module box around related classes.</summary>
     public ClassDiagramBuilder Group(string id, Action<GroupBuilder> configure)
     {
         var g = new GroupBuilder(id);
@@ -110,31 +116,31 @@ public sealed class ClassDiagramBuilder
         return this;
     }
 
-    /// <summary>Child extends parent (hollow triangle at the parent).</summary>
+    /// <summary>Child extends parent — solid line, hollow triangle at the parent.</summary>
     public ClassDiagramBuilder Inherits(string child, string parent)
         => Relation(child, parent, RelationKind.Inherits, null);
 
-    /// <summary>Class implements an interface (dashed, hollow triangle).</summary>
+    /// <summary>Class implements an interface — dashed line, hollow triangle at the interface.</summary>
     public ClassDiagramBuilder Implements(string child, string iface)
         => Relation(child, iface, RelationKind.Implements, null);
 
-    /// <summary>A directed association with optional label and multiplicities.</summary>
+    /// <summary>A plain directed association, with optional multiplicities at each end.</summary>
     public ClassDiagramBuilder Association(string from, string to, string? label = null, string? fromCard = null, string? toCard = null)
         => Relation(from, to, RelationKind.Association, label, fromCard, toCard);
 
-    /// <summary>Whole–part aggregation (hollow diamond at the whole).</summary>
+    /// <summary>Whole–part where the part outlives the whole — hollow diamond at the whole.</summary>
     public ClassDiagramBuilder Aggregation(string whole, string part, string? label = null, string? fromCard = null, string? toCard = null)
         => Relation(whole, part, RelationKind.Aggregation, label, fromCard, toCard);
 
-    /// <summary>Whole–part composition (filled diamond at the whole).</summary>
+    /// <summary>Whole–part where the part's lifetime is owned — filled diamond at the whole.</summary>
     public ClassDiagramBuilder Composition(string whole, string part, string? label = null, string? fromCard = null, string? toCard = null)
         => Relation(whole, part, RelationKind.Composition, label, fromCard, toCard);
 
-    /// <summary>A usage dependency (dashed, open arrowhead).</summary>
+    /// <summary>A usage dependency — dashed line, open arrowhead.</summary>
     public ClassDiagramBuilder DependsOn(string from, string to, string? label = null)
         => Relation(from, to, RelationKind.Dependency, label);
 
-    /// <summary>Add a relation of an explicit kind.</summary>
+    /// <summary>The general form the named relation methods delegate to.</summary>
     public ClassDiagramBuilder Relation(string from, string to, RelationKind kind, string? label, string? fromCard = null, string? toCard = null)
     {
         var pairs = new List<(string, string)>
@@ -151,7 +157,7 @@ public sealed class ClassDiagramBuilder
         return this;
     }
 
-    /// <summary>Script the animation flow explicitly. Without this the engine cascades the inheritance levels.</summary>
+    /// <summary>Script the animation explicitly. Without this each inheritance level lights up in turn.</summary>
     public ClassDiagramBuilder Flow(Action<FlowBuilder> configure)
     {
         _flow ??= new FlowBuilder();
@@ -162,11 +168,11 @@ public sealed class ClassDiagramBuilder
     // ---- reflection ----
 
     /// <summary>
-    /// Add a card for each CLR type and infer the relations *among the given
-    /// types*: base type → <see cref="RelationKind.Inherits"/>, directly
-    /// implemented interfaces → <see cref="RelationKind.Implements"/>, property
-    /// types → <see cref="RelationKind.Association"/> (collections get a
-    /// <c>*</c> multiplicity). Types outside the set are ignored, so the
+    /// Reflect more types into an existing builder — the instance form of
+    /// <see cref="FromTypes"/>. Base type → <see cref="RelationKind.Inherits"/>,
+    /// directly implemented interfaces → <see cref="RelationKind.Implements"/>,
+    /// property types → <see cref="RelationKind.Association"/> (collections get
+    /// a <c>*</c> multiplicity). Types outside the set are ignored, so the
     /// diagram stays scoped to what you pass in.
     /// </summary>
     public ClassDiagramBuilder AddTypes(params Type[] types)
@@ -238,14 +244,18 @@ public sealed class ClassDiagramBuilder
         return sb.ToString();
     }
 
-    /// <summary>Render the diagram as a fenced <c>```beck</c> Markdown block.</summary>
+    /// <summary>Render as a fenced <c>```beck</c> Markdown block — drop it into any Markdown page and it renders to a static SVG.</summary>
     public string ToFence() => BeckMarkdown.Fence(ToYaml());
 
     /// <inheritdoc/>
     public override string ToString() => ToYaml();
 }
 
-/// <summary>Fluent builder for a UML class card.</summary>
+/// <summary>
+/// Configures one UML class card inside a <c>Class(id, c => …)</c> callback.
+/// Field and method compartment lines are plain strings, so write them the way
+/// your team reads them.
+/// </summary>
 public sealed class ClassBuilder
 {
     private readonly string _id;
@@ -268,13 +278,13 @@ public sealed class ClassBuilder
     /// <summary>Set the display name (defaults to the id).</summary>
     public ClassBuilder Name(string name) { _name = name; return this; }
 
-    /// <summary>Set the «stereotype» line above the name (e.g. "interface", "abstract").</summary>
+    /// <summary>Set the «stereotype» line above the name — <c>interface</c>, <c>abstract</c>, <c>enum</c>, <c>aggregate</c>, anything.</summary>
     public ClassBuilder Stereotype(string stereotype) { _stereotype = stereotype; return this; }
 
-    /// <summary>Set the accent to a semantic token.</summary>
+    /// <summary>Set the accent to a semantic token (follows the theme).</summary>
     public ClassBuilder Accent(AccentToken token) { _accent = Tokens.Of(token); return this; }
 
-    /// <summary>Set the accent to a raw color.</summary>
+    /// <summary>Set the accent to a raw CSS color.</summary>
     public ClassBuilder Accent(string color) { _accent = color; return this; }
 
     /// <summary>Add one line to the fields compartment (e.g. <c>"Id: Guid"</c>).</summary>
@@ -289,10 +299,10 @@ public sealed class ClassBuilder
     /// <summary>Add several method lines at once.</summary>
     public ClassBuilder Methods(params string[] methods) { _methods.AddRange(methods); return this; }
 
-    /// <summary>Make the card a link (e.g. to the type's API reference page).</summary>
+    /// <summary>Make the card a link — to the type's source or docs, say.</summary>
     public ClassBuilder Link(string href, string? target = null) { _href = href; _target = target; return this; }
 
-    /// <summary>Assign the class to a namespace group.</summary>
+    /// <summary>Assign the class to a namespace group inline.</summary>
     public ClassBuilder Group(string groupId) { _group = groupId; return this; }
 
     /// <summary>Fix the card width in pixels.</summary>

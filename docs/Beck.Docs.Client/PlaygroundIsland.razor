@@ -73,8 +73,16 @@
     <div class="flex-1 grid grid-cols-2 min-h-0 max-md:grid-cols-1 max-md:grid-rows-2">
         <div class="flex flex-col min-h-0 border-r border-base-200 dark:border-base-800">
             <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-base-50 dark:bg-base-900">system.beck.yaml</div>
-            <textarea class="pg-editor" spellcheck="false" aria-label="Beck YAML source"
-                      @bind="_yaml" @bind:event="oninput" @bind:after="ScheduleRender"></textarea>
+            @* Monaco editor (schema-aware YAML completions + hover, driven from C# off
+               BeckSchema). Its container is sized by flex; the editor's automaticLayout
+               tracks it. Before the WASM island boots this pane is empty — the prerendered
+               chrome shows the frame only. *@
+            <div id="pg-editor-host">
+                <StandaloneCodeEditor @ref="_editor" Id="pg-monaco" CssClass="h-full"
+                                      ConstructionOptions="EditorConstructionOptions"
+                                      OnDidInit="EditorInit"
+                                      OnDidChangeModelContent="EditorChanged" />
+            </div>
         </div>
         <div class="flex flex-col min-h-0">
             <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-white dark:bg-base-950">
@@ -113,6 +121,14 @@
     private string _statusText = "✓ valid";
     private int _nodeCount, _edgeCount;
 
+    // ---- Monaco editor ------------------------------------------------------
+    private StandaloneCodeEditor _editor = null!;
+    private string _editorTheme = "beck";
+    // Programmatic SetValue (example load) fires OnDidChangeModelContent; swallow that one
+    // event so it doesn't schedule a second, animation-restarting render after our explicit one.
+    private bool _suppressNextChange;
+    private DotNetObjectReference<PlaygroundIsland>? _hostRef;
+
     // Debounce the live re-render: typing fires oninput per keystroke, but a full
     // layout+route+SVG pass (and its restarting animation) shouldn't run mid-word.
     private CancellationTokenSource? _debounce;
@@ -145,6 +161,105 @@
         await JS.InvokeVoidAsync("beckMeasure.fontsReady");
         RenderNow();
         StateHasChanged();
+    }
+
+    // The editor's initial content + language come from ConstructionOptions; the theme is set
+    // in EditorInit once the beck themes are defined (below).
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor _) => new()
+    {
+        Language = "yaml",
+        Value = _yaml,
+        Theme = _editorTheme,
+        AutomaticLayout = true,
+        Minimap = new EditorMinimapOptions { Enabled = false },
+        ScrollBeyondLastLine = false,
+        FontFamily = "'IBM Plex Mono', ui-monospace, monospace",
+        LineHeight = 24,
+        WordWrap = "off",
+        LineNumbers = "on",
+        RenderLineHighlight = "line",
+        Padding = new EditorPaddingOptions { Top = 14, Bottom = 14 },
+    };
+
+    // Runs once the Monaco instance exists: define the brand themes, register schema-aware
+    // completions/hover, and hook the site theme toggle so the editor recolours with the page.
+    private async Task EditorInit()
+    {
+        await DefineThemesAsync();
+        await BeckCompletions.RegisterAsync(JS);
+
+        _hostRef = DotNetObjectReference.Create(this);
+        var theme = await JS.InvokeAsync<string>("beckEditor.observeTheme", _hostRef);
+        _editorTheme = theme == "dark" ? "beck-dark" : "beck";
+        await BlazorMonaco.Editor.Global.SetTheme(JS, _editorTheme);
+    }
+
+    // Live edits: mirror the editor value into _yaml and re-render (debounced). The single
+    // programmatic SetValue from LoadExample is swallowed here so it renders exactly once.
+    private async Task EditorChanged(ModelContentChangedEvent _)
+    {
+        if (_suppressNextChange) { _suppressNextChange = false; return; }
+        _yaml = await _editor.GetValue();
+        await ScheduleRender();
+    }
+
+    // Called from beck-editor.js when the site theme toggles; flip the editor between the
+    // light and dark brand themes to match.
+    [JSInvokable]
+    public async Task OnHostThemeChanged(string theme)
+    {
+        _editorTheme = theme == "dark" ? "beck-dark" : "beck";
+        await BlazorMonaco.Editor.Global.SetTheme(JS, _editorTheme);
+    }
+
+    // Two brand-tinted Monaco themes (Monaco needs literal colours, so these can't ride the
+    // site's CSS variables). Slate neutrals + an emerald key colour echo the Beck palette;
+    // beck-editor.js flips between them on the site theme toggle.
+    private async Task DefineThemesAsync()
+    {
+        static List<TokenThemeRule> Rules(string key, string str, string num, string comment) => new()
+        {
+            new() { Token = "type", Foreground = key },
+            new() { Token = "key", Foreground = key },
+            new() { Token = "string.yaml", Foreground = str },
+            new() { Token = "string", Foreground = str },
+            new() { Token = "number", Foreground = num },
+            new() { Token = "comment", Foreground = comment, FontStyle = "italic" },
+        };
+
+        await BlazorMonaco.Editor.Global.DefineTheme(JS, "beck", new StandaloneThemeData
+        {
+            Base = "vs",
+            Inherit = true,
+            Rules = Rules("047857", "0369a1", "b45309", "94a3b8"),
+            Colors = new Dictionary<string, string>
+            {
+                ["editor.background"] = "#f8fafc",
+                ["editor.foreground"] = "#334155",
+                ["editorLineNumber.foreground"] = "#cbd5e1",
+                ["editorLineNumber.activeForeground"] = "#64748b",
+                ["editor.lineHighlightBackground"] = "#eef2f6",
+                ["editor.selectionBackground"] = "#d1fae5",
+                ["editorCursor.foreground"] = "#047857",
+            },
+        });
+
+        await BlazorMonaco.Editor.Global.DefineTheme(JS, "beck-dark", new StandaloneThemeData
+        {
+            Base = "vs-dark",
+            Inherit = true,
+            Rules = Rules("34d399", "38bdf8", "fbbf24", "64748b"),
+            Colors = new Dictionary<string, string>
+            {
+                ["editor.background"] = "#0f172a",
+                ["editor.foreground"] = "#e2e8f0",
+                ["editorLineNumber.foreground"] = "#334155",
+                ["editorLineNumber.activeForeground"] = "#94a3b8",
+                ["editor.lineHighlightBackground"] = "#111c33",
+                ["editor.selectionBackground"] = "#134e4a",
+                ["editorCursor.foreground"] = "#34d399",
+            },
+        });
     }
 
     // Debounced editor render. @bind:after fires after each oninput has updated _yaml;
@@ -206,6 +321,9 @@
             // base so it resolves on a GitHub Pages sub-path deploy too (HttpClient.BaseAddress
             // is the app base, which already includes any sub-path prefix).
             _yaml = await Http.GetStringAsync(ex.Src.TrimStart('/'));
+            // Push into Monaco (swallowing the resulting change event), then render once.
+            _suppressNextChange = true;
+            await _editor.SetValue(_yaml);
             RenderNow();
         }
         catch (Exception e)
@@ -229,6 +347,7 @@
     {
         _debounce?.Cancel();
         _debounce?.Dispose();
+        _hostRef?.Dispose();
     }
 
     private const string InitialYaml = """

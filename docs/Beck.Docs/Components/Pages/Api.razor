@@ -2,426 +2,138 @@
 
 <PageTitle>API reference — Beck</PageTitle>
 
-<div class="mx-auto max-w-[1180px] px-8 grid grid-cols-[250px_1fr] gap-12 items-start max-lg:grid-cols-1">
-    <aside class="sticky top-[62px] self-start max-h-[calc(100vh-62px)] overflow-y-auto py-[34px] max-lg:hidden">
+@* Radio-input tab plumbing for the overview: pure CSS, no client JS. The checked input's
+   position selects the matching label and panel. *@
+<style>
+    .api-tabs > input { position: absolute; opacity: 0; pointer-events: none; }
+    .api-tabs .api-tab-panel { display: none; }
+    .api-tabs > input:nth-of-type(1):checked ~ .api-tab-panels .api-tab-panel:nth-of-type(1),
+    .api-tabs > input:nth-of-type(2):checked ~ .api-tab-panels .api-tab-panel:nth-of-type(2),
+    .api-tabs > input:nth-of-type(3):checked ~ .api-tab-panels .api-tab-panel:nth-of-type(3),
+    .api-tabs > input:nth-of-type(4):checked ~ .api-tab-panels .api-tab-panel:nth-of-type(4) { display: flex; }
+    .api-tabs .api-tab-label { cursor: pointer; opacity: 0.55; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .api-tabs .api-tab-label:hover { opacity: 0.8; }
+    .api-tabs > input:nth-of-type(1):checked ~ .api-tab-labels .api-tab-label:nth-of-type(1),
+    .api-tabs > input:nth-of-type(2):checked ~ .api-tab-labels .api-tab-label:nth-of-type(2),
+    .api-tabs > input:nth-of-type(3):checked ~ .api-tab-labels .api-tab-label:nth-of-type(3),
+    .api-tabs > input:nth-of-type(4):checked ~ .api-tab-labels .api-tab-label:nth-of-type(4) { opacity: 1; border-bottom-color: currentColor; }
+</style>
+
+@* The entire page is generated: members, signatures, prose, and the builder-role grouping come
+   from reflection over the authoring builders joined with their Beck.xml doc comments
+   (ApiCatalog), and each hero diagram is Beck rendering its own API via ClassDiagramBuilder.
+   Nothing here to keep in sync. *@
+<div class="mx-auto max-w-6xl grid grid-cols-[250px_1fr] gap-12 items-start max-lg:grid-cols-1">
+    <aside class="sticky top-16 self-start max-h-[calc(100vh-4rem)] overflow-y-auto py-8 max-lg:hidden">
         <nav id="api-nav">
-            <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck.Authoring</div>
-            <div class="flex flex-col gap-px mb-[22px]">
-                <a class="api-nav-link" href="/api/#diagrambuilder">DiagramBuilder</a>
-                <a class="api-nav-link" href="/api/#nodebuilder">NodeBuilder</a>
-                <a class="api-nav-link" href="/api/#edgebuilder">EdgeBuilder</a>
-                <a class="api-nav-link" href="/api/#groupbuilder">GroupBuilder</a>
-                <a class="api-nav-link" href="/api/#flowbuilder">FlowBuilder</a>
-                <a class="api-nav-link" href="/api/#sequencediagrambuilder">SequenceDiagramBuilder</a>
-                <a class="api-nav-link" href="/api/#messagebuilder">MessageBuilder</a>
-                <a class="api-nav-link" href="/api/#statediagrambuilder">StateDiagramBuilder</a>
-                <a class="api-nav-link" href="/api/#statebuilder">StateBuilder</a>
-                <a class="api-nav-link" href="/api/#transitionbuilder">TransitionBuilder</a>
-                <a class="api-nav-link" href="/api/#classdiagrambuilder">ClassDiagramBuilder</a>
-                <a class="api-nav-link" href="/api/#classbuilder">ClassBuilder</a>
+            <div class="font-mono text-xs tracking-widest text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck.Authoring</div>
+            <div class="flex flex-col gap-px mb-5">
+                <a class="api-nav-link" href="/api/#overview">Overview</a>
+                @foreach (var c in ApiCatalog.Classes)
+                {
+                    <a class="api-nav-link" href="/api/#@c.Id">@c.Name</a>
+                }
             </div>
         </nav>
     </aside>
 
-    <article class="max-w-[760px] min-w-0 py-[34px] pb-[90px]">
-        @foreach (var c in Classes)
-        {
-            <section id="@c.Id" class="mb-[72px]">
-                <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">API <span class="mx-1.5">/</span> @((MarkupString)c.Breadcrumb)</div>
-                <div class="flex items-center gap-[11px] mb-3">
-                    <span class="font-mono text-[11px] uppercase tracking-[0.08em] text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-[9px] py-0.5">@c.Kind</span>
-                    <h1 class="font-mono text-3xl font-semibold tracking-[-0.01em] text-base-900 dark:text-base-50">@c.Name</h1>
+    <article class="min-w-0 py-8 pb-24">
+        @* Overview: a quick orientation plus the whole builder family on one Beck-rendered map —
+           every card links to its section, every edge is a real callback collaboration. *@
+        <section id="overview" class="mb-20">
+            <header class="dot-grid rounded-2xl border border-base-200 dark:border-base-800 px-8 pt-6 pb-7">
+                <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-5">API <span class="mx-1.5">/</span> Beck.Authoring</div>
+                <div class="flex items-center gap-4 mb-3">
+                    <span class="font-mono text-xs uppercase tracking-wider text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-2 py-0.5">namespace</span>
+                    <h1 class="font-mono text-3xl font-semibold tracking-tight text-base-900 dark:text-base-50">Beck.Authoring</h1>
                 </div>
-                <p class="text-base leading-[1.65] text-base-600 dark:text-base-400 m-0 mb-3.5">@((MarkupString)c.Summary)</p>
-                <div class="font-mono text-[12.5px] text-base-400 dark:text-base-500 mb-[30px]">@((MarkupString)c.Meta)</div>
-
-                <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 pb-[9px] border-b border-base-200 dark:border-base-800">@c.MemberHeading</h2>
-                <div class="mb-2">
-                    @foreach (var m in c.Members)
+                <p class="text-sm text-base-600 dark:text-base-400 m-0 mb-3.5 max-w-2xl">
+                    A fluent, dependency-free API that emits Beck YAML from code. Every diagram starts at one of
+                    the four root builders — one per diagram type — and ends with <span class="font-mono">ToYaml()</span>
+                    or a fenced <span class="font-mono">ToFence()</span> block. You never construct the rest of the
+                    family yourself: each builder arrives inside a configure callback, chains its setters, and hands
+                    control back. Each tab below maps one diagram type's family — which method opens which
+                    builder — and every card links to its reference.
+                </p>
+                @* CSS-only tabs (radio inputs), keeping the page free of client JavaScript. *@
+                <div class="api-tabs mt-5">
+                    @for (var i = 0; i < ApiCatalog.OverviewTabs.Count; i++)
                     {
-                        <div class="border border-base-200 dark:border-base-800 rounded-[11px] overflow-hidden bg-white dark:bg-base-900 mb-3.5">
-                            <div class="px-[15px] py-3 font-mono text-[13.5px] bg-base-50 dark:bg-base-900 border-b border-base-200 dark:border-base-800 overflow-x-auto whitespace-pre">@((MarkupString)m.Sig)</div>
-                            <p class="m-0 px-[15px] py-3 text-sm leading-snug text-base-600 dark:text-base-400">@((MarkupString)m.Doc)</p>
+                        <input type="radio" name="api-overview-tab" id="api-tab-@i" checked="@(i == 0)" />
+                    }
+                    <div class="api-tab-labels flex gap-4 border-b border-base-200 dark:border-base-800 mb-6">
+                        @for (var i = 0; i < ApiCatalog.OverviewTabs.Count; i++)
+                        {
+                            <label class="api-tab-label font-mono text-xs tracking-wider text-primary-700 dark:text-primary-400 px-1 pb-2" for="api-tab-@i">@ApiCatalog.OverviewTabs[i].Label</label>
+                        }
+                    </div>
+                    <div class="api-tab-panels">
+                        @foreach (var t in ApiCatalog.OverviewTabs)
+                        {
+                            <div class="api-tab-panel justify-center">
+                                <BeckDiagram Yaml="@t.Yaml" Class="beck-embed beck-embed--bare w-full" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            </header>
+        </section>
+
+        @foreach (var c in ApiCatalog.Classes)
+        {
+            <section id="@c.Id" class="mb-20">
+                @* Hero band: the class diagram is part of the title composition, sitting directly
+                   on the dot-grid surface rather than boxed off to the side. *@
+                <header class="dot-grid rounded-2xl border border-base-200 dark:border-base-800 px-8 pt-6 pb-7 mb-8">
+                    <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-5">API <span class="mx-1.5">/</span> @((MarkupString)c.BreadcrumbHtml)</div>
+                    <div class="grid grid-cols-[minmax(0,4fr)_minmax(0,5fr)] gap-10 items-center max-md:grid-cols-1">
+                        <div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <span class="font-mono text-xs uppercase tracking-wider text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-2 py-0.5">class</span>
+                                <h1 class="font-mono text-3xl font-semibold tracking-tight text-base-900 dark:text-base-50">@c.Name</h1>
+                            </div>
+                            <p class="text-sm text-base-600 dark:text-base-400 m-0 mb-3.5">@((MarkupString)c.SummaryHtml)</p>
+                            <div class="font-mono text-xs text-base-400 dark:text-base-500">@((MarkupString)c.MetaHtml)</div>
+                        </div>
+                        <div class="flex items-center justify-center max-md:hidden">
+                            <BeckDiagram Yaml="@c.DiagramYaml" Class="beck-embed beck-embed--bare w-full" />
+                        </div>
+                    </div>
+                </header>
+
+                <div class="max-w-full">
+                    @foreach (var g in c.MemberGroups)
+                    {
+                        <div class="flex items-baseline gap-3 mt-8 mb-3">
+                            <span class="font-mono text-xs font-semibold tracking-widest text-primary-700 dark:text-primary-400">@(c.MemberGroups.Count == 1 ? "METHODS" : g.Label)</span>
+                            <span class="text-xs text-base-400 dark:text-base-500">@g.Hint</span>
+                            <span class="flex-1 self-center border-t border-base-200 dark:border-base-800"></span>
+                        </div>
+                        @foreach (var m in g.Members)
+                        {
+                            <div class="border border-base-200 dark:border-base-800 rounded-xl overflow-hidden bg-white dark:bg-base-900/75 mb-4">
+                                <div class="flex items-start gap-3 px-4 py-4 bg-base-50 dark:bg-base-900 @(m.DocHtml.Length > 0 ? "border-b border-base-200 dark:border-base-800" : "")">
+                                    <div class="flex-1 min-w-0 font-mono text-xs overflow-x-auto whitespace-pre">@((MarkupString)m.SigHtml)</div>
+
+                                </div>
+                                @if (m.DocHtml.Length > 0)
+                                {
+                                    <p class="m-0 px-4 py-2 text-sm leading-snug text-base-600 dark:text-base-400">@((MarkupString)m.DocHtml)</p>
+                                }
+                            </div>
+                        }
+                    }
+
+                    @if (c.ExampleHtml is not null)
+                    {
+                        <h2 class="text-sm font-mono uppercase tracking-wider text-base-400 dark:text-base-500 font-medium mb-4 mt-9 pb-2 border-b border-base-200 dark:border-base-800">Example</h2>
+                        <div class="border border-base-200 dark:border-base-800 rounded-lg overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
+                            <div class="flex items-center px-3 py-2 border-b border-base-200 dark:border-base-800 font-mono text-xs text-base-400 dark:text-base-500">@c.ExampleFile<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
+                            <div class="px-4 py-3 font-mono text-sm leading-relaxed whitespace-pre overflow-auto text-base-900 dark:text-base-50">@((MarkupString)c.ExampleHtml)</div>
                         </div>
                     }
                 </div>
-
-                @if (c.Example is not null)
-                {
-                    <h2 class="text-sm font-mono uppercase tracking-[0.08em] text-base-400 dark:text-base-500 font-medium mb-4 mt-9 pb-[9px] border-b border-base-200 dark:border-base-800">Example</h2>
-                    <div class="border border-base-200 dark:border-base-800 rounded-[10px] overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
-                        <div class="flex items-center px-[13px] py-2 border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500">@c.ExampleFile<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
-                        <div class="px-[15px] py-[13px] font-mono text-[13.5px] leading-[1.75] whitespace-pre overflow-auto text-base-900 dark:text-base-50">@((MarkupString)c.Example)</div>
-                    </div>
-                }
             </section>
         }
     </article>
 </div>
-
-@code {
-    private sealed record Member(string Sig, string Doc);
-
-    private sealed record ApiClass(
-        string Id, string Kind, string Name, string Breadcrumb, string Meta,
-        string Summary, string MemberHeading, Member[] Members,
-        string? ExampleFile = null, string? Example = null);
-
-    // ---- signature formatting helpers (types in tok-str, member name emphasised) ----
-    private const string NameCls = "text-base-900 dark:text-base-50 font-medium";
-    private static string T(string type) => $"<span class=\"tok-str\">{type}</span>";
-    private static string Ctor(string name, string args) =>
-        $"<span class=\"tok-key\">new</span> <span class=\"{NameCls}\">{name}</span>({args})";
-    private static string Sig(string ret, string name, string args) =>
-        $"{T(ret)} <span class=\"{NameCls}\">{name}</span>({args})";
-
-    private static readonly ApiClass[] Classes =
-    [
-        new("diagrambuilder", "class", "DiagramBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> DiagramBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> assembly Beck.dll",
-            "A dependency-free fluent builder that turns code into Beck YAML — or a fenced " +
-            "<span class=\"font-mono text-[13.5px] text-base-900 dark:text-base-50\">```beck</span> Markdown block. " +
-            "Walk any model (an Aspire app graph, an EF model, a service registry) into one and emit a diagram.",
-            "Methods",
-            [
-                new(Ctor("DiagramBuilder", $"{T("string")} title"),
-                    "Create a builder, optionally with a diagram title."),
-                new(Sig("DiagramBuilder", "Title", $"{T("string")} title"),
-                    "Set the diagram title."),
-                new(Sig("DiagramBuilder", "Subtitle", $"{T("string")} subtitle"),
-                    "Set the muted second heading line."),
-                new(Sig("DiagramBuilder", "Direction", $"{T("Direction")} direction"),
-                    "Set the layout direction — <span class=\"font-mono\">TB</span> (default), <span class=\"font-mono\">BT</span>, <span class=\"font-mono\">LR</span>, or <span class=\"font-mono\">RL</span>."),
-                new(Sig("DiagramBuilder", "Theme", $"{T("ThemeMode")} theme"),
-                    "Set the theme: <span class=\"font-mono\">Auto</span> (default), <span class=\"font-mono\">Light</span>, or <span class=\"font-mono\">Dark</span>."),
-                new(Sig("DiagramBuilder", "Animate", $"{T("bool")} animate"),
-                    "Enable or disable the flow animation."),
-                new(Sig("DiagramBuilder", "Loop", $"{T("bool")} loop"),
-                    "Loop the flow (default) or play it through once."),
-                new(Sig("DiagramBuilder", "Spacing", $"{T("int?")} rank, {T("int?")} node, {T("int?")} cornerRadius"),
-                    "Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius in px."),
-                new(Sig("DiagramBuilder", "Node", $"{T("string")} id, {T("Action&lt;NodeBuilder&gt;")} configure"),
-                    "Add a node and configure it via <span class=\"font-mono\">NodeBuilder</span> — title, kind, icon, accent, link, and more."),
-                new(Sig("DiagramBuilder", "Node", $"{T("string")} id, {T("string")} title, {T("NodeKind?")} kind"),
-                    "The terse overload: add a node with a title and an optional kind."),
-                new(Sig("DiagramBuilder", "Group", $"{T("string")} id, {T("Action&lt;GroupBuilder&gt;")} configure"),
-                    "Add a labelled, boxed cluster. Members may be node ids <em>or</em> other group ids — groups nest to any depth."),
-                new(Sig("DiagramBuilder", "Edge", $"{T("string")} from, {T("string")} to, {T("Action&lt;EdgeBuilder&gt;")} configure"),
-                    "Connect two nodes (or groups). Configure label, style, curve, kind, color, and arrowheads."),
-                new(Sig("DiagramBuilder", "Flow", $"{T("Action&lt;FlowBuilder&gt;")} configure"),
-                    "Script the animation. Omit it and Beck auto-derives a flow from the edges."),
-                new(Sig("string", "ToYaml", ""),
-                    "Render the diagram as Beck YAML. Throws if an edge endpoint isn't a declared node or group id."),
-                new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
-            ],
-            "Program.cs",
-            "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> DiagramBuilder(<span class=\"tok-str\">\"Web Platform\"</span>)\n" +
-            "    .Direction(Direction.TB)\n" +
-            "    .Node(<span class=\"tok-str\">\"web\"</span>, n =&gt; n.Title(<span class=\"tok-str\">\"Web App\"</span>).Kind(NodeKind.User))\n" +
-            "    .Node(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"API Server\"</span>)\n" +
-            "    .Edge(<span class=\"tok-str\">\"web\"</span>, <span class=\"tok-str\">\"api\"</span>)\n" +
-            "    .ToFence();   <span class=\"tok-punct\">// drop straight into a .md file</span>"),
-
-        new("nodebuilder", "class", "NodeBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> NodeBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Node</span>",
-            "Configures a single node inside a <span class=\"font-mono\">Node(id, n =&gt; …)</span> callback. Every method returns " +
-            "the same builder, so calls chain. Unset fields fall back to the node kind's defaults.",
-            "Methods",
-            [
-                new(Sig("NodeBuilder", "Title", $"{T("string")} title"), "Set the display title (defaults to the id)."),
-                new(Sig("NodeBuilder", "Subtitle", $"{T("string")} subtitle"), "Set the muted subtitle line."),
-                new(Sig("NodeBuilder", "Icon", $"{T("string")} icon"), "Set a named icon key or raw inline <span class=\"font-mono\">&lt;svg&gt;</span> markup."),
-                new(Sig("NodeBuilder", "Kind", $"{T("NodeKind")} kind"), "Set the archetype (default <span class=\"font-mono\">Service</span>) — picks an icon, accent, and shape."),
-                new(Sig("NodeBuilder", "Variant", $"{T("NodeVariant")} variant"), "Set the visual weight: <span class=\"font-mono\">Solid</span>, <span class=\"font-mono\">Subtle</span>, or <span class=\"font-mono\">Ghost</span>."),
-                new(Sig("NodeBuilder", "Status", $"{T("string")} status"), "Set the initial status-pill text."),
-                new(Sig("NodeBuilder", "Accent", $"{T("AccentToken")} token"), "Set the accent to a semantic token (follows the theme)."),
-                new(Sig("NodeBuilder", "Accent", $"{T("string")} color"), "Set the accent to a raw CSS colour (a hex string, say)."),
-                new(Sig("NodeBuilder", "Width", $"{T("int")} px"), "Fix the card width in px (prevents reflow on a status change)."),
-                new(Sig("NodeBuilder", "Rank", $"{T("int")} rank"), "Force the node into a specific layout rank."),
-                new(Sig("NodeBuilder", "Order", $"{T("int")} order"), "Tie-break the node's order within its rank."),
-                new(Sig("NodeBuilder", "Group", $"{T("string")} groupId"), "Assign the node to a group inline (alternative to group members)."),
-                new(Sig("NodeBuilder", "Link", $"{T("string")} href, {T("string?")} target"), "Make the card a link. Pass <span class=\"font-mono\">\"_blank\"</span> to open in a new tab."),
-                new(Sig("NodeBuilder", "Surface", $"{T("string")} color"), "Override the card background (a raw CSS colour)."),
-                new(Sig("NodeBuilder", "TextColor", $"{T("string")} color"), "Override the card text colour (a raw CSS colour)."),
-            ]),
-
-        new("edgebuilder", "class", "EdgeBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> EdgeBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Edge</span>",
-            "Configures one edge inside an <span class=\"font-mono\">Edge(from, to, e =&gt; …)</span> callback. Endpoints may be node ids " +
-            "or group ids.",
-            "Methods",
-            [
-                new(Sig("EdgeBuilder", "Label", $"{T("string")} label"), "Set the edge label."),
-                new(Sig("EdgeBuilder", "Style", $"{T("EdgeStyle")} style"), "Set the line style: <span class=\"font-mono\">Solid</span> or <span class=\"font-mono\">Dashed</span>."),
-                new(Sig("EdgeBuilder", "Curve", $"{T("EdgeCurve")} curve"), "Set the routing curve: <span class=\"font-mono\">StepRound</span> (default), <span class=\"font-mono\">Straight</span>, or <span class=\"font-mono\">S</span>."),
-                new(Sig("EdgeBuilder", "Kind", $"{T("EdgeKind")} kind"), "Set the semantic kind (defaults colour + style): <span class=\"font-mono\">Data</span>, <span class=\"font-mono\">Control</span>, <span class=\"font-mono\">Async</span>, <span class=\"font-mono\">Dependency</span>."),
-                new(Sig("EdgeBuilder", "Color", $"{T("AccentToken")} token"), "Set the stroke to a semantic token."),
-                new(Sig("EdgeBuilder", "Color", $"{T("string")} color"), "Set the stroke to a raw CSS colour."),
-                new(Sig("EdgeBuilder", "Arrow", $"{T("bool")} arrow"), "Toggle the arrowhead (default on). <span class=\"font-mono\">false</span> draws none."),
-                new(Sig("EdgeBuilder", "Arrows", $"{T("ArrowEnds")} ends"), "Choose which ends carry an arrowhead — e.g. <span class=\"font-mono\">ArrowEnds.Both</span>."),
-                new(Sig("EdgeBuilder", "FromSide", $"{T("Side")} side"), "Pin the edge's exit side on the source node."),
-                new(Sig("EdgeBuilder", "ToSide", $"{T("Side")} side"), "Pin the edge's entry side on the target node."),
-            ]),
-
-        new("groupbuilder", "class", "GroupBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> GroupBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Group</span>",
-            "Configures a labelled, boxed cluster inside a <span class=\"font-mono\">Group(id, g =&gt; …)</span> callback. " +
-            "Members may be node ids or other group ids, so groups nest.",
-            "Methods",
-            [
-                new(Sig("GroupBuilder", "Label", $"{T("string")} label"), "Set the group label (defaults to the id)."),
-                new(Sig("GroupBuilder", "Members", $"<span class=\"tok-key\">params</span> {T("string[]")} ids"), "Add member node (or group) ids."),
-                new(Sig("GroupBuilder", "Member", $"{T("string")} id"), "Add a single member id."),
-                new(Sig("GroupBuilder", "Accent", $"{T("AccentToken")} token"), "Tint the box + label with a semantic token."),
-                new(Sig("GroupBuilder", "Accent", $"{T("string")} color"), "Tint the box + label with a raw CSS colour."),
-            ]),
-
-        new("flowbuilder", "class", "FlowBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> FlowBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">DiagramBuilder.Flow</span>",
-            "Scripts the animation timeline inside a <span class=\"font-mono\">Flow(f =&gt; …)</span> callback — packets, status changes, " +
-            "and effects, played in order. Without an explicit flow the engine auto-derives one from the edges.",
-            "Methods",
-            [
-                new(Sig("FlowBuilder", "Repeat", $"{T("int")} repeat"), "Repeat count: <span class=\"font-mono\">-1</span> loops forever (default), <span class=\"font-mono\">0</span> plays once."),
-                new(Sig("FlowBuilder", "RepeatDelay", $"{T("double")} seconds"), "Delay between repeats, in seconds."),
-                new(Sig("FlowBuilder", "Packet", $"{T("string")} from, {T("string")} to, {T("string?")} color, {T("string?")} label, {T("string[]?")} via"), "Send a packet along an edge, optionally via waypoints, with a colour and label."),
-                new(Sig("FlowBuilder", "Status", $"{T("string")} node, {T("string")} text, {T("string?")} color"), "Set a node's status-pill text (persists until changed)."),
-                new(Sig("FlowBuilder", "Highlight", $"{T("string")} node, {T("string?")} color"), "Briefly highlight a node."),
-                new(Sig("FlowBuilder", "Pulse", $"{T("string")} node, {T("string?")} color"), "Pulse a node — a ripple on arrival."),
-                new(Sig("FlowBuilder", "Activate", $"{T("string")} from, {T("string")} to, {T("string?")} color"), "Persistently recolour an edge (and its arrowhead) until the next reset."),
-                new(Sig("FlowBuilder", "Stream", $"{T("string")} from, {T("string")} to, {T("string?")} color"), "Continuous flowing dashes along an edge (ongoing traffic), until reset."),
-                new(Sig("FlowBuilder", "Working", $"{T("string")} node, {T("string?")} color"), "Leave a node visibly busy (a breathing glow) until <span class=\"font-mono\">Idle</span> or reset."),
-                new(Sig("FlowBuilder", "Idle", $"{T("string")} node"), "Clear a node's <span class=\"font-mono\">Working</span> state."),
-                new(Sig("FlowBuilder", "Fail", $"{T("string")} node, {T("string?")} text, {T("string?")} color"), "A failure beat: red shake + flash, with optional status text."),
-                new(Sig("FlowBuilder", "Phase", $"{T("string")} label"), "A named seek label, so the handle's <span class=\"font-mono\">seek(label)</span> can jump here."),
-                new(Sig("FlowBuilder", "Wait", $"{T("double")} seconds"), "Pause for a number of seconds."),
-                new(Sig("FlowBuilder", "Reset", ""), "Reset the diagram to its initial state."),
-                new(Sig("FlowBuilder", "Parallel", $"{T("Action&lt;FlowBuilder&gt;")} build"), "Run a group of steps simultaneously."),
-            ],
-            "Program.cs",
-            "<span class=\"tok-key\">new</span> DiagramBuilder(<span class=\"tok-str\">\"Read path\"</span>)\n" +
-            "    .Node(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"API\"</span>).Node(<span class=\"tok-str\">\"db\"</span>, n =&gt; n.Kind(NodeKind.Db))\n" +
-            "    .Edge(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"db\"</span>)\n" +
-            "    .Flow(f =&gt; f\n" +
-            "        .Packet(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"db\"</span>, label: <span class=\"tok-str\">\"SELECT\"</span>)\n" +
-            "        .Working(<span class=\"tok-str\">\"db\"</span>).Wait(<span class=\"tok-accent\">1</span>).Idle(<span class=\"tok-str\">\"db\"</span>)\n" +
-            "        .Packet(<span class=\"tok-str\">\"db\"</span>, <span class=\"tok-str\">\"api\"</span>, color: <span class=\"tok-str\">\"success\"</span>))\n" +
-            "    .ToFence();"),
-
-        new("sequencediagrambuilder", "class", "SequenceDiagramBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> SequenceDiagramBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> assembly Beck.dll",
-            "The fluent builder for a <span class=\"font-mono\">type: sequence</span> diagram — participants become columns, " +
-            "messages become rows in call order, and without an explicit flow the message order <em>is</em> the animation.",
-            "Methods",
-            [
-                new(Ctor("SequenceDiagramBuilder", $"{T("string")} title"),
-                    "Create a builder, optionally with a diagram title."),
-                new(Sig("SequenceDiagramBuilder", "Title", $"{T("string")} title"),
-                    "Set the diagram title."),
-                new(Sig("SequenceDiagramBuilder", "Subtitle", $"{T("string")} subtitle"),
-                    "Set the muted second heading line."),
-                new(Sig("SequenceDiagramBuilder", "Theme", $"{T("ThemeMode")} theme"),
-                    "Set the theme: <span class=\"font-mono\">Auto</span> (default), <span class=\"font-mono\">Light</span>, or <span class=\"font-mono\">Dark</span>."),
-                new(Sig("SequenceDiagramBuilder", "Animate", $"{T("bool")} animate"),
-                    "Enable or disable the flow animation."),
-                new(Sig("SequenceDiagramBuilder", "Loop", $"{T("bool")} loop"),
-                    "Loop the flow (default) or play it through once."),
-                new(Sig("SequenceDiagramBuilder", "Spacing", $"{T("int?")} rank, {T("int?")} node, {T("int?")} cornerRadius"),
-                    "Tune layout spacing: row gap (along the lifelines), column gap (across), and corner radius in px."),
-                new(Sig("SequenceDiagramBuilder", "Participant", $"{T("string")} id, {T("Action&lt;NodeBuilder&gt;")} configure"),
-                    "Add a participant column and configure it via <span class=\"font-mono\">NodeBuilder</span> — participants take the same fields as architecture nodes."),
-                new(Sig("SequenceDiagramBuilder", "Participant", $"{T("string")} id, {T("string")} title, {T("NodeKind?")} kind"),
-                    "The terse overload: add a participant with a title and an optional kind."),
-                new(Sig("SequenceDiagramBuilder", "Message", $"{T("string")} from, {T("string")} to, {T("string?")} label, {T("Action&lt;MessageBuilder&gt;?")} configure"),
-                    "Send a message. <span class=\"font-mono\">from</span> equal to <span class=\"font-mono\">to</span> draws a self-message loop. Throws if an endpoint isn't a declared participant, so a typo fails loudly in C#."),
-                new(Sig("SequenceDiagramBuilder", "Reply", $"{T("string")} from, {T("string")} to, {T("string?")} label, {T("Action&lt;MessageBuilder&gt;?")} configure"),
-                    "Send a reply — dashed with an open arrowhead; closes the receiver's activation bar."),
-                new(Sig("SequenceDiagramBuilder", "Section", $"{T("string")} label"),
-                    "Insert a labelled full-width band before the next message — each section also becomes a seekable <span class=\"font-mono\">phase</span>."),
-                new(Sig("SequenceDiagramBuilder", "Flow", $"{T("Action&lt;FlowBuilder&gt;")} configure"),
-                    "Script the animation explicitly. Without this the engine animates the message order."),
-                new(Sig("string", "ToYaml", ""),
-                    "Render the diagram as Beck YAML. Throws if the diagram has no participants or no messages."),
-                new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
-            ],
-            "Program.cs",
-            "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> SequenceDiagramBuilder(<span class=\"tok-str\">\"Checkout\"</span>)\n" +
-            "    .Participant(<span class=\"tok-str\">\"web\"</span>, <span class=\"tok-str\">\"Web App\"</span>, NodeKind.User)\n" +
-            "    .Participant(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"Orders API\"</span>)\n" +
-            "    .Message(<span class=\"tok-str\">\"web\"</span>, <span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"POST /orders\"</span>)\n" +
-            "    .Reply(<span class=\"tok-str\">\"api\"</span>, <span class=\"tok-str\">\"web\"</span>, <span class=\"tok-str\">\"201 Created\"</span>)\n" +
-            "    .ToFence();   <span class=\"tok-punct\">// the message order is the animation</span>"),
-
-        new("messagebuilder", "class", "MessageBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> MessageBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">SequenceDiagramBuilder.Message / .Reply</span>",
-            "Configures one sequence message inside a <span class=\"font-mono\">Message(from, to, label, m =&gt; …)</span> callback.",
-            "Methods",
-            [
-                new(Sig("MessageBuilder", "Label", $"{T("string")} label"), "Set the message label (drawn above the arrow)."),
-                new(Sig("MessageBuilder", "Kind", $"{T("EdgeKind")} kind"), "Set the semantic kind — <span class=\"font-mono\">Async</span> renders dashed with an open arrowhead and eased packet motion."),
-                new(Sig("MessageBuilder", "Style", $"{T("EdgeStyle")} style"), "Override the line style: <span class=\"font-mono\">Solid</span> or <span class=\"font-mono\">Dashed</span>."),
-                new(Sig("MessageBuilder", "Color", $"{T("AccentToken")} token"), "Set the stroke to a semantic token."),
-                new(Sig("MessageBuilder", "Color", $"{T("string")} color"), "Set the stroke to a raw CSS colour."),
-                new(Sig("MessageBuilder", "Activate", $"{T("bool")} activate"), "Force (<span class=\"font-mono\">true</span>) or suppress (<span class=\"font-mono\">false</span>) an activation bar on the receiver."),
-            ]),
-
-        new("statediagrambuilder", "class", "StateDiagramBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> StateDiagramBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> assembly Beck.dll",
-            "The fluent builder for a <span class=\"font-mono\">type: state</span> diagram. Transitions auto-create the states they " +
-            "mention, so declaring a state explicitly is only needed to refine it; <span class=\"font-mono\">Initial</span> and " +
-            "<span class=\"font-mono\">Final</span> wire the <span class=\"font-mono\">[*]</span> pseudo-state for you.",
-            "Methods",
-            [
-                new(Ctor("StateDiagramBuilder", $"{T("string")} title"),
-                    "Create a builder, optionally with a diagram title."),
-                new(Sig("StateDiagramBuilder", "Title", $"{T("string")} title"),
-                    "Set the diagram title."),
-                new(Sig("StateDiagramBuilder", "Subtitle", $"{T("string")} subtitle"),
-                    "Set the muted second heading line."),
-                new(Sig("StateDiagramBuilder", "Direction", $"{T("Direction")} direction"),
-                    "Set the layout direction — <span class=\"font-mono\">TB</span> (default) reads like a lifecycle, <span class=\"font-mono\">LR</span> like a pipeline."),
-                new(Sig("StateDiagramBuilder", "Theme", $"{T("ThemeMode")} theme"),
-                    "Set the theme: <span class=\"font-mono\">Auto</span> (default), <span class=\"font-mono\">Light</span>, or <span class=\"font-mono\">Dark</span>."),
-                new(Sig("StateDiagramBuilder", "Animate", $"{T("bool")} animate"),
-                    "Enable or disable the flow animation."),
-                new(Sig("StateDiagramBuilder", "Loop", $"{T("bool")} loop"),
-                    "Loop the flow (default) or play it through once."),
-                new(Sig("StateDiagramBuilder", "Spacing", $"{T("int?")} rank, {T("int?")} node, {T("int?")} cornerRadius"),
-                    "Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius in px."),
-                new(Sig("StateDiagramBuilder", "State", $"{T("string")} id, {T("Action&lt;StateBuilder&gt;")} configure"),
-                    "Declare a state and refine it via <span class=\"font-mono\">StateBuilder</span> — title, accent, subtitle. Undeclared states still render as plain pills."),
-                new(Sig("StateDiagramBuilder", "State", $"{T("string")} id, {T("string")} title, {T("AccentToken?")} accent"),
-                    "The terse overload: declare a state with a title and an optional accent."),
-                new(Sig("StateDiagramBuilder", "Transition", $"{T("string")} from, {T("string")} to, {T("string?")} label, {T("Action&lt;TransitionBuilder&gt;?")} configure"),
-                    "Add a transition. <span class=\"font-mono\">from</span> equal to <span class=\"font-mono\">to</span> draws a self-transition loop."),
-                new(Sig("StateDiagramBuilder", "Initial", $"{T("string")} stateId"),
-                    "Draw the entry dot into a state — shorthand for a transition from <span class=\"font-mono\">[*]</span>."),
-                new(Sig("StateDiagramBuilder", "Final", $"{T("string")} stateId, {T("string?")} label"),
-                    "Draw the exit bullseye from a state — shorthand for a transition to <span class=\"font-mono\">[*]</span>."),
-                new(Sig("StateDiagramBuilder", "Flow", $"{T("Action&lt;FlowBuilder&gt;")} configure"),
-                    "Script the animation explicitly. Without this the engine walks the transitions in machine order."),
-                new(Sig("string", "ToYaml", ""),
-                    "Render the diagram as Beck YAML. Throws if the diagram has no states and no transitions."),
-                new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
-            ],
-            "Program.cs",
-            "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> StateDiagramBuilder(<span class=\"tok-str\">\"Publish Lifecycle\"</span>)\n" +
-            "    .Direction(Direction.LR)\n" +
-            "    .State(<span class=\"tok-str\">\"review\"</span>, <span class=\"tok-str\">\"In Review\"</span>, AccentToken.Warn)\n" +
-            "    .Initial(<span class=\"tok-str\">\"draft\"</span>)\n" +
-            "    .Transition(<span class=\"tok-str\">\"draft\"</span>, <span class=\"tok-str\">\"review\"</span>, <span class=\"tok-str\">\"submit\"</span>)\n" +
-            "    .Transition(<span class=\"tok-str\">\"review\"</span>, <span class=\"tok-str\">\"published\"</span>, <span class=\"tok-str\">\"approve\"</span>)\n" +
-            "    .Final(<span class=\"tok-str\">\"published\"</span>)\n" +
-            "    .ToFence();"),
-
-        new("statebuilder", "class", "StateBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> StateBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">StateDiagramBuilder.State</span>",
-            "Refines a single state inside a <span class=\"font-mono\">State(id, s =&gt; …)</span> callback. States a transition " +
-            "mentions but you never declare keep their auto-created pill.",
-            "Methods",
-            [
-                new(Sig("StateBuilder", "Title", $"{T("string")} title"), "Set the display title (defaults to the id)."),
-                new(Sig("StateBuilder", "Subtitle", $"{T("string")} subtitle"), "Set the muted subtitle line."),
-                new(Sig("StateBuilder", "Accent", $"{T("AccentToken")} token"), "Set the accent to a semantic token (follows the theme)."),
-                new(Sig("StateBuilder", "Accent", $"{T("string")} color"), "Set the accent to a raw CSS colour."),
-                new(Sig("StateBuilder", "Width", $"{T("int")} px"), "Fix the pill width in px."),
-                new(Sig("StateBuilder", "Rank", $"{T("int")} rank"), "Force the state into a specific layout rank."),
-                new(Sig("StateBuilder", "Order", $"{T("int")} order"), "Tie-break the state's order within its rank."),
-            ]),
-
-        new("transitionbuilder", "class", "TransitionBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> TransitionBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">StateDiagramBuilder.Transition</span>",
-            "Configures one transition inside a <span class=\"font-mono\">Transition(from, to, label, t =&gt; …)</span> callback.",
-            "Methods",
-            [
-                new(Sig("TransitionBuilder", "Label", $"{T("string")} label"), "Set the transition label (the event or guard)."),
-                new(Sig("TransitionBuilder", "Style", $"{T("EdgeStyle")} style"), "Override the line style: <span class=\"font-mono\">Solid</span> or <span class=\"font-mono\">Dashed</span>."),
-                new(Sig("TransitionBuilder", "Color", $"{T("AccentToken")} token"), "Set the stroke to a semantic token."),
-                new(Sig("TransitionBuilder", "Color", $"{T("string")} color"), "Set the stroke to a raw CSS colour."),
-            ]),
-
-        new("classdiagrambuilder", "class", "ClassDiagramBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> ClassDiagramBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> assembly Beck.dll",
-            "The fluent builder for a <span class=\"font-mono\">type: class</span> diagram — UML class cards joined by the six " +
-            "relation kinds. Build cards by hand with <span class=\"font-mono\">Class</span>, or reflect real CLR types with " +
-            "<span class=\"font-mono\">FromTypes</span> so the diagram can never drift from the code.",
-            "Methods",
-            [
-                new(Ctor("ClassDiagramBuilder", $"{T("string")} title"),
-                    "Create a builder, optionally with a diagram title."),
-                new($"<span class=\"tok-key\">static</span> {T("ClassDiagramBuilder")} <span class=\"{NameCls}\">FromTypes</span>(<span class=\"tok-key\">params</span> {T("Type[]")} types)",
-                    "Reflect CLR types into cards and infer the relations among them — base types become <span class=\"font-mono\">inherits</span>, interfaces <span class=\"font-mono\">implements</span>, property types labelled associations (collections get a <span class=\"font-mono\">*</span> multiplicity), enums «enum» cards. Types outside the set are ignored."),
-                new(Sig("ClassDiagramBuilder", "AddTypes", $"<span class=\"tok-key\">params</span> {T("Type[]")} types"),
-                    "Reflect more types into an existing builder — the instance form of <span class=\"font-mono\">FromTypes</span>."),
-                new(Sig("ClassDiagramBuilder", "Title", $"{T("string")} title"),
-                    "Set the diagram title."),
-                new(Sig("ClassDiagramBuilder", "Subtitle", $"{T("string")} subtitle"),
-                    "Set the muted second heading line."),
-                new(Sig("ClassDiagramBuilder", "Direction", $"{T("Direction")} direction"),
-                    "Set the layout direction — <span class=\"font-mono\">TB</span> (default) reads the hierarchy top-down."),
-                new(Sig("ClassDiagramBuilder", "Theme", $"{T("ThemeMode")} theme"),
-                    "Set the theme: <span class=\"font-mono\">Auto</span> (default), <span class=\"font-mono\">Light</span>, or <span class=\"font-mono\">Dark</span>."),
-                new(Sig("ClassDiagramBuilder", "Animate", $"{T("bool")} animate"),
-                    "Enable or disable the flow animation."),
-                new(Sig("ClassDiagramBuilder", "Loop", $"{T("bool")} loop"),
-                    "Loop the flow (default) or play it through once."),
-                new(Sig("ClassDiagramBuilder", "Spacing", $"{T("int?")} rank, {T("int?")} node, {T("int?")} cornerRadius"),
-                    "Tune layout spacing: rank gap (along the hierarchy), node gap (across), and corner radius in px."),
-                new(Sig("ClassDiagramBuilder", "Class", $"{T("string")} id, {T("Action&lt;ClassBuilder&gt;")} configure"),
-                    "Add a class card and configure it via <span class=\"font-mono\">ClassBuilder</span> — name, stereotype, fields, methods."),
-                new(Sig("ClassDiagramBuilder", "Class", $"{T("string")} id, {T("string")} name"),
-                    "The terse overload: add a class card with a display name."),
-                new(Sig("ClassDiagramBuilder", "Group", $"{T("string")} id, {T("Action&lt;GroupBuilder&gt;")} configure"),
-                    "Add a labelled boundary — a namespace or module box around related classes."),
-                new(Sig("ClassDiagramBuilder", "Inherits", $"{T("string")} child, {T("string")} parent"),
-                    "Child extends parent — solid line, hollow triangle at the parent."),
-                new(Sig("ClassDiagramBuilder", "Implements", $"{T("string")} child, {T("string")} iface"),
-                    "Class implements an interface — dashed line, hollow triangle at the interface."),
-                new(Sig("ClassDiagramBuilder", "Association", $"{T("string")} from, {T("string")} to, {T("string?")} label, {T("string?")} fromCard, {T("string?")} toCard"),
-                    "A plain directed association, with optional multiplicities at each end."),
-                new(Sig("ClassDiagramBuilder", "Aggregation", $"{T("string")} whole, {T("string")} part, {T("string?")} label, {T("string?")} fromCard, {T("string?")} toCard"),
-                    "Whole–part where the part outlives the whole — hollow diamond at the whole."),
-                new(Sig("ClassDiagramBuilder", "Composition", $"{T("string")} whole, {T("string")} part, {T("string?")} label, {T("string?")} fromCard, {T("string?")} toCard"),
-                    "Whole–part where the part's lifetime is owned — filled diamond at the whole."),
-                new(Sig("ClassDiagramBuilder", "DependsOn", $"{T("string")} from, {T("string")} to, {T("string?")} label"),
-                    "A usage dependency — dashed line, open arrowhead."),
-                new(Sig("ClassDiagramBuilder", "Relation", $"{T("string")} from, {T("string")} to, {T("RelationKind")} kind, {T("string?")} label, {T("string?")} fromCard, {T("string?")} toCard"),
-                    "The general form the six named relation methods delegate to."),
-                new(Sig("ClassDiagramBuilder", "Flow", $"{T("Action&lt;FlowBuilder&gt;")} configure"),
-                    "Script the animation explicitly. Without this each inheritance level lights up in turn."),
-                new(Sig("string", "ToYaml", ""),
-                    "Render the diagram as Beck YAML. Throws if there are no classes, or a relation references an undeclared class id."),
-                new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
-            ],
-            "Program.cs",
-            "<span class=\"tok-key\">var</span> fence = ClassDiagramBuilder\n" +
-            "    .FromTypes(<span class=\"tok-key\">typeof</span>(Entity), <span class=\"tok-key\">typeof</span>(Order), <span class=\"tok-key\">typeof</span>(OrderLine), <span class=\"tok-key\">typeof</span>(OrderStatus))\n" +
-            "    .Title(<span class=\"tok-str\">\"Order Model\"</span>)\n" +
-            "    .ToFence();   <span class=\"tok-punct\">// regenerates from the real types — it can't drift</span>"),
-
-        new("classbuilder", "class", "ClassBuilder", "Beck.Authoring <span class=\"mx-1.5\">/</span> ClassBuilder",
-            "namespace Beck <span class=\"mx-2\">·</span> configured via <span class=\"font-mono\">ClassDiagramBuilder.Class</span>",
-            "Configures one UML class card inside a <span class=\"font-mono\">Class(id, c =&gt; …)</span> callback. Field and method " +
-            "compartment lines are plain strings, so write them the way your team reads them.",
-            "Methods",
-            [
-                new(Sig("ClassBuilder", "Name", $"{T("string")} name"), "Set the class name in the card header (defaults to the id)."),
-                new(Sig("ClassBuilder", "Stereotype", $"{T("string")} stereotype"), "Set the «stereotype» line above the name — <span class=\"font-mono\">interface</span>, <span class=\"font-mono\">abstract</span>, <span class=\"font-mono\">enum</span>, <span class=\"font-mono\">aggregate</span>, anything."),
-                new(Sig("ClassBuilder", "Accent", $"{T("AccentToken")} token"), "Set the accent to a semantic token (follows the theme)."),
-                new(Sig("ClassBuilder", "Accent", $"{T("string")} color"), "Set the accent to a raw CSS colour."),
-                new(Sig("ClassBuilder", "Field", $"{T("string")} field"), "Add one line to the fields compartment."),
-                new(Sig("ClassBuilder", "Fields", $"<span class=\"tok-key\">params</span> {T("string[]")} fields"), "Add several field lines at once."),
-                new(Sig("ClassBuilder", "Method", $"{T("string")} method"), "Add one line to the methods compartment."),
-                new(Sig("ClassBuilder", "Methods", $"<span class=\"tok-key\">params</span> {T("string[]")} methods"), "Add several method lines at once."),
-                new(Sig("ClassBuilder", "Link", $"{T("string")} href, {T("string?")} target"), "Make the card a link — to the type's source or docs, say."),
-                new(Sig("ClassBuilder", "Group", $"{T("string")} groupId"), "Assign the class to a namespace group inline."),
-                new(Sig("ClassBuilder", "Width", $"{T("int")} px"), "Fix the card width in px."),
-                new(Sig("ClassBuilder", "Rank", $"{T("int")} rank"), "Force the card into a specific layout rank."),
-                new(Sig("ClassBuilder", "Order", $"{T("int")} order"), "Tie-break the card's order within its rank."),
-            ]),
-    ];
-}

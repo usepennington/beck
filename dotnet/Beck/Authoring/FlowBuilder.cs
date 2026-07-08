@@ -7,11 +7,9 @@ using System.Text;
 namespace Beck;
 
 /// <summary>
-/// Fluent builder for a diagram's animation <c>flow:</c> — the scripted sequence
-/// of packets, status changes, and effects the engine plays. Mirrors the flow
-/// steps the TypeScript engine parses (packet/burst/status/highlight/pulse/
-/// activate/stream/working/idle/fail/phase/wait/reset/parallel). Without an
-/// explicit flow the engine auto-derives one from the edges.
+/// Scripts the animation timeline inside a <c>Flow(f => …)</c> callback —
+/// packets, status changes, and effects, played in order.
+/// Without an explicit flow the engine auto-derives one from the edges.
 /// </summary>
 /// <example>
 /// <code>

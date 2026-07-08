@@ -7,10 +7,10 @@ namespace Beck;
 
 /// <summary>
 /// Builds a <c>type: state</c> Beck diagram — a state machine of pills and
-/// labelled transitions. <see cref="Initial"/>/<see cref="Final"/> wire the UML
-/// entry dot and exit bullseye; states referenced only by transitions are
-/// auto-created by the engine, so <c>State()</c> is only needed to refine a
-/// state's title or accent.
+/// labelled transitions. Transitions auto-create the states they mention, so
+/// <c>State()</c> is only needed to refine a state's title or accent;
+/// <see cref="Initial"/> and <see cref="Final"/> wire the <c>[*]</c>
+/// pseudo-state (the UML entry dot and exit bullseye) for you.
 /// </summary>
 /// <example>
 /// <code>
@@ -47,16 +47,16 @@ public sealed class StateDiagramBuilder
     /// <summary>Set the diagram subtitle.</summary>
     public StateDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
 
-    /// <summary>Set the layout direction (state machines often read best LR).</summary>
+    /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default) reads like a lifecycle, <see cref="Beck.Direction.LR"/> like a pipeline.</summary>
     public StateDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
-    /// <summary>Set the theme mode.</summary>
+    /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
     public StateDiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
 
-    /// <summary>Enable or disable animation.</summary>
+    /// <summary>Enable or disable the flow animation.</summary>
     public StateDiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
 
-    /// <summary>Enable or disable looping.</summary>
+    /// <summary>Loop the flow (default) or play it through once.</summary>
     public StateDiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container.</summary>
@@ -74,7 +74,7 @@ public sealed class StateDiagramBuilder
         return this;
     }
 
-    /// <summary>Tune layout spacing.</summary>
+    /// <summary>Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius (px).</summary>
     public StateDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
         if (rank is { } r) _meta.SpacingRank = r;
@@ -83,7 +83,7 @@ public sealed class StateDiagramBuilder
         return this;
     }
 
-    /// <summary>Declare (or refine) a state, configured via a builder callback.</summary>
+    /// <summary>Declare a state and refine it via <see cref="StateBuilder"/> — title, accent, subtitle. Undeclared states still render as plain pills.</summary>
     public StateDiagramBuilder State(string id, Action<StateBuilder>? configure = null)
     {
         var s = new StateBuilder(id);
@@ -92,7 +92,7 @@ public sealed class StateDiagramBuilder
         return this;
     }
 
-    /// <summary>Declare a state with a title and optional accent.</summary>
+    /// <summary>The terse overload: declare a state with a title and an optional accent.</summary>
     public StateDiagramBuilder State(string id, string title, AccentToken? accent = null)
     {
         var s = new StateBuilder(id).Title(title);
@@ -101,7 +101,7 @@ public sealed class StateDiagramBuilder
         return this;
     }
 
-    /// <summary>Add a transition between two states (states are auto-created as needed).</summary>
+    /// <summary>Add a transition (states are auto-created as needed). <paramref name="from"/> equal to <paramref name="to"/> draws a self-transition loop.</summary>
     public StateDiagramBuilder Transition(string from, string to, string? label = null, Action<TransitionBuilder>? configure = null)
     {
         var t = new TransitionBuilder(from, to);
@@ -111,13 +111,13 @@ public sealed class StateDiagramBuilder
         return this;
     }
 
-    /// <summary>Mark the machine's initial state (draws the entry dot).</summary>
+    /// <summary>Draw the entry dot into a state — shorthand for a transition from <c>[*]</c>.</summary>
     public StateDiagramBuilder Initial(string stateId) => Transition(Pseudo, stateId);
 
-    /// <summary>Mark a final state (draws the exit bullseye), with an optional transition label.</summary>
+    /// <summary>Draw the exit bullseye from a state — shorthand for a transition to <c>[*]</c>, with an optional label.</summary>
     public StateDiagramBuilder Final(string stateId, string? label = null) => Transition(stateId, Pseudo, label);
 
-    /// <summary>Script the animation flow explicitly. Without this the engine walks the transitions.</summary>
+    /// <summary>Script the animation explicitly. Without this the engine walks the transitions in machine order.</summary>
     public StateDiagramBuilder Flow(Action<FlowBuilder> configure)
     {
         _flow ??= new FlowBuilder();
@@ -126,6 +126,7 @@ public sealed class StateDiagramBuilder
     }
 
     /// <summary>Render the diagram as Beck YAML.</summary>
+    /// <exception cref="InvalidOperationException">The diagram has no states and no transitions.</exception>
     public string ToYaml()
     {
         if (_states.Count == 0 && _transitions.Count == 0)
@@ -148,14 +149,17 @@ public sealed class StateDiagramBuilder
         return sb.ToString();
     }
 
-    /// <summary>Render the diagram as a fenced <c>```beck</c> Markdown block.</summary>
+    /// <summary>Render as a fenced <c>```beck</c> Markdown block — drop it into any Markdown page and it renders to a static SVG.</summary>
     public string ToFence() => BeckMarkdown.Fence(ToYaml());
 
     /// <inheritdoc/>
     public override string ToString() => ToYaml();
 }
 
-/// <summary>Fluent builder for a state pill.</summary>
+/// <summary>
+/// Refines a single state inside a <c>State(id, s => …)</c> callback. States a
+/// transition mentions but you never declare keep their auto-created pill.
+/// </summary>
 public sealed class StateBuilder
 {
     private readonly string _id;
@@ -174,10 +178,10 @@ public sealed class StateBuilder
     /// <summary>Set the muted subtitle line.</summary>
     public StateBuilder Subtitle(string subtitle) { _subtitle = subtitle; return this; }
 
-    /// <summary>Set the accent to a semantic token.</summary>
+    /// <summary>Set the accent to a semantic token (follows the theme).</summary>
     public StateBuilder Accent(AccentToken token) { _accent = Tokens.Of(token); return this; }
 
-    /// <summary>Set the accent to a raw color.</summary>
+    /// <summary>Set the accent to a raw CSS color.</summary>
     public StateBuilder Accent(string color) { _accent = color; return this; }
 
     /// <summary>Fix the pill width in pixels.</summary>
@@ -202,7 +206,7 @@ public sealed class StateBuilder
     }
 }
 
-/// <summary>Fluent builder for a state transition.</summary>
+/// <summary>Configures one transition inside a <c>Transition(from, to, label, t => …)</c> callback.</summary>
 public sealed class TransitionBuilder
 {
     private readonly string _from;
@@ -218,16 +222,16 @@ public sealed class TransitionBuilder
         _to = to;
     }
 
-    /// <summary>Set the transition label.</summary>
+    /// <summary>Set the transition label (the event or guard).</summary>
     public TransitionBuilder Label(string label) { _label = label; return this; }
 
-    /// <summary>Override the line style.</summary>
+    /// <summary>Override the line style: <see cref="EdgeStyle.Solid"/> or <see cref="EdgeStyle.Dashed"/>.</summary>
     public TransitionBuilder Style(EdgeStyle style) { _style = style; return this; }
 
-    /// <summary>Set the stroke to a semantic token.</summary>
+    /// <summary>Set the stroke to a semantic token (follows the theme).</summary>
     public TransitionBuilder Color(AccentToken token) { _color = Tokens.Of(token); return this; }
 
-    /// <summary>Set the stroke to a raw color.</summary>
+    /// <summary>Set the stroke to a raw CSS color.</summary>
     public TransitionBuilder Color(string color) { _color = color; return this; }
 
     /// <summary>Narrate this transition: the text becomes a caption just before the
