@@ -85,7 +85,7 @@ internal static class SvgRenderer
 
             // z2 edges (+ markers), then labels (pass 2 — mid labels dodge every line)
             body.Append("<g class=\"beck-overlay\">");
-            foreach (var e in edges) body.Append(Edge(e, markers, style));
+            foreach (var e in edges) body.Append(Edge(e, markers, style, hash));
             var placer = new LabelPlacer(layout.Nodes.Values, layout.Width, layout.Height, style, guard);
             foreach (var e in edges)
             {
@@ -163,7 +163,7 @@ internal static class SvgRenderer
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
            .Append($"style=\"max-width:{N(w)}px;height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
         svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style)).Append(animCss).Append("</style>");
-        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append("</defs>");
+        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append(Stylesheet.StyleDefs(hash, style)).Append("</defs>");
         svg.Append(TitleBlock(model, w, style));
         svg.Append($"<g class=\"beck-canvas\" transform=\"translate(0,{N(titleH)})\">").Append(body).Append("</g>");
         svg.Append("</svg>");
@@ -217,9 +217,17 @@ internal static class SvgRenderer
 
         var sb = new StringBuilder();
         FontRoleSpec nSpec = style.Typography.Roles.Of(FontRole.Narration);
+        bool figCaption = style.Typography.NarrationFigureCaption;
+        // Editorial renders the caption as a numbered figure caption: a deterministic "Fig. N — "
+        // prefix (N = 1-based beat order, content-derived + stable) and serif-italic text. The prefix
+        // is prepended before wrapping/measuring so the measured string == the rendered string.
+        string textStyle = figCaption ? "fill:currentColor;font-style:italic" : "fill:currentColor";
         for (int i = 0; i < beats.Count; i++)
         {
-            var lines = WrapNarration(beats[i].Text, maxTextW, m);
+            string beatText = figCaption
+                ? $"Fig. {(i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)} — {beats[i].Text}"
+                : beats[i].Text;
+            var lines = WrapNarration(beatText, maxTextW, m);
             double textW = lines.Max(l => m.Measure(l, FontRole.Narration).Width);
             double left = cx - (dotD + gap + textW) / 2;
             double textCx = left + dotD + gap + textW / 2;
@@ -228,11 +236,11 @@ internal static class SvgRenderer
 
             sb.Append($"<g class=\"beck-beat bbeat{i}-{hash}\" opacity=\"0\" style=\"color:{color}\">");
             sb.Append($"<rect class=\"beck-narration-bar\" x=\"{N(barLeft)}\" y=\"{N(barTop)}\" width=\"{N(barW)}\" height=\"{N(barH)}\" rx=\"{N(style.Geometry.NarrationRadius)}\" ")
-              .Append($"style=\"fill:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationFill)}%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationBorder)}%,transparent);filter:drop-shadow(0 4px 12px rgb(0 0 0/.06))\"/>");
+              .Append($"style=\"fill:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationFill)}%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationBorder)}%,transparent);filter:{style.Geometry.NarrationShadow}\"/>");
             sb.Append($"<circle cx=\"{N(left + dotR)}\" cy=\"{N(midY)}\" r=\"{N(dotR)}\" style=\"fill:currentColor\" opacity=\"0.55\"/>");
             for (int k = 0; k < lines.Count; k++)
                 sb.Append($"<text class=\"beck-narration-text\" x=\"{N(textCx)}\" y=\"{N(firstY + k * lineHt)}\" text-anchor=\"middle\" dominant-baseline=\"central\" ")
-                  .Append($"font-size=\"{N(nSpec.SizePx)}\" font-weight=\"{P(nSpec.Weight)}\" style=\"fill:currentColor\">{SvgWriter.Text(lines[k])}</text>");
+                  .Append($"font-size=\"{N(nSpec.SizePx)}\" font-weight=\"{P(nSpec.Weight)}\" style=\"{textStyle}\">{SvgWriter.Text(lines[k])}</text>");
             sb.Append("</g>");
         }
         return (sb.ToString(), margin + barH);
@@ -261,12 +269,18 @@ internal static class SvgRenderer
         return lines;
     }
 
-    private static string Edge(RoutedEdge e, Markers markers, BeckStyle style)
+    private static string Edge(RoutedEdge e, Markers markers, BeckStyle style, string hash)
     {
         EdgeModel m = e.Edge;
         var sb = new StringBuilder();
+        // Glow's luminous edges: an edge that uses the *default* colour (var(--beck-edge)) paints with
+        // the style's single hash-scoped gradient defined in <defs>; author-coloured edges keep their
+        // explicit colour, and the arrow markers (still edge-coloured) match the gradient's endpoints.
+        string stroke = style.Strokes.GradientEdges && m.Color == "var(--beck-edge)"
+            ? $"url(#beck-edge-grad-{hash})"
+            : SvgWriter.Attr(m.Color);
         sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(m.Kind)}\" d=\"{e.D}\" ")
-          .Append($"style=\"stroke:{SvgWriter.Attr(m.Color)}\"");
+          .Append($"style=\"stroke:{stroke}\"");
         if (m.Style == EdgeStyle.Dashed) sb.Append($" stroke-dasharray=\"{style.Strokes.EdgeDash}\"");
         MarkerShape? end = m.MarkerEnd ?? (m.Arrow is ArrowEnds.End or ArrowEnds.Both ? MarkerShape.Arrow : null);
         MarkerShape? start = m.MarkerStart ?? (m.Arrow is ArrowEnds.Start or ArrowEnds.Both ? MarkerShape.Arrow : null);

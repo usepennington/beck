@@ -54,6 +54,7 @@ internal static class StyleSanitizer
             EdgeLabelHalo = Clean(s.Geometry.EdgeLabelHalo),
             NodeShadow = Clean(s.Geometry.NodeShadow),
             NodeShadowDark = Clean(s.Geometry.NodeShadowDark),
+            SurfaceBackground = Clean(s.Geometry.SurfaceBackground),
         },
     };
 

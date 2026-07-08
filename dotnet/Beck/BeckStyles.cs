@@ -13,7 +13,7 @@ namespace Beck;
 public static class BeckStyles
 {
     /// <summary>All built-in styles, in declaration order.</summary>
-    public static IReadOnlyList<BeckStyle> All { get; } = new[] { BeckStyle.Classic };
+    public static IReadOnlyList<BeckStyle> All { get; } = new[] { BeckStyle.Classic, MinimalStyle.Instance, TerminalStyle.Instance, BlueprintStyle.Instance, GlowStyle.Instance, EditorialStyle.Instance };
 
     /// <summary>Built-in styles keyed by <see cref="BeckStyle.Name"/> (ordinal, case-sensitive).</summary>
     public static IReadOnlyDictionary<string, BeckStyle> ByName { get; } =

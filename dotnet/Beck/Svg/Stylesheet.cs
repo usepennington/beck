@@ -55,7 +55,11 @@ internal static class Stylesheet
         }
 
         // ---- stratum 2: shape CSS (SVG translation of styles.css) ----
-        sb.Append(scope).Append("{font-family:var(--beck-font);}");
+        // The root rule carries the diagram font and, for styles that opt in, a token-driven surface
+        // background (blueprint's grid). Classic's SurfaceBackground is "" → byte-identical output.
+        sb.Append(scope).Append("{font-family:var(--beck-font);");
+        if (geo.SurfaceBackground.Length > 0) sb.Append(geo.SurfaceBackground);
+        sb.Append('}');
         // fx-node wrapper: effect transforms (scale/shake) pivot on the card centre.
         sb.Append($"{scope} .beck-fx-node{{transform-box:fill-box;transform-origin:center;}}");
         // Packet-label CSS (mono 11px 600) sourced from Typography.PacketLabel — deliberately
@@ -93,7 +97,10 @@ internal static class Stylesheet
         // group
         sb.Append($"{scope} .beck-group{{fill:none;stroke:var(--beck-group-border);stroke-width:{Sw(geo.GroupStroke)};stroke-dasharray:{strokes.GroupDash};}}");
         sb.Append($"{scope} .beck-group-label-bg{{fill:var(--beck-surface);}}");
-        sb.Append($"{scope} .beck-group-label{{fill:var(--beck-group-label);}}");
+        // Group labels are already uppercased at the render site; a style can additionally make them
+        // mono (blueprint). Classic's GroupLabel role is sans → nothing appended → byte-identical.
+        string glFamily = style.Typography.Roles.Of(Text.FontRole.GroupLabel).Mono ? "font-family:var(--beck-font-mono);" : "";
+        sb.Append($"{scope} .beck-group-label{{fill:var(--beck-group-label);{glFamily}}}");
 
         // state pills reuse the card treatment; start/end pseudo-states
         sb.Append($"{scope} .beck-node--start{{fill:var(--beck-text-muted);}}");
@@ -121,13 +128,41 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-band-label{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.BandLabel)}%, var(--beck-text));}}");
 
         // edges + labels
-        sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:round;stroke-linejoin:round;}}");
-        sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:{geo.EdgeLabelHalo};stroke-linejoin:round;}}");
+        // DashedEdges (blueprint) dashes every base edge; classic leaves it solid (byte-identical).
+        string edgeDash = strokes.DashedEdges ? $"stroke-dasharray:{strokes.EdgeDash};" : "";
+        sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:round;stroke-linejoin:round;{edgeDash}}}");
+        // Edge-label type honours the EdgeLabel role's family/case flags (mono uppercase for blueprint);
+        // the textLength guard keeps the run inside its measured box, so this is layout-safe. Classic's
+        // EdgeLabel is sans/non-uppercase → nothing appended → byte-identical.
+        var elSpec = style.Typography.Roles.Of(Text.FontRole.EdgeLabel);
+        string elType = (elSpec.Mono ? "font-family:var(--beck-font-mono);" : "") + (elSpec.Uppercase ? "text-transform:uppercase;" : "");
+        sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:{geo.EdgeLabelHalo};stroke-linejoin:round;{elType}}}");
 
         // title block
         sb.Append($"{scope} .beck-title{{fill:var(--beck-text);}}");
         sb.Append($"{scope} .beck-subtitle{{fill:var(--beck-text-muted);}}");
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Style-scoped SVG <c>&lt;defs&gt;</c> content (concatenated after the markers + animation defs).
+    /// Today this is only glow's luminous edge gradient (<see cref="StyleStrokes.GradientEdges"/>): a
+    /// single <c>&lt;linearGradient&gt;</c> whose id is scoped by the content hash and whose stops are
+    /// <c>color-mix</c> expressions over <c>--beck-*</c> tokens — deterministic, theme-adaptive, and
+    /// never a resolved literal. Endpoints hold the plain <c>--beck-edge</c> tone (matching the arrow
+    /// markers, which stay edge-coloured) while the midpoint blooms toward accent/info. Returns
+    /// <c>""</c> for every style that doesn't opt in (classic included), so the <c>&lt;defs&gt;</c>
+    /// block is byte-identical.
+    /// </summary>
+    public static string StyleDefs(string h, BeckStyle style)
+    {
+        if (!style.Strokes.GradientEdges) return "";
+        string id = $"beck-edge-grad-{h}";
+        return $"<linearGradient id=\"{id}\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">" +
+               "<stop offset=\"0\" stop-color=\"var(--beck-edge)\"/>" +
+               "<stop offset=\"0.5\" stop-color=\"color-mix(in srgb, var(--beck-info) 50%, var(--beck-accent))\"/>" +
+               "<stop offset=\"1\" stop-color=\"var(--beck-edge)\"/>" +
+               "</linearGradient>";
     }
 }
