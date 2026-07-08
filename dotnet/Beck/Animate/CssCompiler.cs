@@ -77,12 +77,14 @@ internal sealed class CssCompiler
                 sb.Append($"<rect class=\"bgl{j}-{_h}\" {box} stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"filter:drop-shadow(0 0 {Nm(6 * _motion.EffectAmplitude)}px {c.Color})\"/>");
         }
 
-        // impact rings (the `impact` knob) — expanding ring at each landing point.
-        for (int j = 0; j < _s.Impacts.Count; j++)
-        {
-            ImpactFx im = _s.Impacts[j];
-            sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
-        }
+        // impact rings (the `impact` knob) — expanding ring at each landing point. Gated off
+        // wholesale by a style with RingsEnabled=false (minimal's "rings off" identity).
+        if (_motion.RingsEnabled)
+            for (int j = 0; j < _s.Impacts.Count; j++)
+            {
+                ImpactFx im = _s.Impacts[j];
+                sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+            }
 
         // edge overlays: activate (solid recolor) + stream (marching dashes).
         for (int j = 0; j < _s.Edges.Count; j++)
@@ -95,7 +97,9 @@ internal sealed class CssCompiler
                 sb.Append($"<path class=\"bstr{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" stroke-dasharray=\"{_strokes.StreamDash}\" opacity=\"0\"/>");
         }
 
-        // working breathing rings (card bounds; the pulse expands via stroke-width).
+        // working breathing rings (card bounds; the pulse expands via stroke-width). Gated off
+        // wholesale by RingsEnabled=false, alongside the impact rings above.
+        if (_motion.RingsEnabled)
         for (int j = 0; j < _s.Working.Count; j++)
         {
             WorkFx wf = _s.Working[j];
@@ -144,7 +148,7 @@ internal sealed class CssCompiler
     /// <summary>The glow filter def (only if a packet needs it — call after Markup()).</summary>
     public string Defs() => _needGlow
         ? $"<filter id=\"beck-glow-{_h}\" x=\"-200%\" y=\"-200%\" width=\"500%\" height=\"500%\">"
-          + "<feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"3\" result=\"blur\"/>"
+          + $"<feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"{Nm(_motion.PacketGlowBlur)}\" result=\"blur\"/>"
           + "<feMerge><feMergeNode in=\"blur\"/><feMergeNode in=\"SourceGraphic\"/></feMerge></filter>"
         : "";
 
@@ -338,7 +342,7 @@ internal sealed class CssCompiler
     // ---- working: a gated opacity window + an infinite breathing ring ----
     private void WorkingCss(StringBuilder sb)
     {
-        if (_s.Working.Count == 0) return;
+        if (!_motion.RingsEnabled || _s.Working.Count == 0) return;
         for (int j = 0; j < _s.Working.Count; j++)
         {
             WorkFx wf = _s.Working[j];
@@ -436,8 +440,9 @@ internal sealed class CssCompiler
             else GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? _motion.HighlightDur : _motion.FailDur);
         }
 
-        // impact rings
-        for (int j = 0; j < _s.Impacts.Count; j++) ImpactCss(sb, j, _s.Impacts[j].Start);
+        // impact rings (gated off with the markup by RingsEnabled=false)
+        if (_motion.RingsEnabled)
+            for (int j = 0; j < _s.Impacts.Count; j++) ImpactCss(sb, j, _s.Impacts[j].Start);
     }
 
     private void TransformTrack(StringBuilder sb, int node, List<CardFx> list)

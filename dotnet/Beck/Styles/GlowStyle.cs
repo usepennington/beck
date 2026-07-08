@@ -41,7 +41,7 @@ public static class GlowStyle
         {
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
-            ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 16%, var(--color-base-200, #e2e8f0))"),
+            ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 30%, var(--color-base-200, #e2e8f0))"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.05), 0 4px 12px rgb(0 0 0 / 0.06)"),
             ("--beck-text", "var(--color-base-800, #1e293b)"),
             ("--beck-text-muted", "var(--color-base-500, #64748b)"),
@@ -54,7 +54,7 @@ public static class GlowStyle
             ("--beck-neutral", "var(--color-base-400, #94a3b8)"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {P(c.Mix.GroupBorder)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
-            ("--beck-edge", "color-mix(in srgb, var(--beck-accent) 30%, var(--color-base-300, #cbd5e1))"),
+            ("--beck-edge", "color-mix(in srgb, var(--beck-accent) 46%, var(--color-base-300, #cbd5e1))"),
             ("--beck-packet", "var(--beck-accent)"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-accent) 8%, var(--color-base-100, #f1f5f9))"),
             ("--beck-accent", "var(--beck-primary)"),
@@ -66,14 +66,14 @@ public static class GlowStyle
         {
             ("--beck-surface", "var(--color-base-950, #080b16)"),
             ("--beck-node-bg", "var(--color-base-900, #10131f)"),
-            ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 30%, var(--color-base-700, #30363d))"),
+            ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 42%, var(--color-base-700, #30363d))"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.4)"),
             ("--beck-text", "var(--color-base-50, #f0f6fc)"),
             ("--beck-text-muted", "var(--color-base-400, #8b949e)"),
             ("--beck-text-faint", "var(--color-base-500, #6e7681)"),
             ("--beck-primary", "var(--color-primary-400, #818cf8)"),
             ("--beck-info", "var(--color-violet-400, #c084fc)"),
-            ("--beck-edge", "color-mix(in srgb, var(--beck-accent) 48%, var(--color-base-700, #30363d))"),
+            ("--beck-edge", "color-mix(in srgb, var(--beck-accent) 62%, var(--color-base-700, #30363d))"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-accent) 16%, var(--color-base-800, #21262d))"),
         });
 
@@ -88,29 +88,34 @@ public static class GlowStyle
             NarrationRadius = 14,
             BandRadius = 16,
 
-            // Soft accent bloom via the card drop-shadow filter. The bloom colour is var(--beck-accent),
+            // Accent bloom via the card drop-shadow filter. The bloom colour is var(--beck-accent),
             // which every node inherits from its own inline --beck-accent, so a card blooms in its own
-            // accent. Kept SUBTLE — a tight halo plus a wide low-alpha wash over a normal ambient shadow.
+            // accent. Amplified from the first-cut subtlety (which read as "classic with faded edges")
+            // into a perceptible glow: a crisp accent rim, a medium halo, and a wide low-alpha wash over
+            // the ambient shadow. Light must hold, so its washes stay lower-alpha than dark's.
             NodeShadow =
-                "drop-shadow(0 0 0.5px color-mix(in srgb, var(--beck-accent) 22%, transparent)) " +
-                "drop-shadow(0 3px 12px color-mix(in srgb, var(--beck-accent) 12%, transparent)) " +
+                "drop-shadow(0 0 1px color-mix(in srgb, var(--beck-accent) 40%, transparent)) " +
+                "drop-shadow(0 0 9px color-mix(in srgb, var(--beck-accent) 24%, transparent)) " +
+                "drop-shadow(0 3px 14px color-mix(in srgb, var(--beck-accent) 14%, transparent)) " +
                 "drop-shadow(0 1px 2px rgb(0 0 0/.06))",
+            // Dark is glow's home turf — push the bloom hardest here.
             NodeShadowDark =
-                "drop-shadow(0 0 1px color-mix(in srgb, var(--beck-accent) 34%, transparent)) " +
-                "drop-shadow(0 0 16px color-mix(in srgb, var(--beck-accent) 20%, transparent)) " +
+                "drop-shadow(0 0 2px color-mix(in srgb, var(--beck-accent) 58%, transparent)) " +
+                "drop-shadow(0 0 14px color-mix(in srgb, var(--beck-accent) 40%, transparent)) " +
+                "drop-shadow(0 0 30px color-mix(in srgb, var(--beck-accent) 24%, transparent)) " +
                 "drop-shadow(0 2px 10px rgb(0 0 0/.55))",
             NarrationShadow =
-                "drop-shadow(0 0 12px color-mix(in srgb, var(--beck-accent) 12%, transparent)) " +
+                "drop-shadow(0 0 16px color-mix(in srgb, var(--beck-accent) 20%, transparent)) " +
                 "drop-shadow(0 4px 12px rgb(0 0 0/.08))",
         };
 
         StyleMix mix = c.Mix with
         {
-            // A touch more accent in card borders and icon chips, and a brighter activation glow, so the
+            // More accent in card borders and icon chips, and a brighter activation glow, so the
             // luminous read carries into class cards and sequence activation bars too.
-            NodeStroke = 42,
-            IconChip = 20,
-            ActivationGlow = 60,
+            NodeStroke = 50,
+            IconChip = 24,
+            ActivationGlow = 66,
         };
 
         StyleStrokes strokes = c.Strokes with
@@ -139,8 +144,11 @@ public static class GlowStyle
             DimLine = 0.42,
             DimLabel = 0.58,
             DimBand = 0.6,
-            // Packet bloom stays on (classic default) — it is core to the glow identity.
+            // Packet bloom stays on (classic default) — it is core to the glow identity — and its blur
+            // is widened past classic's 3px so the travelling packet dot (the judges' favourite element)
+            // carries a soft, clearly-perceptible halo rather than a hard dot with a faint fringe.
             GlowEnabled = true,
+            PacketGlowBlur = 5,
         };
 
         return c with

@@ -412,6 +412,28 @@ public sealed record StyleMotion
     /// Off styles still render the packet dot/ring itself — only the decorative bloom is
     /// suppressed, so the packet feature stays fully available.</summary>
     public required bool GlowEnabled { get; init; }
+
+    /// <summary>
+    /// The <c>stdDeviation</c> of the packet-bloom Gaussian blur (<c>beck-glow-{hash}</c> filter) —
+    /// how far a glowing packet dot's halo spreads. Only in play when <see cref="GlowEnabled"/> is
+    /// <c>true</c> and a packet actually glows; a larger value leans harder into the packet dot
+    /// (glow's showpiece element). <c>3.0</c> (classic, and every style that doesn't set it)
+    /// reproduces the exact historical filter — byte-identical.
+    /// </summary>
+    public double PacketGlowBlur { get; init; } = 3.0;
+
+    /// <summary>
+    /// Whether the decorative <em>impact</em> (expanding ring at a packet's landing) and
+    /// <em>working</em> (breathing ring around a busy card) ring overlays render at all. Unlike
+    /// <see cref="EffectAmplitude"/> — which only scales their peak opacity/stroke and so never fully
+    /// removes them — this is a hard gate: <c>false</c> (minimal's "rings off" identity) emits neither
+    /// the ring markup nor its keyframes, so a restrained style shows no hollow rings while its
+    /// packets, trails, pulses, highlights, and status pills all still animate. The underlying
+    /// <c>impact</c>/<c>working</c> flow features stay authorable; only their ring decoration is
+    /// suppressed. <c>true</c> (classic, and every style that doesn't set it) renders both rings
+    /// exactly as before — byte-identical.
+    /// </summary>
+    public bool RingsEnabled { get; init; } = true;
     /// <summary>Uniform amplitude multiplier (0–1 typical) on the peak opacity/stroke-width of the
     /// ripple, highlight/fail border-glow, impact-ring, and working-ring effects — a single dial for
     /// "motion stays but understated" styles. <c>1.0</c> reproduces classic's exact peaks.</summary>
@@ -498,6 +520,15 @@ public sealed record StyleGeometry
     /// <summary>Narration-bar drop-shadow filter (a CSS <c>filter</c> value, e.g. <c>none</c> to
     /// turn it off).</summary>
     public required string NarrationShadow { get; init; }
+
+    /// <summary>
+    /// The gap (px) between the narration caption's leading bullet dot and its text. An emitter
+    /// literal promoted to a style field so a wider-set style (terminal's mono caption, where the
+    /// dot otherwise crowds the first glyph) can give the bullet more air without touching the
+    /// bullet radius or the caption's centred layout. <c>9.6</c> (classic, and every style that
+    /// doesn't set it) reproduces the historical spacing — byte-identical.
+    /// </summary>
+    public double NarrationBulletGap { get; init; } = 9.6;
 
     /// <summary>
     /// Extra CSS declarations painted onto the diagram's root <c>&lt;svg&gt;</c> box (the scope

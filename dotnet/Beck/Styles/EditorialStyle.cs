@@ -54,7 +54,12 @@ public static class EditorialStyle
         var light = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
-            ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
+            // Paper/outline node surfaces: the card fill IS the page paper (var(--beck-surface)), so a
+            // card reads as a hairline-ruled region on the page rather than a filled panel — the
+            // textbook line-art identity, in BOTH themes. In light this already matched the white
+            // surface; in dark it drops the base-900 panel fill that read as a heavy dark block, so the
+            // hairline ink border alone defines the card. Ties to the surface token, not a literal.
+            ("--beck-node-bg", "var(--beck-surface)"),
             ("--beck-node-border", "var(--color-base-400, #94a3b8)"),
             ("--beck-node-shadow", "none"),
             ("--beck-text", "var(--color-base-900, #0f172a)"),
@@ -79,7 +84,8 @@ public static class EditorialStyle
         var dark = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-950, #0d1117)"),
-            ("--beck-node-bg", "var(--color-base-900, #161b22)"),
+            // Paper/outline in dark too: card fill = the page paper, hairline ink border only (see light).
+            ("--beck-node-bg", "var(--beck-surface)"),
             ("--beck-node-border", "var(--color-base-500, #6e7681)"),
             ("--beck-node-shadow", "none"),
             ("--beck-text", "var(--color-base-50, #f0f6fc)"),
