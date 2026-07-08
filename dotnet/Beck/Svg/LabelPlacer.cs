@@ -37,7 +37,7 @@ internal sealed class LabelPlacer
 
     public string MidLabel(IReadOnlyList<Point> points, string text, List<IReadOnlyList<Point>> otherLines, ITextMeasurer m)
     {
-        double w = m.Measure(text, FontRole.EdgeLabel).Width;
+        double w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
         if (w <= 0) w = text.Length * 7;
         double h = _edgeLabel.SizePx; // edge-label ink height ≈ font size
         double hw = w / 2 + LabelPadX, hh = h / 2 + LabelPadY;
@@ -57,7 +57,7 @@ internal sealed class LabelPlacer
         if (len == 0) len = 1;
         double dx = (b.X - a.X) / len, dy = (b.Y - a.Y) / len;
         double px = a.X + dx * 18 - dy * 10, py = a.Y + dy * 18 + dx * 10;
-        double w = m.Measure(text, FontRole.EdgeLabel).Width;
+        double w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
         double hw = text.Length * 3.5 + 3;
         _placed.Add(new Rect(px - hw, py - 7, hw * 2, 14));
         return $"<text class=\"beck-edge-label\" x=\"{I(px)}\" y=\"{I(py)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{P(_edgeLabel.Weight)}\"{Guard(w)}>{SvgWriter.Text(text)}</text>";

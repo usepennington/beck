@@ -24,4 +24,7 @@ public sealed class InterMetricsMeasurer : ITextMeasurer
 
     /// <inheritdoc />
     public TextMetrics Measure(string text, FontRole role) => _impl.Measure(text, role);
+
+    /// <inheritdoc />
+    public TextMetrics Measure(string text, FontRole role, FontRoleSpec spec) => _impl.Measure(text, spec);
 }

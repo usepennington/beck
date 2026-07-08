@@ -94,4 +94,59 @@ public sealed class ClassicSvgGoldenTests
         string golden = File.ReadAllText(Path.Combine(GoldenDir, "editorial.svg"));
         Assert.Equal(golden, actual);
     }
+
+    private const string BrutalistPinnedSuffix = "brut4115";
+
+    [Fact]
+    public void BrutalistSvg_MatchesGolden()
+    {
+        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = BrutalistPinnedSuffix, Style = BrutalistStyle.Instance });
+        string golden = File.ReadAllText(Path.Combine(GoldenDir, "brutalist.svg"));
+        Assert.Equal(golden, actual);
+    }
+
+    private const string SketchPinnedSuffix = "sk3tchg0";
+
+    [Fact]
+    public void SketchSvg_MatchesGolden()
+    {
+        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = SketchPinnedSuffix, Style = SketchStyle.Instance });
+        string golden = File.ReadAllText(Path.Combine(GoldenDir, "sketch.svg"));
+        Assert.Equal(golden, actual);
+    }
+
+    private const string ExtrudePinnedSuffix = "extrud30";
+
+    [Fact]
+    public void ExtrudeSvg_MatchesGolden()
+    {
+        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = ExtrudePinnedSuffix, Style = ExtrudeStyle.Instance });
+        string golden = File.ReadAllText(Path.Combine(GoldenDir, "extrude.svg"));
+        Assert.Equal(golden, actual);
+    }
+
+    private const string CircuitPinnedSuffix = "c1rcu1t0";
+
+    [Fact]
+    public void CircuitSvg_MatchesGolden()
+    {
+        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = CircuitPinnedSuffix, Style = CircuitStyle.Instance });
+        string golden = File.ReadAllText(Path.Combine(GoldenDir, "circuit.svg"));
+        Assert.Equal(golden, actual);
+    }
+
+    private const string MetroPinnedSuffix = "m3tr0000";
+
+    [Fact]
+    public void MetroSvg_MatchesGolden()
+    {
+        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = MetroPinnedSuffix, Style = MetroStyle.Instance });
+        string golden = File.ReadAllText(Path.Combine(GoldenDir, "metro.svg"));
+        Assert.Equal(golden, actual);
+    }
 }

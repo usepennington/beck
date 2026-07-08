@@ -63,6 +63,8 @@ internal static class Defaults
             [PacketShape.Circle] = 12,
             [PacketShape.Ring] = 12,
             [PacketShape.Square] = 12,
+            // Train's "size" is the capsule's half-height; the capsule elongates along the path from it.
+            [PacketShape.Train] = 6,
         };
 
     /// <summary>Per-edge-kind packet motion: radius, speed, glow, and ease token.</summary>

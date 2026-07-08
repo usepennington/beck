@@ -132,6 +132,17 @@ internal sealed class CssCompiler
             if (p.Shape == PacketShape.Square)
                 sb.Append($"<rect class=\"beck-packet bp{i}-{_h}\" x=\"{Nm(-p.Size)}\" y=\"{Nm(-p.Size)}\" width=\"{Nm(2 * p.Size)}\" height=\"{Nm(2 * p.Size)}\" {fillStroke}{glow} opacity=\"0\" ")
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg\"/>");
+            // Train (metro's identity glyph): an elongated rounded-rect capsule centred on the offset
+            // point, its long axis running ALONG the path — the one packet that rotates with the route.
+            // offset-rotate:auto aligns the local +x axis with the path tangent (CSS default), so the
+            // capsule leans into curves like a carriage; every other glyph pins offset-rotate:0deg upright.
+            // Half-height = p.Size; the capsule runs 3.4×size long with fully-rounded (stadium) ends.
+            else if (p.Shape == PacketShape.Train)
+            {
+                double len = p.Size * 3.4, ht = p.Size * 2;
+                sb.Append($"<rect class=\"beck-packet bp{i}-{_h}\" x=\"{Nm(-len / 2)}\" y=\"{Nm(-ht / 2)}\" width=\"{Nm(len)}\" height=\"{Nm(ht)}\" rx=\"{Nm(ht / 2)}\" {fillStroke}{glow} opacity=\"0\" ")
+                  .Append($"style=\"offset-path:path('{p.D}');offset-rotate:auto\"/>");
+            }
             else
                 sb.Append($"<circle class=\"beck-packet bp{i}-{_h}\" r=\"{Nm(p.Size)}\" {fillStroke}{glow} opacity=\"0\" ")
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg\"/>");
@@ -382,7 +393,11 @@ internal sealed class CssCompiler
             PacketHop p = _s.Packets[i];
             double ws = Pct(p.Start), we = Pct(p.Start + p.Duration);
             double e = 0.01;
-            string ease = Easing.ToCss(p.Ease);
+            // Brutalist's stepped flow motion: the packet hops its edge in n discrete jumps
+            // (StyleMotion.PacketSteps) instead of its smooth per-edge-kind ease. The trail below
+            // inherits this stepped ease unless a distinct TrailSteps is set. null → classic ease.
+            Ease packetEase = _motion.PacketSteps is { } pn ? Easing.StepsN(pn) : p.Ease;
+            string ease = Easing.ToCss(packetEase);
             string startDist = p.Reversed ? "100%" : "0%";
             string endDist = p.Reversed ? "0%" : "100%";
 
@@ -445,6 +460,14 @@ internal sealed class CssCompiler
             for (int j = 0; j < _s.Impacts.Count; j++) ImpactCss(sb, j, _s.Impacts[j].Start);
     }
 
+    /// <summary>
+    /// The pulse/highlight peak transform. Classic lifts the card (<c>translateY(-2px) scale(1.04)</c>);
+    /// a <see cref="StyleMotion.PressDown"/> style (extrude's 2.5D slabs) instead presses it down-right
+    /// toward its depth faces (<c>translate(2px,2px)</c>), so the slab reads as pushed into the page.
+    /// Both compile into the same shared-cycle transform keyframes.
+    /// </summary>
+    private string ActivePeak => _motion.PressDown ? "translate(2px,2px)" : "translateY(-2px) scale(1.04)";
+
     private void TransformTrack(StringBuilder sb, int node, List<CardFx> list)
     {
         var pts = new List<(double T, string Tf, Ease? E)> { (0, "none", null) };
@@ -455,12 +478,12 @@ internal sealed class CssCompiler
             {
                 case CardFxKind.Pulse:
                     pts.Add((s, "none", Easing.BackOut(3)));
-                    pts.Add((s + 0.18, "translateY(-2px) scale(1.04)", Easing.ElasticOut(1, 0.5)));
+                    pts.Add((s + 0.18, ActivePeak, Easing.ElasticOut(1, 0.5)));
                     pts.Add((s + _motion.PulseDur, "none", null));
                     break;
                 case CardFxKind.Highlight:
                     pts.Add((s, "none", Easing.BackOut(2)));
-                    pts.Add((s + 0.21, "translateY(-2px) scale(1.04)", Easing.ElasticOut(1, 0.4)));
+                    pts.Add((s + 0.21, ActivePeak, Easing.ElasticOut(1, 0.4)));
                     pts.Add((s + _motion.HighlightDur, "none", null));
                     break;
                 case CardFxKind.Fail:
