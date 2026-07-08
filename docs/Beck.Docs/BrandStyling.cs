@@ -118,12 +118,7 @@ internal static class BrandStyling
         #pg-editor-host { flex: 1 1 0%; min-height: 0; width: 100%; overflow: hidden; background: var(--color-base-50); }
         .dark #pg-editor-host { background: var(--color-base-900); }
         #pg-editor-host .monaco-editor, #pg-editor-host .monaco-editor .overflow-guard { border-radius: 0; }
-        .pg-editor {
-          flex: 1; border: none; outline: none; resize: none; width: 100%;
-          padding: 16px 18px; font-family: var(--font-mono); font-size: 14px; line-height: 1.8;
-          background: var(--color-base-50); color: var(--color-base-900); tab-size: 2;
-        }
-        .dark .pg-editor { background: var(--color-base-900); color: var(--color-base-50); }
+        #pg-editor-host .monaco-editor { height: 100%; }
         #pg-status.ok  { color: var(--color-primary-600); }
         #pg-status.err { color: #e6685b; }
 

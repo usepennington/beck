@@ -43,16 +43,16 @@ public sealed class DiagramBuilder
     /// <summary>Set the diagram subtitle.</summary>
     public DiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
 
-    /// <summary>Set the layout direction.</summary>
+    /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default), <see cref="Beck.Direction.BT"/>, <see cref="Beck.Direction.LR"/>, or <see cref="Beck.Direction.RL"/>.</summary>
     public DiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
-    /// <summary>Set the theme mode.</summary>
+    /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
     public DiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
 
-    /// <summary>Enable or disable animation.</summary>
+    /// <summary>Enable or disable the flow animation.</summary>
     public DiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
 
-    /// <summary>Enable or disable looping.</summary>
+    /// <summary>Loop the flow (default) or play it through once.</summary>
     public DiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container: <see cref="FitMode.Shrink"/> scales it down to fit (default); <see cref="FitMode.Scroll"/> keeps natural size and scrolls horizontally.</summary>
@@ -81,7 +81,7 @@ public sealed class DiagramBuilder
         return this;
     }
 
-    /// <summary>Script the animation flow (packets, status, effects). Without this the engine auto-derives one.</summary>
+    /// <summary>Script the animation (packets, status changes, effects). Omit it and Beck auto-derives a flow from the edges.</summary>
     public DiagramBuilder Flow(Action<FlowBuilder> configure)
     {
         _flow ??= new FlowBuilder();
@@ -89,7 +89,7 @@ public sealed class DiagramBuilder
         return this;
     }
 
-    /// <summary>Add a node, configured via a builder callback.</summary>
+    /// <summary>Add a node and configure it via <see cref="NodeBuilder"/> — title, kind, icon, accent, link, and more.</summary>
     public DiagramBuilder Node(string id, Action<NodeBuilder>? configure = null)
     {
         var node = new NodeBuilder(id);
@@ -98,7 +98,7 @@ public sealed class DiagramBuilder
         return this;
     }
 
-    /// <summary>Add a node with a title and optional kind.</summary>
+    /// <summary>The terse overload: add a node with a title and an optional kind.</summary>
     public DiagramBuilder Node(string id, string title, NodeKind? kind = null)
     {
         var node = new NodeBuilder(id).Title(title);
@@ -107,7 +107,7 @@ public sealed class DiagramBuilder
         return this;
     }
 
-    /// <summary>Add a group, configured via a builder callback.</summary>
+    /// <summary>Add a labelled, boxed cluster. Members may be node ids or other group ids — groups nest to any depth.</summary>
     public DiagramBuilder Group(string id, Action<GroupBuilder> configure)
     {
         var group = new GroupBuilder(id);
@@ -116,7 +116,7 @@ public sealed class DiagramBuilder
         return this;
     }
 
-    /// <summary>Add an edge from one node/group to another.</summary>
+    /// <summary>Connect two nodes (or groups). Configure label, style, curve, kind, color, and arrowheads via <see cref="EdgeBuilder"/>.</summary>
     public DiagramBuilder Edge(string from, string to, Action<EdgeBuilder>? configure = null)
     {
         var edge = new EdgeBuilder(from, to);
@@ -182,7 +182,7 @@ public sealed class DiagramBuilder
         }
     }
 
-    /// <summary>Render the diagram as a fenced <c>```beck</c> Markdown block.</summary>
+    /// <summary>Render as a fenced <c>```beck</c> Markdown block — drop it into any Markdown page and it renders to a static SVG.</summary>
     public string ToFence() => BeckMarkdown.Fence(ToYaml());
 
     /// <inheritdoc/>
