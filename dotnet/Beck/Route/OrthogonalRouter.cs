@@ -19,6 +19,9 @@ internal static class OrthogonalRouter
     private const double LaneMargin = 6;
     private const double SelfLoopExtent = 30;
     private const double SameRankEps = 6;
+    private const double StraightenInset = 6;    // keep a nudged anchor this far off a face corner
+    private const double StraightenSingle = 16;  // most one anchor may slide to straighten an edge
+    private const double StraightenTotal = 24;   // most both anchors may slide, combined
 
     private static Point Center(Rect r) => new(r.X + r.W / 2, r.Y + r.H / 2);
     private static bool IsVertical(Side s) => s is Side.Top or Side.Bottom;
@@ -178,6 +181,51 @@ internal static class OrthogonalRouter
         return new List<Point> { a, new(laneX, a.Y), new(laneX, b.Y), b };
     }
 
+    /// <summary>
+    /// Straighten a nearly-aligned edge by sliding its anchors along their faces — a small "cheat"
+    /// so a short cross-axis jog reads as one clean straight line instead of a stepped Z. Applies
+    /// only to opposite parallel faces, only when the anchors' perpendicular gap is within budget,
+    /// and only when the resulting straight run clears every obstacle. Prefers to move a single
+    /// free-face anchor (keeping a fanned face's spread intact); larger gaps split the nudge across
+    /// both. Gaps beyond the budget are left as genuine jogs.
+    /// </summary>
+    private static bool TryStraighten(
+        Rect from, Rect to, Side fromSide, Side toSide, double fromShift, double toShift,
+        IReadOnlyList<Rect> obstacles, ref Point a, ref Point b)
+    {
+        if (fromSide == toSide) return false;
+        bool vert = IsVertical(fromSide) && IsVertical(toSide);   // Top/Bottom faces → perp axis = X
+        bool horz = !IsVertical(fromSide) && !IsVertical(toSide); // Left/Right faces → perp axis = Y
+        if (!vert && !horz) return false;
+
+        double aPerp = vert ? a.X : a.Y, bPerp = vert ? b.X : b.Y;
+        double off = bPerp - aPerp;
+        if (Math.Abs(off) < 0.5) return false;             // already straight
+        if (Math.Abs(off) > StraightenTotal) return false; // genuine jog — leave it stepped
+
+        // Reachable band = the two faces' overlap on the perp axis, inset off the corners.
+        double aLo = (vert ? from.X : from.Y) + StraightenInset, aHi = (vert ? from.X + from.W : from.Y + from.H) - StraightenInset;
+        double bLo = (vert ? to.X : to.Y) + StraightenInset, bHi = (vert ? to.X + to.W : to.Y + to.H) - StraightenInset;
+        double lo = Math.Max(aLo, bLo), hi = Math.Min(aHi, bHi);
+        if (hi < lo) return false; // faces don't overlap — no shared straight line exists
+
+        // Prefer to keep a fanned face (shift != 0) put and move only the free one; else split.
+        bool aFree = fromShift == 0, bFree = toShift == 0;
+        double target = Math.Abs(off) <= StraightenSingle
+            ? (bFree ? aPerp : aFree ? bPerp : (aPerp + bPerp) / 2)
+            : (aPerp + bPerp) / 2;
+        target = Math.Clamp(target, lo, hi);
+
+        if (Math.Abs(target - aPerp) > StraightenSingle || Math.Abs(target - bPerp) > StraightenSingle) return false;
+        if (Math.Abs(target - aPerp) + Math.Abs(target - bPerp) > StraightenTotal + 0.01) return false;
+
+        Point na = vert ? new Point(target, a.Y) : new Point(a.X, target);
+        Point nb = vert ? new Point(target, b.Y) : new Point(b.X, target);
+        if (PolylineHits(new[] { na, nb }, obstacles)) return false;
+        a = na; b = nb;
+        return true;
+    }
+
     private static List<Point> OrthogonalPolyline(Point a, Point b, Side fromSide, Side toSide, IReadOnlyList<Rect> obstacles, Size? bounds)
     {
         if (fromSide == toSide) return SameFaceLoop(a, b, fromSide, obstacles, bounds);
@@ -250,7 +298,9 @@ internal static class OrthogonalRouter
         if (req.Curve == EdgeCurve.S)
             return new RoutedPath(SCurve(a, b, fromSide), new[] { a, b });
 
-        var poly = OrthogonalPolyline(a, b, fromSide, toSide, req.Obstacles, req.Bounds);
+        var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromShift, req.ToShift, req.Obstacles, ref a, ref b)
+            ? new List<Point> { a, b }
+            : OrthogonalPolyline(a, b, fromSide, toSide, req.Obstacles, req.Bounds);
         return new RoutedPath(StepRound.RoundedPath(poly, req.Radius), poly);
     }
 }

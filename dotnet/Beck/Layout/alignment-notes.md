@@ -12,10 +12,23 @@ columns); per-card widths expose it.
 The fix must let **connected nodes share a cross-axis coordinate across group
 boundaries** — something the "group = pre-baked centered block" model cannot express.
 
-We are pursuing **Approach C** (global coordinate assignment). Approaches A and B are
-recorded here so the alternatives aren't lost.
+**Outcome:** Approach C was implemented and then reverted — a global re-solve broke fan-in
+centring the hierarchical layout already got right (e.g. a node fed by three parents ended up
+under the left parent instead of centred under the middle one). What shipped instead is the
+hierarchical layout **plus a router-level anchor-nudge cheat** (see "Shipped solution" below).
+Approaches A/B/C are kept for reference.
 
-## Approach C — global coordinate rewrite (chosen)
+## Shipped solution — anchor-nudge cheat (in `Route/OrthogonalRouter.cs`)
+
+The hierarchical layout already places nodes well (it centres fans and stacks groups). The
+only thing left is the last few px of cross-axis misalignment on otherwise-straight edges. So
+`TryStraighten` slides an edge's anchors along their faces to close a *small* perpendicular gap
+(≤ `StraightenTotal`), preferring to nudge a single free-face anchor and leaving a fanned face's
+spread intact; gaps beyond the budget stay as genuine jogs, and the straightened run is rejected
+if it would hit an obstacle. This fixes the grid columns and short chains without moving nodes,
+and without the fan-in regression Approach C introduced.
+
+## Approach C — global coordinate rewrite (tried, reverted)
 
 Replace the per-group opaque coordinate assignment with a single global cross-axis solve
 over every leaf node (Brandes–Köpf-style vertical alignment / bend minimisation), with
