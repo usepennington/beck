@@ -414,33 +414,6 @@ internal static class LayeredLayout
                 }
         }
 
-        // ---- straighten 1:1 chains: nudge a node onto its lone cross-rank partner ----
-        // Only true 1:1 links qualify (each endpoint has a single neighbour across the gap), so
-        // fan legs stay put while clean chains — including the virtual-node runs of long edges —
-        // snap into line. ResolveSeparation still forbids overlaps, so a node only moves into
-        // genuinely free cross-axis space; this is what turns a short jog into a straight line.
-        bool OneToOne(string parent, string child) =>
-            down.GetValueOrDefault(parent)?.Count == 1 && up.GetValueOrDefault(child)?.Count == 1;
-        for (int it = 0; it < 4; it++)
-        {
-            if (it % 2 == 0)
-                for (int r = 1; r <= maxRank; r++)
-                {
-                    var desired = new Dictionary<string, double>();
-                    foreach (var id in order[r])
-                        if (up.GetValueOrDefault(id) is { Count: 1 } u && OneToOne(u[0], id)) desired[id] = sec[u[0]];
-                    if (desired.Count > 0) ResolveSeparation(r, desired);
-                }
-            else
-                for (int r = maxRank - 1; r >= 0; r--)
-                {
-                    var desired = new Dictionary<string, double>();
-                    foreach (var id in order[r])
-                        if (down.GetValueOrDefault(id) is { Count: 1 } d && OneToOne(id, d[0])) desired[id] = sec[d[0]];
-                    if (desired.Count > 0) ResolveSeparation(r, desired);
-                }
-        }
-
         // ---- primary (rank-axis) coordinates ----
         var rankDepth = new double[maxRank + 1];
         for (int r = 0; r <= maxRank; r++)
