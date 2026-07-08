@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Beck.Docs.Client</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The pure-C# renderer runs in the browser (WASM): the playground measures with the
+         managed InterMetricsMeasurer (no native Skia), so no native assets ship. -->
+    <ProjectReference Include="..\..\dotnet\Beck\Beck.csproj" />
+  </ItemGroup>
+</Project>

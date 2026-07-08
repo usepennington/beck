@@ -32,7 +32,9 @@ Every recipe below is a small static illustration (`animate: false`). For the fu
 wwwroot/examples/guides/nodes-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-01.beck.yaml
+```
 
 `kind` defaults to `service`, so a node with no `kind` is a primary-accented service card.
 
@@ -44,7 +46,9 @@ To swap the glyph, set `icon` to a named key. The names cover the usual infrastr
 wwwroot/examples/guides/nodes-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-02.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-02.beck.yaml
+```
 
 For a glyph that isn't in the set, pass raw inline SVG. Beck drops the markup straight into the icon chip, so size your paths to a 24×24 viewBox:
 
@@ -52,7 +56,9 @@ For a glyph that isn't in the set, pass raw inline SVG. Beck drops the markup st
 wwwroot/examples/guides/nodes-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-03.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-03.beck.yaml
+```
 
 > [!TIP]
 > Inline SVG uses `fill="currentColor"` so the glyph follows the node's accent and theme automatically.
@@ -65,7 +71,9 @@ wwwroot/examples/guides/nodes-03.beck.yaml
 wwwroot/examples/guides/nodes-04.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-04.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-04.beck.yaml
+```
 
 Any value that isn't a token — a hex, `rgb()`, or CSS colour name — is used verbatim. A raw accent does **not** follow the theme, so reserve it for a deliberately fixed brand colour:
 
@@ -73,7 +81,9 @@ Any value that isn't a token — a hex, `rgb()`, or CSS colour name — is used 
 wwwroot/examples/guides/nodes-05.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-05.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-05.beck.yaml
+```
 
 ## Change visual weight
 
@@ -87,7 +97,9 @@ wwwroot/examples/guides/nodes-05.beck.yaml
 wwwroot/examples/guides/nodes-06.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-06.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-06.beck.yaml
+```
 
 > [!NOTE]
 > The `ghost` **kind** and the `ghost` **variant** are not the same thing. `kind: ghost` is a neutral placeholder node (which happens to default to the ghost variant); `variant: ghost` is purely the dashed, transparent look applied to any kind.
@@ -100,7 +112,9 @@ wwwroot/examples/guides/nodes-06.beck.yaml
 wwwroot/examples/guides/nodes-07.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-07.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-07.beck.yaml
+```
 
 A `status` set here is the node's resting state. If you want a status that **changes** while the diagram plays — flipping from `idle` to `busy`, say — that's a flow concern; see [Animate the flow](/docs/guides/flow).
 
@@ -112,7 +126,9 @@ To turn a card into a hyperlink, add `href`. Beck renders the whole node as an `
 wwwroot/examples/guides/nodes-08.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-08.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-08.beck.yaml
+```
 
 `target` is only meaningful alongside `href`.
 
@@ -124,7 +140,9 @@ When a single card must match a fixed brand or a hardened reference design, over
 wwwroot/examples/guides/nodes-09.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/nodes-09.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/nodes-09.beck.yaml
+```
 
 > [!WARNING]
 > `surface` and `textColor` opt a node out of light/dark theming. A card that looks right in dark mode may be unreadable in light mode — set both, and test in both themes.

@@ -25,7 +25,9 @@ inherits the node's accent and theme.
 wwwroot/examples/reference/icon-custom.beck.yaml
 ```
 
-<beck-diagram src="/examples/reference/icon-custom.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/reference/icon-custom.beck.yaml
+```
 
 See [node `icon`](/docs/reference/yaml#icons) in the schema for where the key slots in, and the
 [node guide](/docs/guides/nodes) for choosing icons in context.

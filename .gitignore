@@ -1,21 +1,12 @@
-node_modules/
-dist/
-dist-lib/
-*.local
 .DS_Store
-.vite/
 
 # .NET
 bin/
 obj/
-dotnet/**/bin/
-dotnet/**/obj/
 *.nupkg
 
 # Local dogfooding / verification scratch (not product code)
-/gallery.html
-/sample-flow.yaml
-/*.png
+/scratch/
 .playwright-mcp/
 /local-feed/
 
@@ -25,6 +16,3 @@ docs/Beck.Docs/output/
 # IDE
 .idea/
 .vs/
-
-# Beck.Rendering visual-check outputs (regenerable)
-/tools/oracle/rendered/

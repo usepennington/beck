@@ -1,9 +1,8 @@
-# Publishes the Beck NuGet package on a pushed `v*` tag (e.g. v0.1.0).
+# Publishes the Beck NuGet packages (Beck + Beck.Skia) on a pushed `v*` tag (e.g. v0.1.0).
 #
 # Versioning is tag-driven: MinVer derives the package version from the tag, so the tag IS the
-# release version (fetch-depth: 0 gives it the full history + tags it needs). The package ships the
-# prebuilt engine as a static web asset; we rebuild that bundle from TypeScript first so a release
-# can never ship a stale committed copy.
+# release version (fetch-depth: 0 gives it the full history + tags it needs). The engine is pure
+# C# — no Node toolchain, nothing prebuilt to refresh before packing.
 name: Publish
 
 on:
@@ -23,18 +22,7 @@ jobs:
         with:
           fetch-depth: 0          # MinVer needs full history + tags to derive the version
 
-      # Rebuild the engine bundle from source so the packed static web asset is fresh.
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install JS deps
-        run: npm ci
-      - name: Build the engine bundle
-        run: npm run build:lib   # writes dotnet/Beck/wwwroot/beck.global.js
-
-      # 10.0.x SDK (pinned by global.json) drives the build; the package targets net8.0, so
+      # 10.0.x SDK (pinned by global.json) drives the build; the packages target net8.0, so
       # install both. NOTE: keep these as bare versions — inline comments inside the block scalar
       # are parsed as part of the version string and break setup-dotnet.
       - name: Setup .NET
@@ -45,13 +33,20 @@ jobs:
             10.0.x
 
       - name: Build
-        run: dotnet build dotnet/Beck/Beck.csproj -c Release
+        run: |
+          dotnet build dotnet/Beck/Beck.csproj -c Release
+          dotnet build dotnet/Beck.Skia/Beck.Skia.csproj -c Release
+
+      - name: Test
+        run: dotnet test dotnet/Beck.Tests/Beck.Tests.csproj -c Release
 
       # No --no-build: MinVer sets the package version through a build-time target, and
       # `dotnet pack --no-build` would skip it (falling back to the default). Pack runs an
       # incremental build so the tag-derived version is applied.
       - name: Pack
-        run: dotnet pack dotnet/Beck/Beck.csproj -c Release -o ${{ github.workspace }}/nupkg
+        run: |
+          dotnet pack dotnet/Beck/Beck.csproj -c Release -o ${{ github.workspace }}/nupkg
+          dotnet pack dotnet/Beck.Skia/Beck.Skia.csproj -c Release -o ${{ github.workspace }}/nupkg
 
       - name: NuGet login (trusted publishing -> short-lived API key)
         uses: NuGet/login@v1

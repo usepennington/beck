@@ -7,20 +7,28 @@
   <ItemGroup>
     <!-- Pennington content engine, consumed from NuGet so the docs site builds on CI
          (no local b:\penn checkout). Kept on one stable line across the three packages. -->
-    <PackageVersion Include="Pennington" Version="0.1.4" />
-    <PackageVersion Include="Pennington.TreeSitter" Version="0.1.4" />
-    <PackageVersion Include="Pennington.MonorailCss" Version="0.1.4" />
+    <PackageVersion Include="Pennington" Version="0.1.6-alpha.0.28" />
+    <PackageVersion Include="Pennington.TreeSitter" Version="0.1.6-alpha.0.28" />
+    <PackageVersion Include="Pennington.MonorailCss" Version="0.1.6-alpha.0.28" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Beck.Rendering: pure-C# SVG renderer (the-bad-idea.md). YamlDotNet is its
-         only runtime dependency; SkiaSharp/HarfBuzzSharp back the optional
-         Beck.Rendering.Skia exact-measurement plug-in. -->
+    <!-- The docs playground runs the renderer client-side in Blazor WebAssembly
+         (Beck.Docs.Client), so the static site keeps working with no server. Pinned to
+         the installed 10.0.x ASP.NET runtime. The .Server package gives the host the
+         WebAssembly render-mode wiring (not in the shared framework). -->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.9" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Beck: pure-C# SVG renderer (the-bad-idea.md). YamlDotNet is its only runtime
+         dependency; SkiaSharp/HarfBuzzSharp back the optional Beck.Skia
+         exact-measurement plug-in. -->
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="SkiaSharp" Version="2.88.9" />
     <PackageVersion Include="HarfBuzzSharp" Version="7.3.0.3" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Test stack for Beck.Rendering.Tests (first automated tests in the repo). -->
+    <!-- Test stack for Beck.Tests. -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />

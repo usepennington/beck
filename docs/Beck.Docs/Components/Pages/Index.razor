@@ -8,8 +8,8 @@
         <h1 class="text-[54px] font-semibold leading-[1.04] tracking-[-0.025em] mb-5 text-base-900 dark:text-base-50">Nice looking software diagrams</h1>
         <p class="text-lg leading-relaxed text-base-600 dark:text-base-400 mb-[30px] max-w-[460px]">
             Describe your system once in a few lines of YAML. Beck handles layout, routing, and
-            styling — and renders clean, animated architecture, sequence, state, and class diagrams
-            you can drop straight into docs and pull requests.
+            styling — and renders animated architecture, sequence, state, and class diagrams as
+            static, self-animating SVG. No client-side JavaScript, no runtime, nothing to hydrate.
         </p>
         <div class="flex gap-3 mb-[26px]">
             <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400" href="/docs/tutorials/first-diagram">Get started <span class="font-mono">→</span></a>
@@ -22,34 +22,32 @@
         </div>
     </div>
 
+    @* The hero is a real Beck render: a scripted launch-countdown flow, rendered to a static,
+       self-animating SVG at build time by the pure-C# engine (no client JS). *@
     <div class="border border-base-200 dark:border-base-800 rounded-2xl bg-white dark:bg-base-900 shadow-[0_12px_40px_-16px_rgba(20,45,35,0.12)] overflow-hidden">
         <div class="flex items-center gap-2 px-[14px] py-[11px] border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
             <span class="h-[11px] w-[11px] rounded-full bg-[#e6685b]"></span><span class="h-[11px] w-[11px] rounded-full bg-[#e0b341]"></span><span class="h-[11px] w-[11px] rounded-full bg-[#5fb866]"></span>
-            <span class="ml-1.5 font-mono text-[11.5px] text-base-400 dark:text-base-500">system.beck.yaml</span>
-            <span class="ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] text-primary-700 dark:text-primary-400"><span class="h-[7px] w-[7px] rounded-full bg-primary-600 dark:bg-primary-400 animate-pulse"></span>live</span>
+            <span class="ml-1.5 font-mono text-[11.5px] text-base-400 dark:text-base-500">launch-sequence.beck.yaml</span>
         </div>
-        <div class="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-            @* Left: site.js types the YAML here (syntax-highlighted HTML) as a scripted
-               editing session — type a small diagram, then go back up to insert nodes,
-               then wire them. The caret is slotted between the text before and after it,
-               so a mid-document insert pushes the edges block down. #hero-code is inline
-               so the caret trails the character it sits after. *@
-            <div class="border-r border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 p-4 min-h-[450px] overflow-hidden">
-                <code id="hero-code" class="inline whitespace-pre font-mono text-[12px] leading-[1.85] text-base-700 dark:text-base-300" aria-hidden="true"></code>
-            </div>
-            @* Right: the live diagram re-renders in lock-step as each line lands. *@
-            <div class="dot-grid min-h-[300px] p-4 overflow-hidden flex items-center justify-center">
-                <div id="hero-host" class="w-full"></div>
-            </div>
+        <div class="dot-grid p-6 flex items-center justify-center min-h-[430px]">
+            <BeckDiagram Yaml="@HeroYaml" Class="beck-embed beck-embed--bare w-full" />
+        </div>
+        <div class="px-[14px] py-[10px] border-t border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900 font-mono text-[11.5px] text-base-400 dark:text-base-500 text-center">
+            this animation is a static SVG — pure CSS, zero JavaScript. view source.
         </div>
     </div>
 </section>
 
-<section class="mx-auto max-w-[1240px] px-8 pt-[18px] pb-16 grid grid-cols-3 gap-6 max-[820px]:grid-cols-1">
+<section class="mx-auto max-w-[1240px] px-8 pt-[18px] pb-16 grid grid-cols-4 gap-6 max-[1020px]:grid-cols-2 max-[640px]:grid-cols-1">
     <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
         <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">yaml</div>
         <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Plain YAML, real diagrams</h3>
         <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">List your nodes and edges — or participants, states, and classes. Beck takes care of layout, edge routing, grouping, and theming automatically.</p>
+    </div>
+    <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
+        <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">svg</div>
+        <h3 class="text-[17px] font-semibold mb-2 text-base-900 dark:text-base-50">Zero client JavaScript</h3>
+        <p class="text-[14.5px] leading-relaxed text-base-600 dark:text-base-400">Diagrams render at build time to self-contained SVG, animated with pure CSS. No engine to ship, no hydration — they play even with scripts disabled.</p>
     </div>
     <div class="border border-base-200 dark:border-base-800 rounded-xl p-6 bg-white dark:bg-base-900">
         <div class="h-[38px] w-[38px] rounded-[10px] bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-400 flex items-center justify-center font-mono text-xs font-semibold mb-[15px]">git</div>
@@ -66,7 +64,7 @@
 <section class="border-t border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
     <div class="mx-auto max-w-[1240px] px-8 py-[72px] text-center">
         <h2 class="text-3xl font-semibold tracking-[-0.02em] mb-3 text-base-900 dark:text-base-50">Start diagramming in five minutes.</h2>
-        <p class="text-[17px] text-base-600 dark:text-base-400 mb-[26px] mx-auto max-w-[480px]">Add the package, write a few lines of YAML, and render your first diagram. No accounts, no canvas wrangling.</p>
+        <p class="text-[17px] text-base-600 dark:text-base-400 mb-[26px] mx-auto max-w-[480px]">Add the package, write a few lines of YAML, and render your first diagram. No accounts, no canvas wrangling, no client JavaScript.</p>
         <div class="flex gap-3 justify-center">
             <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400" href="/docs/">Read the guide</a>
             <a class="px-5 py-[13px] rounded-[10px] text-[15px] font-medium inline-flex items-center gap-2 bg-transparent border border-base-300 dark:border-base-700 text-base-900 dark:text-base-50 hover:bg-base-50 dark:hover:bg-base-900" href="/playground">Open the playground</a>
@@ -80,3 +78,51 @@
 </section>
 
 <Footer />
+
+@code {
+    // The hero diagram: a rocket launch scripted with an explicit flow, chosen to exercise
+    // nearly every effect the renderer has — burst, working, stream, status swaps, a ring
+    // packet with impact, parallel beats, and the narration bar carrying the countdown.
+    private const string HeroYaml = """
+        type: architecture
+        meta:
+          title: T-minus ten seconds
+          direction: TB
+        nodes:
+          - { id: control, title: Mission Control, subtitle: go / no-go, kind: user, status: HOLD, width: 210 }
+          - { id: fuel, title: Fuel, subtitle: LOX + RP-1, kind: db, accent: info }
+          - { id: guidance, title: Guidance, subtitle: gimbal + nav, kind: gateway }
+          - { id: ignition, title: Ignition, subtitle: main engines, accent: warn }
+          - { id: rocket, title: Rocket, subtitle: 7.5 million lbf, kind: external, status: on pad }
+        groups:
+          - { id: seq, label: Launch sequencer, members: [fuel, guidance, ignition], accent: primary }
+        edges:
+          - { from: control, to: fuel, kind: control }
+          - { from: control, to: guidance, kind: control }
+          - { from: control, to: ignition, kind: control, label: go }
+          - { from: fuel, to: rocket, label: pressurize }
+          - { from: guidance, to: rocket, kind: async }
+          - { from: ignition, to: rocket, label: ignite }
+        flow:
+          steps:
+            - narrate: T-minus ten. Guidance is internal.
+            - burst: { from: control, to: [fuel, guidance, ignition], count: 2 }
+            - parallel:
+                - working: { node: fuel }
+                - working: { node: guidance }
+            - status: { node: control, text: GO, color: success }
+            - narrate: Tanks pressurized. All systems go.
+            - stream: { from: fuel, to: rocket, color: info }
+            - packet: { from: guidance, to: rocket }
+            - narrate: { text: Three… two… one…, hold: 2 }
+            - working: { node: ignition, color: warn }
+            - packet: { from: ignition, to: rocket, label: ignite, color: warn, shape: ring, impact: true }
+            - status: { node: rocket, text: LIFTOFF, color: success }
+            - parallel:
+                - pulse: { node: rocket, color: warn }
+                - highlight: { node: rocket }
+            - narrate: { text: We have liftoff., color: success }
+            - wait: 2
+            - reset:
+        """;
+}

@@ -26,6 +26,10 @@ builder.Services.AddPennington(penn =>
     penn.AddLlmsTxt();
 });
 
+// The shared C# Beck renderer: one Skia measurer over the site's fonts, reused by the
+// build-time fence preprocessor and the live playground (see BeckDiagramRenderer).
+builder.Services.AddSingleton<BeckDiagramRenderer>();
+
 // Render ```beck fences to static, self-animating inline SVG at build time via the
 // pure-C# engine (the-bad-idea.md, M10) — content diagrams need no client JS. Priority
 // 500 beats the tree-sitter source-embed preprocessor; every other fence is deferred.
@@ -59,9 +63,17 @@ builder.Services.AddTreeSitter(treeSitter =>
     treeSitter.ContentRoot = ".";
 });
 
-// Blazor static SSR — unlocks MapRazorComponents<App>() and @page routing so we
-// own the entire chrome (custom landing, playground, sidebar) instead of a template.
-builder.Services.AddRazorComponents();
+// Blazor static SSR (unlocks MapRazorComponents<App>() and @page routing so we own the
+// entire chrome) PLUS interactive-WebAssembly components: the /playground island lives in
+// the Beck.Docs.Client project and renders diagrams entirely in the browser via the C#
+// engine (compiled to WASM) — no server, no client JS engine. Every other page stays static
+// SSR. Because it is client-side, the whole site still deploys as static files.
+builder.Services.AddRazorComponents()
+    .AddInteractiveWebAssemblyComponents();
+
+// The playground island injects HttpClient (to fetch example .beck.yaml files) — it must
+// resolve during server prerender too, even though the fetch only runs after WASM boots.
+builder.Services.AddScoped(_ => new HttpClient());
 
 // Mdazor component registry: Razor components embeddable in Markdown. BeckGallery reflects over
 // the Beck.Authoring token enums and renders a live preview of every value, so the reference
@@ -81,11 +93,15 @@ app.UseMonorailCss();
 
 app.UseAntiforgery();
 
-// Serve RCL static web assets (Beck's _content/Beck/beck.global.js). Bare hosts must
-// opt in; DocSite hosts get this for free.
+// Serve static web assets: the fonts/JS/CSS and, crucially, the WASM playground's
+// _framework bundle. Bare hosts must opt in; DocSite hosts get this for free.
 app.MapStaticAssets();
 
-app.MapRazorComponents<App>();
+app.MapRazorComponents<App>()
+    // The /playground route is a static-SSR page in this host; its interactive UI is a
+    // WebAssembly island (Beck.Docs.Client) bundled via the project reference. No routable
+    // components live in the client assembly, so no AddAdditionalAssemblies is needed.
+    .AddInteractiveWebAssemblyRenderMode();
 
 // `dotnet run` serves live; `dotnet run -- build [baseUrl] [outDir]` emits static HTML.
 await app.RunOrBuildAsync(args);

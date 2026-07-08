@@ -9,8 +9,9 @@ namespace Beck.Docs;
 ///   <item>the signature dot-grid surface (<c>.dot-grid</c>) reused by every diagram frame;</item>
 ///   <item>syntax tokens for the <b>hand-authored</b> code snippets in the hero/API pages
 ///         (Markdig fences are colored by <c>SyntaxTheme</c> instead);</item>
-///   <item>framing for the <c>.beck-embed</c> wrapper the Beck engine injects when it
-///         hydrates a <c>```beck</c> fence — we can't put utility classes on DOM we don't render;</item>
+///   <item>framing for the <c>.beck-embed</c> wrapper the build-time fence renderer and
+///         <c>&lt;BeckDiagram&gt;</c> emit around each SVG — it lives in rendered markdown, so
+///         it stays declarative CSS rather than utility classes;</item>
 ///   <item>playground elements created or class-toggled by <c>site.js</c>: the runtime
 ///         IL scan that discovers utility classes never sees a class that only exists in a
 ///         JavaScript string, so those stay declarative CSS.</item>
@@ -54,8 +55,8 @@ internal static class BrandStyling
         .dark .tok-punct  { color: var(--color-base-500); }
         .dark .tok-str    { color: #e0b341; }
 
-        /* ---- Beck engine embeds (Beck injects this DOM; can't utility-class it) ---- */
-        /* A hydrated ```beck fence becomes <div class="beck-embed">; frame it on the
+        /* ---- Beck embeds ---- */
+        /* A rendered ```beck fence becomes <div class="beck-embed"><svg …>; frame it on the
            dot-grid surface so every live diagram reads as a framed preview. */
         .beck-embed {
           position: relative;
@@ -79,15 +80,15 @@ internal static class BrandStyling
           background-color: var(--color-base-900);
           background-image: radial-gradient(var(--color-base-800) 1px, transparent 1px);
         }
-        /* Auto margins center the diagram in the embed but collapse to the top edge
-           when it's taller than a constrained frame, so the title stays scrollable. */
-        .beck-embed > .beck-root { max-width: 100%; margin: auto; }
-        beck-diagram { display: block; max-width: 100%; }
-        /* Static build-time renderer (M10): the C# engine emits the <svg> directly into
-           the embed instead of a hydrated .beck-root, so centre it the same way. */
+        /* The C# engine emits the <svg> directly into the embed; auto margins center it but
+           collapse to the top edge when it's taller than a constrained frame, so the title
+           stays scrollable. */
         .beck-embed > .beck-svg { max-width: 100%; height: auto; margin: auto; }
         .beck-embed--error { border-color: var(--color-red-400, #f87171); }
         .beck-embed--error pre { margin: 0; width: 100%; overflow: auto; font-family: var(--font-mono); font-size: 12px; }
+        /* Bare: drop the fence frame so a diagram sits directly on its host surface (the
+           homepage hero renders onto its own dot-grid card). */
+        .beck-embed--bare { border: 0; background: none; padding: 0; margin: 0; min-height: 0; }
         /* The playground renders into its own canvas — strip the fence frame there. */
         .pg-preview-canvas .beck-embed {
           border: 0; background: none; padding: 0; margin: 0; min-height: 0;
@@ -155,6 +156,9 @@ internal static class BrandStyling
         }
         .dark .pg-dd-panel { background: var(--color-base-900); border-color: var(--color-base-700); box-shadow: 0 14px 40px -10px rgb(0 0 0 / .7); }
         .pg-dd-panel--right { left: auto; right: 0; min-width: 216px; }
+        /* Click-catcher behind an open panel (z-index 30 < panel's 40) so an outside
+           click closes the dropdown while its items stay clickable. */
+        .pg-dd-backdrop { position: fixed; inset: 0; z-index: 30; }
 
         .pg-dd-group { padding: 2px 0; }
         .pg-dd-group + .pg-dd-group { margin-top: 6px; border-top: 1px solid var(--color-base-100); padding-top: 8px; }
@@ -209,19 +213,22 @@ internal static class BrandStyling
         .pg-swatch[data-scheme="hot-dog"]  { background: linear-gradient(135deg, #ff1e1e 0 50%, #ffe500 50% 100%); }
 
         /* ---- playground colour schemes: override the diagram's --beck-* tokens ----
-           Keyed off #pg-host[data-scheme] so the id (1,x,0) outranks both the engine's
-           own `.beck-root` defaults and its `.beck-root[data-theme=dark]` block, making
-           each named scheme a fixed palette regardless of the site's light/dark toggle.
-           The engine's .beck-root is transparent (the title sits on the page), so each
-           scheme also paints its own surface as a self-framed card — otherwise a dark
-           palette's light title would land on the light preview pane. */
-        #pg-host[data-scheme="monokai"] .beck-root,
-        #pg-host[data-scheme="one-dark"] .beck-root,
-        #pg-host[data-scheme="hot-dog"] .beck-root {
+           Keyed off #pg-host[data-scheme] so the id (1,x,0) outranks the engine's own
+           token defaults, making each named scheme a fixed palette regardless of the
+           site's light/dark toggle. The C# renderer sets its --beck-* tokens directly on
+           the `<svg class="beck-svg">` element, so the override must target that same
+           element (an ancestor would lose to a directly-set custom property) — hence
+           `.beck-svg`, not the JS engine's `.beck-root` wrapper. The svg background is
+           transparent (the title sits on the page), so each scheme also paints its own
+           surface as a self-framed card — otherwise a dark palette's light title would
+           land on the light preview pane. */
+        #pg-host[data-scheme="monokai"] .beck-svg,
+        #pg-host[data-scheme="one-dark"] .beck-svg,
+        #pg-host[data-scheme="hot-dog"] .beck-svg {
           background: var(--beck-surface); border-radius: 14px; padding: 20px 24px;
           border: 1px solid var(--beck-node-border);
         }
-        #pg-host[data-scheme="monokai"] .beck-root {
+        #pg-host[data-scheme="monokai"] .beck-svg {
           --beck-surface: #272822; --beck-node-bg: #31322b; --beck-node-border: #49483e;
           --beck-node-shadow: 0 1px 3px rgb(0 0 0 / .4), 0 6px 16px rgb(0 0 0 / .45);
           --beck-text: #f8f8f2; --beck-text-muted: #c9c5b0; --beck-text-faint: #90897a;
@@ -229,7 +236,7 @@ internal static class BrandStyling
           --beck-primary: #66d9ef; --beck-success: #a6e22e; --beck-warn: #fd971f;
           --beck-danger: #f92672; --beck-info: #ae81ff; --beck-neutral: #75715e;
         }
-        #pg-host[data-scheme="one-dark"] .beck-root {
+        #pg-host[data-scheme="one-dark"] .beck-svg {
           --beck-surface: #282c34; --beck-node-bg: #2f343e; --beck-node-border: #3e4451;
           --beck-node-shadow: 0 1px 3px rgb(0 0 0 / .4), 0 6px 16px rgb(0 0 0 / .45);
           --beck-text: #dfe3ea; --beck-text-muted: #9aa2b1; --beck-text-faint: #6b7280;
@@ -240,7 +247,7 @@ internal static class BrandStyling
         /* Hot Dog Stand: the loud yellow/red/black classic. Everything sits on yellow
            with near-black text (readable on the pale-yellow node cards too); red is the
            accent (node borders, edges, groups). */
-        #pg-host[data-scheme="hot-dog"] .beck-root {
+        #pg-host[data-scheme="hot-dog"] .beck-svg {
           --beck-surface: #ffd400; --beck-node-bg: #fff0a3; --beck-node-border: #d40000;
           --beck-node-shadow: 0 2px 0 rgb(180 0 0 / .55), 0 5px 14px rgb(0 0 0 / .2);
           --beck-text: #241a00; --beck-text-muted: #a30000; --beck-text-faint: #b8500a;
@@ -284,18 +291,17 @@ internal static class BrandStyling
         }
 
         /* ---- syntax cheatsheet: live-diagram canvas ---- */
-        /* Each card emits a ```beck fence the client hydrates into a light-DOM .beck-embed.
-           Hide the raw YAML until then, and strip the fence's framed-preview chrome so the
-           diagram sits directly on the card's own dot-grid cell (no nested frame). */
-        .syntax-canvas > pre { display: none; }
+        /* Each card renders its diagram server-side via <BeckDiagram> into a .beck-embed.
+           Strip the fence's framed-preview chrome so the diagram sits directly on the
+           card's own dot-grid cell (no nested frame). */
         .syntax-canvas .beck-embed {
           border: 0; background: none; padding: 0; margin: 0; min-height: 0; width: 100%;
         }
 
         /* ---- icon reference gallery ---- */
-        /* site.js fills [data-beck-icon-gallery] from window.Beck.icons (the engine's own
-           registry), so these card/chip classes exist only in a JS string and must be
-           declarative CSS. The chip echoes a node's accent-tinted icon chip, in brand primary. */
+        /* The <IconGallery /> component renders these cards server-side from the C# engine's
+           icon registry (BeckSvg.IconRegistry). The chip echoes a node's accent-tinted icon
+           chip, in brand primary. */
         [data-beck-icon-gallery] {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
@@ -307,17 +313,19 @@ internal static class BrandStyling
           border: 1px solid var(--color-base-200); border-radius: 12px; background: #fff;
         }
         .dark .beck-icon-card { border-color: var(--color-base-800); background: var(--color-base-900); }
-        .beck-icon-chip {
+        /* NB: distinct from the SVG-internal `.beck-icon-chip` <rect> the engine emits — reusing
+           that exact name here would leak width/height onto every rendered node's chip. */
+        .beck-icon-card-chip {
           display: flex; align-items: center; justify-content: center;
           width: 40px; height: 40px; border-radius: 10px;
           background: color-mix(in srgb, var(--color-primary-600) 12%, var(--color-base-100));
           color: var(--color-primary-700);
         }
-        .dark .beck-icon-chip {
+        .dark .beck-icon-card-chip {
           background: color-mix(in srgb, var(--color-primary-500) 18%, var(--color-base-800));
           color: var(--color-primary-400);
         }
-        .beck-icon-chip svg { width: 22px; height: 22px; }
+        .beck-icon-card-chip svg { width: 22px; height: 22px; }
         .beck-icon-key { font-family: var(--font-mono); font-size: 12.5px; color: var(--color-base-900); }
         .dark .beck-icon-key { color: var(--color-base-50); }
         .beck-icon-aliases { font-family: var(--font-mono); font-size: 10.5px; line-height: 1.4; color: var(--color-base-400); word-break: break-word; }

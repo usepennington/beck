@@ -10,15 +10,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The Beck engine RCL: ships _content/Beck/beck.global.js as a static web asset
-         (still used by the interactive playground) and the Beck.Authoring
-         DiagramBuilder C# API used by the API docs. -->
+    <!-- Host-side WebAssembly render-mode wiring (AddInteractiveWebAssembly*), which is not
+         part of the Microsoft.AspNetCore.App shared framework. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Blazor WebAssembly client: hosts the interactive /playground island, which
+         renders diagrams in the browser via the pure-C# engine. Referencing it here bundles
+         its WASM payload into this host's static web assets, so the static export ships it. -->
+    <ProjectReference Include="..\Beck.Docs.Client\Beck.Docs.Client.csproj" />
+    <!-- Beck: the pure-C# engine. Turns ```beck fences into static self-animating SVG at
+         build time (BeckSvgPreprocessor) — no client JS — and provides the DiagramBuilder
+         authoring API the API docs describe. Beck.Skia supplies exact text measurement
+         over the site's own fonts. -->
     <ProjectReference Include="..\..\dotnet\Beck\Beck.csproj" />
-    <!-- The pure-C# renderer: turns ```beck fences into static self-animating SVG at
-         build time (BeckSvgPreprocessor), so content diagrams need no client JS.
-         Beck.Rendering.Skia supplies exact text measurement over the site's own fonts. -->
-    <ProjectReference Include="..\..\dotnet\Beck.Rendering\Beck.Rendering.csproj" />
-    <ProjectReference Include="..\..\dotnet\Beck.Rendering.Skia\Beck.Rendering.Skia.csproj" />
+    <ProjectReference Include="..\..\dotnet\Beck.Skia\Beck.Skia.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,7 +42,11 @@
          - Pennington.TreeSitter  : the `:symbol` source embeds (real source pulled from files).
          - Pennington.MonorailCss : runtime utility-class discovery + the /styles.css endpoint;
            the semantic primary/accent/base palette also feeds the embedded Beck engine via
-           the emitted color CSS variables. -->
+           the emitted color CSS variables.
+         The interactive /playground boots a Blazor WebAssembly island; serving it from the static
+         export needs the WASM-boot-manifest materialization Pennington added in 0.1.6-alpha
+         (WebAssemblyBootAssetDiscovery + the relative _framework/ link-audit bypass), pinned in
+         Directory.Packages.props. -->
     <PackageReference Include="Pennington" />
     <PackageReference Include="Pennington.TreeSitter" />
     <PackageReference Include="Pennington.MonorailCss" />

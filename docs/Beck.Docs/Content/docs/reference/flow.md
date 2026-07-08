@@ -10,7 +10,7 @@ A diagram's animation is a `flow` — an ordered list of steps the engine compil
 plays when the diagram scrolls into view. When no `flow` is authored, Beck derives one from the
 edges. For a task-oriented walkthrough, see [Animate the flow](/docs/guides/flow).
 
-Animation is skipped entirely — and the motion runtime never loads — when `meta.animate` is `false`
+Animation is skipped entirely — Beck emits the static frame — when `meta.animate` is `false`
 or the reader prefers reduced motion. See [reduced motion](#reduced-motion).
 
 ## The flow block
@@ -180,11 +180,7 @@ flow:
 
 ## Reduced motion
 
-If `meta.animate` is `false`, a `<beck-diagram>` carries `animate="false"`, or the reader's system
-requests reduced motion, Beck renders the static frame and never loads its animation runtime (GSAP,
-fetched from a CDN at runtime). The persistent CSS-driven effects (`working`, `stream`, status and
-icon tints) consume theme variables directly, so they survive a theme change and keep running even
-while the timeline is paused.
-
-To drive playback yourself — play, pause, seek to a `phase` label — render with
-`window.Beck.renderDiagram` and use the returned handle; see the [API reference](/api).
+If `meta.animate` is `false`, or the reader's system requests reduced motion, Beck emits the static
+frame instead. The persistent CSS-driven effects (`working`, `stream`, status and icon tints) consume
+theme variables directly, so they survive a theme change and keep running even while the timeline is
+paused.

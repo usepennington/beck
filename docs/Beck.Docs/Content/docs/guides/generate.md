@@ -59,13 +59,9 @@ File.WriteAllText("docs/architecture.md", builder.ToFence());
 
 ## Render the result
 
-A `.beck.yaml` file renders by pointing a `<beck-diagram>` at it. The engine fetches the file and hydrates it in light DOM:
+A `.beck.yaml` file renders in Markdown with a ` ```beck:symbol ` fence pointing at it. The Pennington preprocessor runs the C# engine at build time and inlines a static, self-animating `<svg>` — no script tag, no client runtime.
 
-```html
-<beck-diagram src="/diagrams/generated.beck.yaml"></beck-diagram>
-```
-
-A fence from `.ToFence()` renders by dropping it straight into any Markdown page — the engine script hydrates ` ```beck ` blocks automatically, no Markdig extension required. Either way you need the engine included once in `<head>`; see [Add Beck to your site](/docs/guides/install) if you haven't already.
+A fence from `.ToFence()` is simpler still: drop it straight into any Markdown page and its ` ```beck ` block renders to an inline `<svg>` the same way. In an ASP.NET app, `BeckSvg.Render(File.ReadAllText(path))` from the `Beck` package returns that same self-contained `<svg>` string for you to write into a page.
 
 Here is the kind of diagram the snippet above produces:
 
@@ -73,7 +69,9 @@ Here is the kind of diagram the snippet above produces:
 wwwroot/examples/guides/generate-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/generate-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/generate-01.beck.yaml
+```
 
 ## The other diagram types
 

@@ -1,20 +1,32 @@
 # Beck
 
-Declarative, animated diagrams from YAML — "Mermaid, but sexy."
+Declarative, animated diagrams from YAML — "Mermaid, but sexy." Rendered **entirely in C#**.
 
 Write a diagram as structured YAML and Beck auto-lays it out, auto-routes the edges, themes it
 from your site's CSS variables, and animates packets flowing through it. Four diagram types share
 one document format and one engine — **architecture** (layered boxes and lines), **sequence**
 (lifelines and messages that play the conversation), **state** (a machine that walks its own
-transitions), and **class** (UML cards, generatable from real C# types). The engine ships as a
-prebuilt bundle with **no build step for authors** and loads GSAP from a CDN at runtime, so nothing
-animation-related is bundled.
+transitions), and **class** (UML cards, generatable from real C# types).
 
-```bash
-npm install
-npm run dev          # open the playground (samples, live editor, light/dark toggle)
-npm run build:lib    # build the IIFE engine bundle into dotnet/Beck/wwwroot/beck.global.js
-BECK_FORMAT=esm npm run build:lib   # optional ESM build to dist-lib/beck.js
+The output is a single self-contained, self-animating inline `<svg>`: layout, routing, and the full
+flow choreography are baked into CSS animations inside the SVG. **No client JavaScript, no GSAP, no
+runtime, nothing to hydrate** — diagrams play even with scripts disabled, respect
+`prefers-reduced-motion`, and adopt the host page's palette and dark mode through CSS variables.
+
+```csharp
+using Beck.Rendering;
+
+string svg = BeckSvg.Render("""
+    type: architecture
+    meta: { title: Web Platform, direction: LR }
+    nodes:
+      - { id: web, title: Web App, kind: user }
+      - { id: gw, title: API Gateway, kind: gateway }
+      - { id: db, title: Postgres, kind: db }
+    edges:
+      - { from: web, to: gw }
+      - { from: gw, to: db, label: reads }
+    """);
 ```
 
 ## A diagram in YAML
@@ -93,54 +105,82 @@ type: class                    # classes: + relations: (inherits/implements/comp
 
 ## Usage
 
-The engine ships inside the **`Beck` NuGet package** (see *Distribution* below); include its one
-script and you get the integration paths below — no separate npm install or CDN.
+Beck ships as two NuGet packages:
 
-**Fenced ` ```beck ` blocks (the main path).** With the script on the page, every Markdown
-` ```beck ` fence — rendered by Markdig/Pennington as `<code class="language-beck">` — is hydrated
-into a live diagram. This is the Mermaid-style integration every diagram in the docs uses, and it
-needs nothing server-side.
-
-**`<beck-diagram>` element** — renders in **light DOM**, so the host page's CSS reaches it. Reads
-inline YAML, a child `<script type="application/yaml">`, or a `src` URL:
-
-```html
-<script src="/path/to/beck.global.js" defer></script>
-<beck-diagram mode="auto">
-  <script type="application/yaml">
-    type: architecture
-    meta: { title: Hello }
-    nodes: [{ id: a, title: A }, { id: b, title: B }]
-    edges: [{ from: a, to: b }]
-  </script>
-</beck-diagram>
+```bash
+dotnet add package Beck        # the engine + the authoring API
+dotnet add package Beck.Skia   # optional: exact text measurement with your own font files
 ```
 
-**Imperatively** (after the IIFE bundle is loaded via `<script>`, the API lives on `window.Beck`):
+**Render YAML to SVG.** `BeckSvg.Render(yaml)` returns the `<svg>` string; write it into any HTML
+you produce — a Razor view, a minimal-API endpoint, a static-site build step:
 
-```ts
-const { renderDiagram } = window.Beck
-const handle = renderDiagram(document.querySelector('#chart'), yamlString, { theme: 'auto' })
-// handle: play(), pause(), reset(), seek(label), setTheme(mode), relayout(), destroy(), ready
+```csharp
+using Beck.Rendering;
+
+string svg = BeckSvg.Render(yaml, new SvgRenderOptions
+{
+    Animation = AnimationMode.Full,   // Full (default) | Static | Scrub (scroll-driven)
+});
+```
+
+**Fenced ` ```beck ` blocks (the docs-site path).** In a Pennington site, a code-block preprocessor
+renders every Markdown ` ```beck ` fence to inline SVG at build time — the Mermaid-style authoring
+experience with zero client cost. See the docs site's `BeckSvgPreprocessor` for the pattern.
+
+**Author YAML from code.** The `Beck` package includes a dependency-free authoring API — one
+builder per diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
+`ClassDiagramBuilder`), including `ClassDiagramBuilder.FromTypes(...)`, which reflects real CLR
+types into an always-current class diagram:
+
+```csharp
+using Beck;
+using Beck.Rendering;
+
+string yaml = new DiagramBuilder("Web Platform")
+    .Node("web", n => n.Title("Web App").Kind(NodeKind.User))
+    .Node("api", "API Server")
+    .Edge("web", "api")
+    .ToYaml();
+
+string svg = BeckSvg.Render(yaml);
+```
+
+**Measure with your real fonts.** The built-in measurer carries embedded Inter + IBM Plex Mono
+metrics, so it works with zero configuration. For pixel-exact card sizing in your own font, add
+`Beck.Skia` and point a `SkiaTextMeasurer` at the same font files your CSS serves:
+
+```csharp
+using Beck.Rendering;
+using Beck.Skia;
+using Beck.Rendering.Text;
+
+var font = new BeckFontSpec
+{
+    Family = "IBM Plex Sans",
+    Files = new Dictionary<int, string> { [400] = "fonts/IBMPlexSans-Regular.ttf", /* … */ },
+};
+using var measurer = new SkiaTextMeasurer(font);
+string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font });
 ```
 
 ## Theming
 
 Every themeable value is a `--beck-*` CSS custom property that **defaults to the host site's
-palette** (`--color-primary-600`, `--color-base-*`, …) with a literal fallback. A diagram renders
-in light DOM, so it inherits those variables straight from the surrounding page and matches it
-automatically, including light/dark — which is just a matter of `[data-theme="dark"]` redefining
-the variables. There is no per-theme JavaScript and no hardcoded colors in the renderer.
+palette** (`--color-primary-600`, `--color-base-*`, …) with a literal fallback. The SVG is inline,
+so it participates in the page's cascade and matches it automatically, including light/dark —
+which is just a matter of `[data-theme="dark"]` (or `prefers-color-scheme`) redefining the
+variables. There is no per-theme rendering and no hardcoded colors.
 
 ## How it works
 
 ```
-YAML → parse → validate(+defaults, per diagram type) → model
-     → measure (render cards off-flow, read sizes)
-     → layout (per type: Sugiyama-lite layered engine, or the fixed sequence grid)
-     → route  (orthogonal step-round edges with obstacle avoidance / sequence rows)
-     → render (position DOM, group boxes, SVG overlay)
-     → animate (compile flow → GSAP timeline; play on scroll-into-view)
+YAML → parse (YamlDotNet) → validate(+defaults, per diagram type) → model
+     → measure (ITextMeasurer: embedded Inter metrics, or Skia+HarfBuzz shaping)
+     → layout  (per type: Sugiyama-lite layered engine, or the fixed sequence grid)
+     → route   (orthogonal step-round edges with obstacle avoidance / sequence rows)
+     → svg     (node shapes, group boxes, markers, labels, theming <style>)
+     → animate (simulate the flow into an absolute schedule → compile to CSS keyframes)
 ```
 
 State and class diagrams compile onto the same layered engine (pills, pseudo-states, and
@@ -148,45 +188,28 @@ compartment cards are node shapes; UML markers are edge decorations). Sequence d
 own fixed-grid layout and router, but every message is still one continuous SVG path, so the
 shared packet animation rides it unchanged.
 
-`prefers-reduced-motion` (or `animate: false`) renders the static frame and never loads GSAP.
+The animation compiler simulates the flow script into an absolute-time schedule, then emits one
+shared-duration CSS animation per element with percentage-window keyframes — overshoot and elastic
+eases are sampled analytically into CSS `linear()` timing functions. `prefers-reduced-motion` (or
+`animate: false`) gets the fully-revealed static frame: all motion CSS lives inside a
+`@media (prefers-reduced-motion: no-preference)` block.
 
-## Distribution — the `Beck` NuGet package
+## Repository layout
 
-Beck ships as a single NuGet package (`dotnet/Beck`, a Razor Class Library) — there is no npm
-package and no CDN to configure. The package contains both halves:
-
-- **The client**, as a static web asset served at `_content/Beck/beck.global.js`. It auto-registers
-  `<beck-diagram>` and **hydrates fenced `` ```beck `` code blocks** (the Mermaid-style integration),
-  so in a Pennington (or any ASP.NET Core) site you just include the script once and write fences.
-- **`Beck.Authoring`**, a dependency-free C# API for emitting Beck YAML from code — one builder per
-  diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
-  `ClassDiagramBuilder`), including `ClassDiagramBuilder.FromTypes(...)`, which reflects real CLR
-  types into an always-current class diagram.
-
-The TypeScript engine is built with `npm run build:lib`, which writes the committed
-`dotnet/Beck/wwwroot/beck.global.js`. That committed asset is what the package ships, so
-`dotnet pack` never needs Node — regenerate and commit it when the engine source changes.
-
-```csharp
-using Beck;
-string fence = new DiagramBuilder("Web Platform")
-    .Node("web", n => n.Title("Web App").Kind(NodeKind.User))
-    .Node("api", "API Server")
-    .Edge("web", "api")
-    .ToFence();   // ```beck … ``` — drop into Markdown; the client renders it
-```
-
-See `dotnet/Beck/README.md` for the package usage.
-
-## Status
-
-The engine + playground, the fenced-block hydrator, and the `Beck` NuGet package (client static web
-asset + `Beck.Authoring`) are complete and verified end-to-end (C# → YAML → fenced block → rendered,
-host-themed diagram).
+- `dotnet/Beck` — the engine + authoring API (`BeckSvg.Render`, `DiagramBuilder` family). Only
+  dependency: YamlDotNet.
+- `dotnet/Beck.Skia` — optional exact text measurement (SkiaSharp + HarfBuzzSharp shaping).
+- `dotnet/Beck.Tests` — xunit suite: model/layout/route golden parity tests, card-sizing gates,
+  render smoke tests.
+- `dotnet/Beck.Sample` — console sample emitting authored YAML.
+- `docs/Beck.Docs` — the Pennington docs site; every content diagram renders at build time, and
+  the interactive playground runs the same engine compiled to WebAssembly (`docs/Beck.Docs.Client`).
 
 ## Acknowledgements
 
 Beck grew out of [`abergs/animations`](https://github.com/abergs/animations) by
 [Anders Åberg](https://andersaberg.com/) — an experiment in animated architecture diagrams with GSAP
 and Tailwind CSS. That project was the inspiration and the jumping-off point for this codebase, and
-Beck would not exist without it. Thank you, Anders.
+Beck would not exist without it. Thank you, Anders. Beck's first engine was TypeScript + GSAP; the
+current engine is a pure-C# port of it, and the CSS choreography is the compiled form of those
+original GSAP timelines.

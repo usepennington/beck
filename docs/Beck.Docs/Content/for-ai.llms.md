@@ -6,9 +6,9 @@ description: A getting-started cheat-sheet for AI agents writing Beck diagrams �
 # Beck for LLMs
 
 This page is a cheat-sheet for an AI assistant authoring **Beck** diagrams. Beck turns a small
-declarative YAML document into a clean, auto-laid-out, animated architecture diagram that renders in
-the browser and adopts the host page's colours. You write the boxes and the lines; Beck does the
-layout, routing, theming, and motion.
+declarative YAML document into a clean, auto-laid-out, animated architecture diagram — rendered
+server-side in C# to a self-animating inline SVG that adopts the host page's colours. You write the
+boxes and the lines; Beck does the layout, routing, theming, and motion.
 
 **The one rule:** only node `id`s are required. Every other field has a sensible default, so the
 smallest useful diagram is a few nodes and edges. Add detail only where you want to override a
@@ -20,8 +20,9 @@ reference here from memory — open it.
 
 ## Quickest start: a fenced block
 
-The primary integration is a Markdown fenced code block tagged ` ```beck `. On any page that
-includes the engine script, every such block is hydrated into a live diagram — nothing server-side:
+The primary integration is a Markdown fenced code block tagged ` ```beck `. A site built with the
+Beck NuGet package renders every such block to a static, self-animating SVG at build time — no
+client JavaScript at all:
 
 ````markdown
 ```beck
@@ -347,27 +348,15 @@ your code](/docs/guides/generate).
 
 ## Embedding a diagram in a page
 
-Beck ships as a single .NET NuGet package (`Beck`) — there is no npm package or CDN. Include its one
-script once:
+Beck renders diagrams with the pure-C# engine — there is no client JS, no npm package, and no CDN.
+Two rendering paths:
 
-```html
-<script src="/_content/Beck/beck.global.js" defer></script>
-```
-
-Then choose an integration:
-
-- **Fenced block (main path):** write a ` ```beck ` block in any Markdown/HTML; it auto-hydrates.
-- **Custom element:** `<beck-diagram>` renders in light DOM so host CSS reaches it. Source can be
-  inline text, a child `<script type="application/yaml">`, or a `src` URL. Attributes: `mode`
-  (`light`/`dark`/`auto`), `src`, `animate` (`false` to disable).
-  ```html
-  <beck-diagram src="/diagrams/architecture.beck.yaml" mode="auto"></beck-diagram>
-  ```
-- **Imperative:** after the script loads, the API is on `window.Beck`:
-  ```js
-  const handle = window.Beck.renderDiagram(host, yamlString, { theme: "auto" });
-  // handle: play(), pause(), reset(), seek(label), setTheme(mode), relayout(), destroy(), ready
-  ```
+- **Fenced block (main path):** write a ` ```beck ` block (inline YAML) or a ` ```beck:symbol ` block
+  (pointing at a `.beck.yaml` file) in any Markdown page. The Pennington preprocessor runs the engine
+  at build time and inlines a static, self-animating `<svg>` — no script tag, no client runtime. Flag
+  variants force the static frame: ` ```beck,static ` and ` ```beck:symbol,static `.
+- **C# / ASP.NET:** `BeckSvg.Render(yaml)` from the `Beck` package returns a self-contained
+  `<svg>` string you write into a page (server-side or at build time).
 
 Setup and palette wiring: [Add Beck to your site](/docs/guides/install) (generic ASP.NET/Tailwind)
 or [Add Beck to a Pennington site](/docs/guides/pennington).
@@ -390,7 +379,7 @@ or [Add Beck to a Pennington site](/docs/guides/pennington).
 - **Animation is automatic** — no `flow:` means a derived one, *except for `type: class`*, which is
   structural reference material and renders a still frame unless you script a `flow:` yourself.
   `meta.loop: false` plays once; `meta.animate: false` (or the reader's reduced-motion setting)
-  renders a static frame and never loads the motion runtime.
+  renders a static frame.
 - **Flow steps are ordered**, single-key mappings; `parallel` runs its children simultaneously;
   `status`/`working`/`stream`/`activate` persist until cleared or `reset`.
 - **It's plain YAML** — the parser reports friendly errors (with a line number for syntax issues),

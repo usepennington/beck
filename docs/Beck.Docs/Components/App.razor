@@ -10,8 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
     @* Set the theme before first paint to avoid a flash of the wrong palette.
-       MonorailCSS keys dark mode off the `.dark` class; the Beck engine keys its
-       hydrated-fence theming off `data-theme`. Set both up front. *@
+       MonorailCSS keys dark mode off the `.dark` class; every Beck SVG keys its
+       theming off the ancestor `data-theme`. Set both up front. *@
     <script>
         (function () {
             try {
@@ -27,11 +27,14 @@
     @* MonorailCSS runtime stylesheet (utilities + ExtraStyles). *@
     <link rel="stylesheet" href="/styles.css" />
 
-    @* The Beck engine: auto-registers <beck-diagram> and hydrates ```beck fences. *@
-    <script src="/_content/Beck/beck.global.js" defer></script>
-    @* site.js drives the homepage hero typewriter (no external typing lib) plus the
-       theme toggle, copy buttons and the Monaco playground. *@
+    @* Every diagram on the site is rendered to static SVG by the pure-C# engine — content
+       ```beck fences at build time, the playground in the browser (WebAssembly). No client
+       Beck JS engine is loaded. site.js only drives the theme toggle, copy buttons, and the
+       small bits of page chrome (nav, syntax filter). *@
     <script src="/js/site.js" defer></script>
+    @* Text metrics for the WASM playground's C# renderer (canvas measureText). Measurement
+       only — the diagram itself is rendered by the C# engine compiled to WebAssembly. *@
+    <script src="/js/beck-measure.js" defer></script>
 
     <HeadOutlet />
 </head>
@@ -53,5 +56,10 @@
             </MainLayout>
         </NotFound>
     </Router>
+
+    @* Blazor runtime: boots the interactive-server circuit that backs the /playground
+       component (server-side C# diagram rendering). Harmless on the static pages — they
+       carry no interactive components — and on the static export it simply never connects. *@
+    <script src="_framework/blazor.web.js"></script>
 </body>
 </html>

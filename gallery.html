@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beck — diagram dogfooding gallery</title>
+  <style>
+    /* Host-site palette, so we can confirm Beck adopts --color-* tokens. */
+    :root {
+      --color-base-50: #ffffff;  --color-base-100: #f1f5f9; --color-base-200: #e2e8f0;
+      --color-base-300: #cbd5e1; --color-base-400: #94a3b8; --color-base-500: #64748b;
+      --color-base-700: #334155; --color-base-800: #1e293b; --color-base-900: #0f172a;
+      --color-primary-600: #6d28d9;          /* violet brand, to prove host adoption */
+      --color-emerald-500: #10b981; --color-amber-500: #f59e0b;
+      --color-red-500: #ef4444;     --color-violet-500: #8b5cf6;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    body { margin: 0; background: #f6f7f9; color: #0f172a; }
+    header { padding: 28px 32px 8px; }
+    header h1 { margin: 0; font-size: 1.4rem; }
+    header p { margin: 4px 0 0; color: #64748b; font-size: 0.9rem; }
+    .grid { display: flex; flex-direction: column; gap: 8px; padding: 16px 32px 64px; max-width: 1080px; }
+    .case { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px 24px; }
+    .case h2 { margin: 0 0 2px; font-size: 0.95rem; }
+    .case .note { margin: 0 0 16px; font-size: 0.78rem; color: #64748b; }
+    .mount { min-height: 80px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Beck dogfooding gallery</h1>
+    <p>Architecture diagrams I'd want to animate — probing icons, kinds, animation styles, and a few known-suspect code paths.</p>
+  </header>
+  <div class="grid" id="grid"></div>
+
+  <script src="/dotnet/Beck/wwwroot/beck.global.js"></script>
+  <script>
+    const cases = [
+      {
+        id: "rag",
+        title: "1 · RAG / LLM answer pipeline (LR)",
+        note: "Modern AI shape. Wants icons for embeddings, vector store, and an LLM 'brain/model' — none exist; falls back to generic icons.",
+        yaml: `meta:
+  title: RAG Answer Pipeline
+  subtitle: A question is embedded, retrieved against, and answered
+  direction: LR
+nodes:
+  - { id: user, title: User, kind: user, subtitle: Asks a question }
+  - { id: api, title: Query API, kind: gateway }
+  - { id: embed, title: Embedding Model, icon: embeddings, accent: info, subtitle: text-embedding-3 }
+  - { id: vstore, title: Vector Store, icon: vector, kind: db, accent: info, subtitle: pgvector }
+  - { id: rerank, title: Reranker, accent: warn }
+  - { id: llm, title: LLM, icon: model, accent: primary, subtitle: Claude }
+  - { id: cache, title: Semantic Cache, kind: cache }
+edges:
+  - { from: user, to: api }
+  - { from: api, to: cache, label: check, style: dashed }
+  - { from: api, to: embed, label: embed }
+  - { from: embed, to: vstore, label: ANN search }
+  - { from: vstore, to: rerank, label: top-k }
+  - { from: rerank, to: llm, label: context }
+  - { from: llm, to: user, label: answer, kind: control }
+flow:
+  repeat: -1
+  repeatDelay: 1.6
+  steps:
+    - status: { node: user, text: "What is Beck?", color: neutral }
+    - packet: { from: user, to: api }
+    - parallel:
+        - packet: { from: api, to: cache, label: miss, color: warn }
+        - status: { node: cache, text: miss, color: warn }
+    - packet: { from: api, to: embed }
+    - pulse: { node: embed, color: info }
+    - packet: { from: embed, to: vstore }
+    - packet: { from: vstore, to: rerank }
+    - packet: { from: rerank, to: llm }
+    - highlight: { node: llm, color: primary }
+    - status: { node: llm, text: generating…, color: primary }
+    - packet: { from: llm, to: user, color: success }
+    - status: { node: user, text: answered, color: success }
+    - wait: 1.2`,
+      },
+      {
+        id: "cicd",
+        title: "2 · CI/CD pipeline with a failing stage (LR)",
+        note: "Wants a 'fail/error' animation (red shake) and a scheduler/clock + git icons. Status flows queued→running→passed/failed.",
+        yaml: `meta:
+  title: Deploy Pipeline
+  direction: LR
+nodes:
+  - { id: push, title: git push, kind: external, icon: code }
+  - { id: build, title: Build, subtitle: docker build }
+  - { id: test, title: Test, subtitle: unit + e2e }
+  - { id: scan, title: Security Scan, accent: warn }
+  - { id: deploy, title: Deploy, kind: gateway, subtitle: prod }
+  - { id: rollback, title: Rollback, accent: danger }
+edges:
+  - { from: push, to: build }
+  - { from: build, to: test }
+  - { from: test, to: scan }
+  - { from: scan, to: deploy }
+  - { from: deploy, to: rollback, label: on failure, kind: async, color: danger }
+flow:
+  repeat: -1
+  repeatDelay: 2
+  steps:
+    - status: { node: build, text: building, color: primary }
+    - packet: { from: push, to: build }
+    - status: { node: build, text: ✓ passed, color: success }
+    - packet: { from: build, to: test }
+    - status: { node: test, text: ✓ passed, color: success }
+    - packet: { from: test, to: scan }
+    - status: { node: scan, text: ✗ CVE found, color: danger }
+    - pulse: { node: scan, color: danger }
+    - packet: { from: scan, to: deploy, color: danger }
+    - status: { node: deploy, text: blocked, color: danger }
+    - wait: 1.4`,
+      },
+      {
+        id: "events",
+        title: "3 · Event-driven order system (TB, groups + async)",
+        note: "Groups + dashed async edges + a message bus. Wants kafka/topic/stream icons. Also routes a fan-out from the bus.",
+        yaml: `meta:
+  title: Order Processing
+  subtitle: Synchronous intake, asynchronous fulfilment
+  direction: TB
+nodes:
+  - { id: web, title: Storefront, kind: user }
+  - { id: orders, title: Orders API, kind: gateway }
+  - { id: bus, title: Kafka, kind: queue, subtitle: orders.created }
+  - { id: pay, title: Payments }
+  - { id: ship, title: Shipping }
+  - { id: notify, title: Notifications }
+  - { id: ordersdb, title: Orders DB, kind: db }
+  - { id: ledger, title: Ledger DB, kind: db }
+groups:
+  - { id: consumers, label: Consumers, members: [pay, ship, notify], accent: primary }
+  - { id: stores, label: Data, members: [ordersdb, ledger], accent: info }
+edges:
+  - { from: web, to: orders }
+  - { from: orders, to: ordersdb, label: persist }
+  - { from: orders, to: bus, label: publish, kind: async }
+  - { from: bus, to: pay, kind: async }
+  - { from: bus, to: ship, kind: async }
+  - { from: bus, to: notify, kind: async }
+  - { from: pay, to: ledger }`,
+      },
+      {
+        id: "roundtrip",
+        title: "4 · Request round-trip (packet labels + parallel)",
+        note: "Probes packet `label` (schema/README say it exists) and a parallel fan-out. Watch whether the labels 'GET' / 'JSON' ever appear on the moving packets.",
+        yaml: `meta:
+  title: Cache-Aside Read
+  direction: LR
+nodes:
+  - { id: client, title: Client, kind: user }
+  - { id: api, title: API, kind: gateway }
+  - { id: cache, title: Redis, kind: cache }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: client, to: api }
+  - { from: api, to: cache }
+  - { from: api, to: db }
+flow:
+  repeat: -1
+  repeatDelay: 1.5
+  steps:
+    - packet: { from: client, to: api, label: GET /item }
+    - packet: { from: api, to: cache, label: lookup, color: warn }
+    - status: { node: cache, text: miss, color: warn }
+    - packet: { from: api, to: db, label: SELECT }
+    - packet: { from: db, to: api, label: row, color: success }
+    - parallel:
+        - packet: { from: api, to: cache, label: SET, color: info }
+        - packet: { from: api, to: client, label: 200 JSON, color: success }
+    - wait: 1`,
+      },
+      {
+        id: "infra",
+        title: "5 · Edge + k8s infra (new icons + href link + per-node theming)",
+        note: "Distinct icons now. Object Storage is a clickable <a href> (target=_blank) with a tinted surface; CDN has a custom text color.",
+        yaml: `meta:
+  title: Edge to Cluster
+  direction: TB
+nodes:
+  - { id: browser, title: Browser, kind: user, icon: browser }
+  - { id: cdn, title: CDN, icon: cdn, subtitle: edge cache, textColor: "#b45309" }
+  - { id: lb, title: Load Balancer, icon: loadbalancer }
+  - { id: ingress, title: Ingress, icon: ingress }
+  - { id: pod1, title: web pod, icon: container }
+  - { id: pod2, title: web pod, icon: container }
+  - { id: s3, title: Object Storage, icon: bucket, subtitle: docs ↗, href: "https://example.com/storage", target: _blank, surface: "#fff7ed" }
+edges:
+  - { from: browser, to: cdn }
+  - { from: cdn, to: lb }
+  - { from: lb, to: ingress }
+  - { from: ingress, to: pod1 }
+  - { from: ingress, to: pod2 }
+  - { from: cdn, to: s3, label: origin, style: dashed }`,
+      },
+      {
+        id: "bugs",
+        title: "6 · Fixed probes (loop:false honored, edge→group, unknown icon falls back)",
+        note: "meta.loop:false now stops the loop. Edge target is a GROUP id. icon: nope is unknown → now falls back to the kind's default icon instead of rendering blank.",
+        yaml: `meta:
+  title: Probe
+  loop: false
+  direction: LR
+nodes:
+  - { id: a, title: Producer, icon: nope }
+  - { id: b, title: Worker 1 }
+  - { id: c, title: Worker 2 }
+groups:
+  - { id: workers, label: Pool, members: [b, c], accent: primary }
+edges:
+  - { from: a, to: workers, label: dispatch }`,
+      },
+      {
+        id: "anim",
+        title: "7 · NEW animation styles (stream · working · activate · fail · packet labels)",
+        note: "Continuous stream dashes (ingest→queue), a persistent 'working' glow on the worker, an activated edge, packet labels that now render, and a fail() red shake with a status.",
+        yaml: `meta:
+  title: Job Pipeline States
+  direction: LR
+nodes:
+  - { id: ingest, title: Ingest, kind: external, icon: stream }
+  - { id: queue, title: Queue, kind: queue }
+  - { id: worker, title: Worker, accent: primary }
+  - { id: store, title: Store, kind: db }
+  - { id: alert, title: Alerting, accent: danger, icon: bell }
+edges:
+  - { from: ingest, to: queue }
+  - { from: queue, to: worker }
+  - { from: worker, to: store }
+  - { from: worker, to: alert, kind: async, color: danger }
+flow:
+  repeat: -1
+  repeatDelay: 1.5
+  steps:
+    - stream: { from: ingest, to: queue, color: info }
+    - working: { node: worker }
+    - packet: { from: queue, to: worker, label: job#42 }
+    - activate: { from: worker, to: store, color: success }
+    - packet: { from: worker, to: store, label: write, color: success }
+    - status: { node: store, text: committed, color: success }
+    - idle: { node: worker }
+    - wait: 0.4
+    - fail: { node: worker, text: OOM killed, color: danger }
+    - packet: { from: worker, to: alert, label: page!, color: danger }
+    - wait: 1.4`,
+      },
+      {
+        id: "shapes",
+        title: "10 · Packet shapes (dot · circle · ring) + impact burst",
+        note: "New `shape:` knob — dot (default), a large circle, a hollow ring — plus `impact: true` for an expanding ring burst at the landing point.",
+        yaml: `meta:
+  title: Packet Shapes
+  subtitle: shape + impact knobs
+  direction: LR
+nodes:
+  - { id: src, title: Source, kind: user }
+  - { id: a, title: dot }
+  - { id: b, title: circle }
+  - { id: c, title: ring }
+edges:
+  - { from: src, to: a }
+  - { from: src, to: b }
+  - { from: src, to: c }
+flow:
+  repeat: -1
+  repeatDelay: 1.4
+  steps:
+    - packet: { from: src, to: a, shape: dot, impact: true }
+    - packet: { from: src, to: b, shape: circle, color: info, impact: true }
+    - packet: { from: src, to: c, shape: ring, color: success, impact: true }
+    - wait: 1`,
+      },
+      {
+        id: "nested",
+        title: "9 · Nested groups — recursive compound layout (multi-rank containment)",
+        note: "AWS Account ▸ VPC ▸ {Web tier, Data} ▸ services. Groups span ranks and nest; outer boxes never enclose a foreign node.",
+        yaml: `meta:
+  title: Cloud Topology
+  subtitle: Nested boundaries via recursive compound layout
+  direction: TB
+nodes:
+  - { id: cf, title: CloudFront, icon: cdn, kind: external }
+  - { id: alb, title: ALB, icon: loadbalancer }
+  - { id: web1, title: web-1, icon: container }
+  - { id: web2, title: web-2, icon: container }
+  - { id: api, title: api, icon: container }
+  - { id: pg, title: Postgres, kind: db }
+  - { id: redis, title: Redis, icon: redis }
+groups:
+  - { id: account, label: AWS Account, members: [vpc], accent: warn }
+  - { id: vpc, label: VPC 10.0.0.0/16, members: [web, data], accent: info }
+  - { id: web, label: Web Tier, members: [alb, web1, web2, api], accent: primary }
+  - { id: data, label: Data Subnet, members: [pg, redis], accent: success }
+edges:
+  - { from: cf, to: alb }
+  - { from: alb, to: web1 }
+  - { from: alb, to: web2 }
+  - { from: web1, to: api }
+  - { from: web2, to: api }
+  - { from: api, to: pg, label: query }
+  - { from: api, to: redis, label: cache }`,
+      },
+      {
+        id: "csharp",
+        title: "8 · Generated by Beck.Authoring (C#) — flow + parallel + working/idle",
+        note: "This YAML was emitted by the C# DiagramBuilder.Flow(...) API (dotnet run), proving the new C#↔TS flow parity end-to-end.",
+        url: "/sample-flow.yaml",
+      },
+    ];
+
+    const grid = document.getElementById("grid");
+    async function mountCase(c) {
+      const wrap = document.createElement("div");
+      wrap.className = "case";
+      wrap.innerHTML = `<h2>${c.title}</h2><p class="note">${c.note}</p><div class="mount" id="mount-${c.id}"></div>`;
+      grid.appendChild(wrap);
+      try {
+        const yaml = c.yaml ?? (await (await fetch(c.url)).text());
+        window.Beck.renderDiagram(wrap.querySelector(".mount"), yaml, { theme: "light" });
+      } catch (err) {
+        wrap.querySelector(".mount").innerHTML =
+          '<pre style="color:#e11d48;white-space:pre-wrap">' + (err && err.message || err) + "</pre>";
+      }
+    }
+    (async () => {
+      for (const c of cases) await mountCase(c);
+      window.__beckReady = true;
+    })();
+  </script>
+</body>
+</html>

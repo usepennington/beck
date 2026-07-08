@@ -21,7 +21,9 @@ lines are plain strings, so write them the way your team reads them:
 wwwroot/examples/guides/class-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/class-01.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/class-01.beck.yaml
+```
 
 That relation is a `composition` — filled diamond at the whole (`from`), with `fromCard`/`toCard`
 multiplicities at the ends.
@@ -35,7 +37,9 @@ inherits Entity*, *Order depends on IOrderNotifier*, *Order is composed of Order
 wwwroot/examples/guides/class-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/class-02.beck.yaml" mode="auto"></beck-diagram>
+```beck:symbol
+wwwroot/examples/guides/class-02.beck.yaml
+```
 
 | kind | write it as | draws |
 |---|---|---|

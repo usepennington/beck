@@ -7,34 +7,44 @@ uid: docs.overview
 ---
 
 Beck turns a declarative **YAML** description into a clean, animated diagram. You write the boxes
-and the lines; Beck handles the layout, the routing, the theming, and the motion — and renders it
-live in the browser, in your site's own colours.
+and the lines; Beck handles the layout, the routing, the theming, and the motion — rendered
+entirely in C#, to a self-animating SVG that adopts your site's own colours.
 
-Four diagram types share one document format, one script, and one animation engine:
+Four diagram types share one document format and one animation engine:
 [**architecture**](/docs/tutorials/first-diagram) (the layered system diagram below),
 [**sequence**](/docs/guides/sequence) (lifelines and messages that *play* the conversation),
 [**state**](/docs/guides/state) (a machine that walks its own transitions), and
 [**class**](/docs/guides/class) (UML cards you can generate straight from your C# types).
 
-It ships as a single .NET NuGet package: a prebuilt engine that hydrates a ` ```beck ` fenced code
-block into a diagram, plus `Beck.Authoring`, a C# API for generating that YAML from your real model.
+It ships as a single .NET NuGet package: a pure-C# engine that renders a ` ```beck ` fenced code
+block to a static, self-animating inline SVG at build time — no client JavaScript — plus a fluent
+authoring API (`DiagramBuilder`) for generating that YAML from your real model.
 
 ```beck
 type: architecture
-meta: { title: Web platform, direction: LR }
+meta: { title: Checkout, direction: TB }
 nodes:
-  - { id: user, title: Client, kind: user }
+  - { id: web, title: Web app, kind: user }
+  - { id: mobile, title: Mobile, kind: user }
   - { id: gw, title: API Gateway, kind: gateway }
   - { id: orders, title: Orders }
+  - { id: payments, title: Payments }
   - { id: db, title: Postgres, kind: db }
+  - { id: stripe, title: Stripe, kind: external }
   - { id: bus, title: Events, kind: queue }
+  - { id: notify, title: Notifications }
 groups:
-  - { id: svc, label: Services, members: [orders], accent: primary }
+  - { id: svc, label: Services, members: [orders, payments], accent: primary }
 edges:
-  - { from: user, to: gw }
+  - { from: web, to: gw }
+  - { from: mobile, to: gw }
   - { from: gw, to: orders }
+  - { from: gw, to: payments, label: charge }
   - { from: orders, to: db, label: query }
+  - { from: payments, to: stripe, kind: dependency }
   - { from: orders, to: bus, label: publish, kind: async }
+  - { from: payments, to: bus, kind: async }
+  - { from: bus, to: notify, kind: async }
 ```
 
 ## The shape of a diagram

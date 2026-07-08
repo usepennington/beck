@@ -21,7 +21,9 @@ To change the primary axis, set `meta.direction`. The default is `TB` (top-to-bo
 wwwroot/examples/guides/layout-01.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/layout-01.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/layout-01.beck.yaml
+```
 
 ## Tune the spacing
 
@@ -33,7 +35,9 @@ Give a busy diagram more room to breathe:
 wwwroot/examples/guides/layout-02.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/layout-02.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/layout-02.beck.yaml
+```
 
 Or pack a compact one tighter:
 
@@ -41,7 +45,9 @@ Or pack a compact one tighter:
 wwwroot/examples/guides/layout-03.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/layout-03.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/layout-03.beck.yaml
+```
 
 ## Fit a wide diagram to the page
 
@@ -64,7 +70,9 @@ Here a metrics sink has no outgoing edge, so Beck ranks it next to the service t
 wwwroot/examples/guides/layout-04.beck.yaml
 ```
 
-<beck-diagram src="/examples/guides/layout-04.beck.yaml" mode="auto" animate="false"></beck-diagram>
+```beck:symbol,static
+wwwroot/examples/guides/layout-04.beck.yaml
+```
 
 > [!TIP]
 > Reach for `rank`/`order` only when the automatic placement is wrong — a handful of pins go a long way, and over-pinning fights the crossing-reduction pass that makes diagrams readable.

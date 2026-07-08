@@ -33,7 +33,7 @@
                 </div>
                 <div class="px-4 pt-[5px] pb-[13px] text-[13.5px] leading-snug text-base-600 dark:text-base-400">@c.Desc</div>
                 <div class="px-4 py-[14px] font-mono text-[13px] leading-[1.75] whitespace-pre bg-base-50 dark:bg-base-900 border-t border-base-200 dark:border-base-800 overflow-x-auto text-base-900 dark:text-base-50">@c.Code</div>
-                <div class="syntax-canvas dot-grid flex flex-1 items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto"><pre><code class="language-beck">@($"type: {c.Type}\n{c.Render}")</code></pre></div>
+                <div class="syntax-canvas dot-grid flex flex-1 items-center justify-center px-4 py-5 min-h-[150px] border-t border-base-200 dark:border-base-800 overflow-auto"><BeckDiagram Yaml="@($"type: {c.Type}\n{c.Render}")" Class="beck-embed beck-embed--bare" /></div>
             </div>
         }
     </div>
@@ -42,11 +42,11 @@
 @code {
     private sealed record Cheat(string Title, string Tag, string Cat, string Desc, string Code, string Render, string Type = "architecture");
 
-    // Each Render YAML is emitted as a ```beck fence (`<code class="language-beck">`); the Beck
-    // client auto-hydrates it into a light-DOM diagram, so the host's MonorailCSS utilities style
-    // it. Razor HTML-encodes the render string inside the <code> (newlines preserved in <pre>), so
-    // the whitespace-significant YAML reaches the DOM intact without a MarkupString. The root
-    // `type:` line is prepended from Cheat.Type, so every hydrated document is explicitly typed.
+    // Each Render YAML is rendered at build time by <BeckDiagram> (the pure-C# engine) into a
+    // static, self-animating inline SVG — no client JS. The SVG's --beck-* tokens fall back to
+    // the host's MonorailCSS --color-* ramps, so the brand palette and dark mode reach it for
+    // free. The root `type:` line is prepended from Cheat.Type, so every document is explicitly
+    // typed.
 
     private static readonly Cheat[] Cheats =
     [

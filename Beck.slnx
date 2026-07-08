@@ -1,12 +1,12 @@
 <Solution>
   <Folder Name="/dotnet/">
     <Project Path="dotnet/Beck/Beck.csproj" />
+    <Project Path="dotnet/Beck.Skia/Beck.Skia.csproj" />
     <Project Path="dotnet/Beck.Sample/Beck.Sample.csproj" />
-    <Project Path="dotnet/Beck.Rendering/Beck.Rendering.csproj" />
-    <Project Path="dotnet/Beck.Rendering.Skia/Beck.Rendering.Skia.csproj" />
-    <Project Path="dotnet/Beck.Rendering.Tests/Beck.Rendering.Tests.csproj" />
+    <Project Path="dotnet/Beck.Tests/Beck.Tests.csproj" />
   </Folder>
   <Folder Name="/docs/">
     <Project Path="docs/Beck.Docs/Beck.Docs.csproj" />
+    <Project Path="docs/Beck.Docs.Client/Beck.Docs.Client.csproj" />
   </Folder>
 </Solution>

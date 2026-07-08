@@ -20,11 +20,6 @@
                 <a class="api-nav-link" href="/api/#classdiagrambuilder">ClassDiagramBuilder</a>
                 <a class="api-nav-link" href="/api/#classbuilder">ClassBuilder</a>
             </div>
-            <div class="font-mono text-[11px] tracking-[0.1em] text-base-400 dark:text-base-500 mb-3 ml-2.5">Beck (client)</div>
-            <div class="flex flex-col gap-px mb-[22px]">
-                <a class="api-nav-link" href="/api/#beckassets">BeckAssets</a>
-                <a class="api-nav-link" href="/api/#beck-diagram">&lt;beck-diagram&gt;</a>
-            </div>
         </nav>
     </aside>
 
@@ -61,36 +56,6 @@
                 }
             </section>
         }
-
-        <section id="beck-diagram" class="mb-10">
-            <div class="font-mono text-xs text-base-400 dark:text-base-500 mb-4">API <span class="mx-1.5">/</span> Beck (client) <span class="mx-1.5">/</span> &lt;beck-diagram&gt;</div>
-            <div class="flex items-center gap-[11px] mb-3">
-                <span class="font-mono text-[11px] uppercase tracking-[0.08em] text-primary-700 dark:text-primary-400 border border-primary-600 dark:border-primary-500 rounded-md px-[9px] py-0.5">element</span>
-                <h1 class="font-mono text-3xl font-semibold tracking-[-0.01em] text-base-900 dark:text-base-50">&lt;beck-diagram&gt;</h1>
-            </div>
-            <p class="text-base leading-[1.65] text-base-600 dark:text-base-400 m-0 mb-3.5">
-                A custom element that renders a Beck diagram in light DOM, so it adopts the host
-                page's styles and palette. Put the YAML in a
-                <span class="font-mono text-[13.5px] text-base-900 dark:text-base-50">&lt;script type="application/yaml"&gt;</span>
-                child, or point <span class="font-mono">src</span> at a YAML file. The engine also hydrates any fenced
-                <span class="font-mono text-[13.5px] text-base-900 dark:text-base-50">```beck</span> code block automatically — which
-                is what <span class="font-mono">ToFence()</span> emits — so most pages never touch the element directly.
-            </p>
-            <div class="font-mono text-[12.5px] text-base-400 dark:text-base-500 mb-[30px]">registered by <span class="mx-1">·</span> _content/Beck/beck.global.js</div>
-            <div class="border border-base-200 dark:border-base-800 rounded-[10px] overflow-hidden bg-base-50 dark:bg-base-900 mb-4">
-                <div class="flex items-center px-[13px] py-2 border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500">page.html<span class="ml-auto cursor-pointer" data-copy="">copy</span></div>
-                <div class="px-[15px] py-[13px] font-mono text-[13.5px] leading-[1.75] whitespace-pre overflow-auto text-base-900 dark:text-base-50"><span class="tok-punct">&lt;</span><span class="tok-key">beck-diagram</span> mode=<span class="tok-str">"auto"</span><span class="tok-punct">&gt;</span>
-  <span class="tok-punct">&lt;</span><span class="tok-key">script</span> type=<span class="tok-str">"application/yaml"</span><span class="tok-punct">&gt;</span>
-    nodes:
-      - { id: api, title: API }
-  <span class="tok-punct">&lt;/</span><span class="tok-key">script</span><span class="tok-punct">&gt;</span>
-<span class="tok-punct">&lt;/</span><span class="tok-key">beck-diagram</span><span class="tok-punct">&gt;</span></div>
-            </div>
-            <p class="text-[15px] text-base-600 dark:text-base-400">
-                Authoring more than a snippet? The <a href="/docs/guides/generate" class="text-primary-700 dark:text-primary-400">Generate diagrams from your code</a>
-                guide walks your real model into the full builder and keeps the diagram in sync in CI.
-            </p>
-        </section>
     </article>
 </div>
 
@@ -148,7 +113,7 @@
                 new(Sig("string", "ToYaml", ""),
                     "Render the diagram as Beck YAML. Throws if an edge endpoint isn't a declared node or group id."),
                 new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
+                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
             ],
             "Program.cs",
             "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> DiagramBuilder(<span class=\"tok-str\">\"Web Platform\"</span>)\n" +
@@ -279,7 +244,7 @@
                 new(Sig("string", "ToYaml", ""),
                     "Render the diagram as Beck YAML. Throws if the diagram has no participants or no messages."),
                 new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
+                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
             ],
             "Program.cs",
             "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> SequenceDiagramBuilder(<span class=\"tok-str\">\"Checkout\"</span>)\n" +
@@ -340,7 +305,7 @@
                 new(Sig("string", "ToYaml", ""),
                     "Render the diagram as Beck YAML. Throws if the diagram has no states and no transitions."),
                 new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
+                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
             ],
             "Program.cs",
             "<span class=\"tok-key\">var</span> fence = <span class=\"tok-key\">new</span> StateDiagramBuilder(<span class=\"tok-str\">\"Publish Lifecycle\"</span>)\n" +
@@ -430,7 +395,7 @@
                 new(Sig("string", "ToYaml", ""),
                     "Render the diagram as Beck YAML. Throws if there are no classes, or a relation references an undeclared class id."),
                 new(Sig("string", "ToFence", ""),
-                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — the client renders it on any page."),
+                    "Render as a fenced <span class=\"font-mono\">```beck</span> Markdown block — drop it into any Markdown page and it renders to a static SVG."),
             ],
             "Program.cs",
             "<span class=\"tok-key\">var</span> fence = ClassDiagramBuilder\n" +
@@ -457,18 +422,6 @@
                 new(Sig("ClassBuilder", "Width", $"{T("int")} px"), "Fix the card width in px."),
                 new(Sig("ClassBuilder", "Rank", $"{T("int")} rank"), "Force the card into a specific layout rank."),
                 new(Sig("ClassBuilder", "Order", $"{T("int")} order"), "Tie-break the card's order within its rank."),
-            ]),
-
-        new("beckassets", "class", "BeckAssets", "Beck (client) <span class=\"mx-1.5\">/</span> BeckAssets",
-            "namespace Beck <span class=\"mx-2\">·</span> static",
-            "Locations and snippets for wiring the Beck client into an ASP.NET Core host. The package serves the " +
-            "prebuilt engine as a static web asset, so a consumer only includes one script in the page head.",
-            "Members",
-            [
-                new($"<span class=\"tok-key\">const string</span> <span class=\"{NameCls}\">ScriptPath</span>",
-                    "The static web asset path the client is served at — <span class=\"font-mono\">/_content/Beck/beck.global.js</span>. Root-relative, so it resolves from any page depth and survives sub-path deploys."),
-                new($"<span class=\"tok-key\">static string</span> <span class=\"{NameCls}\">ScriptTag</span>",
-                    "A ready-to-inject <span class=\"font-mono\">&lt;script defer&gt;</span> tag for the page head — e.g. via a Pennington <span class=\"font-mono\">AdditionalHtmlHeadContent</span>."),
             ]),
     ];
 }
