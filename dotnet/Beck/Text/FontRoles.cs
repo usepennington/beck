@@ -47,22 +47,57 @@ public static class FontRoles
 
 /// <summary>
 /// A style-scoped resolver from <see cref="FontRole"/> to <see cref="FontRoleSpec"/>. The classic
-/// table delegates to <see cref="FontRoles.Of"/> (no data duplicated; the measurement path is
-/// unchanged); a custom style constructs one from its own spec map. Keeping the role table behind
-/// this indirection lets rendering read style-scoped typography without touching
-/// <see cref="ITextMeasurer"/> — the card sizer resolves roles around measurement calls.
+/// table is built from <see cref="FontRoles.Of"/> (no data duplicated — that switch stays the single
+/// source, this table only snapshots it into an array); a custom style constructs one from its own
+/// spec map. Keeping the role table behind this indirection lets rendering read style-scoped
+/// typography without touching <see cref="ITextMeasurer"/> — the card sizer resolves roles around
+/// measurement calls (the measurers still call <see cref="FontRoles.Of"/> directly, unchanged).
 /// </summary>
-public sealed class FontRoleTable
+/// <remarks>
+/// Storage is a plain <see cref="FontRoleSpec"/> array indexed by <c>(int)role</c> so the type is
+/// <em>value-semantic</em>: two tables built from the same data compare equal (element-wise), which
+/// makes two structurally-equal <see cref="BeckStyle"/>s compare equal. A delegate-backed table
+/// would compare by reference and silently break record equality / the <c>with</c>-derivation story.
+/// <c>Of</c> is a bare array index, so no per-lookup allocation on the measure/render hot path.
+/// </remarks>
+public sealed class FontRoleTable : IEquatable<FontRoleTable>
 {
-    private readonly Func<FontRole, FontRoleSpec> _resolve;
+    private static readonly int RoleCount = Enum.GetValues<FontRole>().Length;
 
-    /// <summary>Wrap an arbitrary resolver (the classic table passes <see cref="FontRoles.Of"/>).</summary>
-    public FontRoleTable(Func<FontRole, FontRoleSpec> resolve) => _resolve = resolve;
+    // Indexed by (int)role. FontRole is contiguous 0..RoleCount-1.
+    private readonly FontRoleSpec[] _specs;
 
-    /// <summary>Build a table from an explicit spec map (custom styles).</summary>
-    public FontRoleTable(IReadOnlyDictionary<FontRole, FontRoleSpec> specs) =>
-        _resolve = role => specs.TryGetValue(role, out var s) ? s : throw new ArgumentOutOfRangeException(nameof(role));
+    /// <summary>Snapshot a resolver into the value-semantic array (the classic table passes
+    /// <see cref="FontRoles.Of"/>; the source switch remains the one definition of the data).</summary>
+    public FontRoleTable(Func<FontRole, FontRoleSpec> resolve)
+    {
+        _specs = new FontRoleSpec[RoleCount];
+        foreach (FontRole role in Enum.GetValues<FontRole>()) _specs[(int)role] = resolve(role);
+    }
+
+    /// <summary>Build a table from an explicit spec map (custom styles); every role must be present.</summary>
+    public FontRoleTable(IReadOnlyDictionary<FontRole, FontRoleSpec> specs)
+    {
+        _specs = new FontRoleSpec[RoleCount];
+        foreach (FontRole role in Enum.GetValues<FontRole>())
+            _specs[(int)role] = specs.TryGetValue(role, out var s) ? s : throw new ArgumentOutOfRangeException(nameof(specs), $"missing spec for role {role}");
+    }
 
     /// <summary>Resolve a role's concrete typography.</summary>
-    public FontRoleSpec Of(FontRole role) => _resolve(role);
+    public FontRoleSpec Of(FontRole role) => _specs[(int)role];
+
+    /// <inheritdoc />
+    public bool Equals(FontRoleTable? other) =>
+        other is not null && (ReferenceEquals(this, other) || _specs.AsSpan().SequenceEqual(other._specs));
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj) => Equals(obj as FontRoleTable);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hc = new HashCode();
+        foreach (FontRoleSpec s in _specs) hc.Add(s);
+        return hc.ToHashCode();
+    }
 }

@@ -14,9 +14,27 @@ internal static class SvgRenderer
 {
     private static string N(double n) => SvgWriter.Num(n);
 
+    /// <summary>Format a style integer (mix percentage, font weight) invariantly, so a comma-decimal
+    /// locale can never perturb the emitted CSS/SVG.</summary>
+    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The <c>textLength</c>/<c>lengthAdjust</c> guard attributes for a measured run, or
+    /// empty when the active <see cref="TextLengthGuard"/> mode suppresses them. Prefixed with a
+    /// space so it drops straight into an attribute list.</summary>
+    internal static string Guard(double w, bool emit) =>
+        emit ? $" textLength=\"{N(w)}\" lengthAdjust=\"spacingAndGlyphs\"" : "";
+
     public static string Render(DiagramModel model, ITextMeasurer measurer, string hash, SvgRenderOptions options, BeckStyle style)
     {
         StyleGeometry geo = style.Geometry;
+        // The per-text textLength guard emission mode. All → always (default, byte-identical);
+        // Off → never; FallbackOnly → only when the measurer approximates (embedded metrics table).
+        bool guard = options.TextLengthGuard switch
+        {
+            TextLengthGuard.Off => false,
+            TextLengthGuard.FallbackOnly => measurer.IsApproximate,
+            _ => true,
+        };
         var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer, geo));
         var markers = new Markers(hash);
         // Pill states a node's flow will swap through (null unless animating with >1 state).
@@ -45,7 +63,7 @@ internal static class SvgRenderer
                     seq.Bands.Count);
             body.Append("<g class=\"beck-nodes\">");
             for (int i = 0; i < model.Nodes.Count; i++)
-                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, StatesFor(model.Nodes[i].Id)));
+                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, guard, StatesFor(model.Nodes[i].Id)));
             body.Append("</g>");
         }
         else
@@ -61,14 +79,14 @@ internal static class SvgRenderer
             {
                 Rect r = layout.Groups[g.Id];
                 body.Append($"<rect class=\"beck-group\" x=\"{N(r.X)}\" y=\"{N(r.Y)}\" width=\"{N(r.W)}\" height=\"{N(r.H)}\" rx=\"{N(geo.GroupRadius)}\" ")
-                    .Append($"style=\"stroke:color-mix(in srgb, {SvgWriter.Attr(g.Accent)} {style.Mix.GroupBorder}%, transparent)\"/>");
+                    .Append($"style=\"stroke:color-mix(in srgb, {SvgWriter.Attr(g.Accent)} {P(style.Mix.GroupBorder)}%, transparent)\"/>");
             }
             body.Append("</g>");
 
             // z2 edges (+ markers), then labels (pass 2 — mid labels dodge every line)
             body.Append("<g class=\"beck-overlay\">");
             foreach (var e in edges) body.Append(Edge(e, markers, style));
-            var placer = new LabelPlacer(layout.Nodes.Values, layout.Width, layout.Height, style);
+            var placer = new LabelPlacer(layout.Nodes.Values, layout.Width, layout.Height, style, guard);
             foreach (var e in edges)
             {
                 if (!string.IsNullOrEmpty(e.Edge.FromLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.FromLabel!, true, measurer));
@@ -85,7 +103,7 @@ internal static class SvgRenderer
             // z3 nodes
             body.Append("<g class=\"beck-nodes\">");
             for (int i = 0; i < model.Nodes.Count; i++)
-                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, StatesFor(model.Nodes[i].Id)));
+                if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r)) body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, guard, StatesFor(model.Nodes[i].Id)));
             body.Append("</g>");
 
             // z4 group labels
@@ -98,7 +116,7 @@ internal static class SvgRenderer
                 double lx = r.X + 14, ly = r.Y;
                 body.Append($"<rect class=\"beck-group-label-bg\" x=\"{N(lx - 5.6)}\" y=\"{N(ly - 8)}\" width=\"{N(lw + 11.2)}\" height=\"16\" rx=\"{N(geo.GroupLabelBgRadius)}\"/>");
                 body.Append($"<text class=\"beck-group-label\" x=\"{N(lx)}\" y=\"{N(ly)}\" dominant-baseline=\"central\" ")
-                    .Append($"font-size=\"{N(glSpec.SizePx)}\" font-weight=\"{glSpec.Weight}\" letter-spacing=\"{SvgWriter.Ls(glSpec.LetterSpacingEm)}\" style=\"fill:{SvgWriter.Attr(g.Accent)}\">{SvgWriter.Text(g.Label.ToUpperInvariant())}</text>");
+                    .Append($"font-size=\"{N(glSpec.SizePx)}\" font-weight=\"{P(glSpec.Weight)}\" letter-spacing=\"{SvgWriter.Ls(glSpec.LetterSpacingEm)}\" style=\"fill:{SvgWriter.Attr(g.Accent)}\">{SvgWriter.Text(g.Label.ToUpperInvariant())}</text>");
             }
             body.Append("</g>");
         }
@@ -170,7 +188,7 @@ internal static class SvgRenderer
             FontRoleSpec spec = style.Typography.Roles.Of(FontRole.DiagramTitle);
             y = 22;
             sb.Append($"<text class=\"beck-title\" x=\"{N(cx)}\" y=\"{N(y)}\" text-anchor=\"middle\" dominant-baseline=\"central\" ")
-              .Append($"font-size=\"{N(spec.SizePx)}\" font-weight=\"{spec.Weight}\" letter-spacing=\"{SvgWriter.Ls(spec.LetterSpacingEm)}\">{SvgWriter.Text(title)}</text>");
+              .Append($"font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" letter-spacing=\"{SvgWriter.Ls(spec.LetterSpacingEm)}\">{SvgWriter.Text(title)}</text>");
         }
         if (model.Meta.Subtitle is { } sub)
         {
@@ -210,11 +228,11 @@ internal static class SvgRenderer
 
             sb.Append($"<g class=\"beck-beat bbeat{i}-{hash}\" opacity=\"0\" style=\"color:{color}\">");
             sb.Append($"<rect class=\"beck-narration-bar\" x=\"{N(barLeft)}\" y=\"{N(barTop)}\" width=\"{N(barW)}\" height=\"{N(barH)}\" rx=\"{N(style.Geometry.NarrationRadius)}\" ")
-              .Append($"style=\"fill:color-mix(in srgb,var(--beck-primary) {style.Mix.NarrationFill}%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) {style.Mix.NarrationBorder}%,transparent);filter:drop-shadow(0 4px 12px rgb(0 0 0/.06))\"/>");
+              .Append($"style=\"fill:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationFill)}%,var(--beck-surface));stroke:color-mix(in srgb,var(--beck-primary) {P(style.Mix.NarrationBorder)}%,transparent);filter:drop-shadow(0 4px 12px rgb(0 0 0/.06))\"/>");
             sb.Append($"<circle cx=\"{N(left + dotR)}\" cy=\"{N(midY)}\" r=\"{N(dotR)}\" style=\"fill:currentColor\" opacity=\"0.55\"/>");
             for (int k = 0; k < lines.Count; k++)
                 sb.Append($"<text class=\"beck-narration-text\" x=\"{N(textCx)}\" y=\"{N(firstY + k * lineHt)}\" text-anchor=\"middle\" dominant-baseline=\"central\" ")
-                  .Append($"font-size=\"{N(nSpec.SizePx)}\" font-weight=\"{nSpec.Weight}\" style=\"fill:currentColor\">{SvgWriter.Text(lines[k])}</text>");
+                  .Append($"font-size=\"{N(nSpec.SizePx)}\" font-weight=\"{P(nSpec.Weight)}\" style=\"fill:currentColor\">{SvgWriter.Text(lines[k])}</text>");
             sb.Append("</g>");
         }
         return (sb.ToString(), margin + barH);
@@ -259,7 +277,7 @@ internal static class SvgRenderer
     }
 
     private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash, int idx, BeckStyle style,
-        IReadOnlyList<(string Text, string Color)>? statusStates = null)
+        bool guard, IReadOnlyList<(string Text, string Color)>? statusStates = null)
     {
         var sb = new StringBuilder();
         string accentStyle = $"--beck-accent:{node.Accent}";
@@ -282,16 +300,16 @@ internal static class SvgRenderer
         double w = rect.W, h = rect.H;
         switch (node.Shape)
         {
-            case NodeShape.Pill: EmitPill(sb, node, w, h, m, style); break;
+            case NodeShape.Pill: EmitPill(sb, node, w, h, m, style, guard); break;
             case NodeShape.Start: sb.Append($"<circle class=\"beck-node--start\" cx=\"{N(w / 2)}\" cy=\"{N(h / 2)}\" r=\"8\"/>"); break;
             case NodeShape.End:
                 sb.Append($"<circle class=\"beck-node--end\" cx=\"{N(w / 2)}\" cy=\"{N(h / 2)}\" r=\"7\"/>")
                   .Append($"<circle class=\"beck-end-dot\" cx=\"{N(w / 2)}\" cy=\"{N(h / 2)}\" r=\"3.5\"/>");
                 break;
-            case NodeShape.Class: EmitClass(sb, node, w, h, m, hash, style); break;
+            case NodeShape.Class: EmitClass(sb, node, w, h, m, hash, style, guard); break;
             default:
-                if (node.Variant == NodeVariant.Ghost || node.Kind == NodeKind.Ghost) EmitGhost(sb, node, w, h, m, style);
-                else EmitCard(sb, node, w, h, m, idx, hash, style, statusStates);
+                if (node.Variant == NodeVariant.Ghost || node.Kind == NodeKind.Ghost) EmitGhost(sb, node, w, h, m, style, guard);
+                else EmitCard(sb, node, w, h, m, idx, hash, style, guard, statusStates);
                 break;
         }
 
@@ -318,15 +336,15 @@ internal static class SvgRenderer
     }
 
     /// <summary>A status pill — chip bg tinted by the status-pill ratio + coloured text — at (x, sy).</summary>
-    private static void StatusPill(StringBuilder sb, string text, string color, double x, double sy, double h, ITextMeasurer m, BeckStyle style)
+    private static void StatusPill(StringBuilder sb, string text, string color, double x, double sy, double h, ITextMeasurer m, BeckStyle style, bool guard)
     {
         FontRoleSpec spec = style.Typography.Roles.Of(FontRole.Status);
         double sw = m.Measure(text, FontRole.Status).Width;
-        sb.Append($"<rect x=\"{N(x)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(h)}\" rx=\"{N(h / 2)}\" style=\"fill:color-mix(in srgb,{color} {style.Mix.StatusPill}%,transparent)\"/>");
-        sb.Append($"<text x=\"{N(x + 8)}\" y=\"{N(sy + h / 2)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{spec.Weight}\" dominant-baseline=\"central\" text-anchor=\"start\" textLength=\"{N(sw)}\" lengthAdjust=\"spacingAndGlyphs\" style=\"fill:{color}\">{SvgWriter.Text(text)}</text>");
+        sb.Append($"<rect x=\"{N(x)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(h)}\" rx=\"{N(h / 2)}\" style=\"fill:color-mix(in srgb,{color} {P(style.Mix.StatusPill)}%,transparent)\"/>");
+        sb.Append($"<text x=\"{N(x + 8)}\" y=\"{N(sy + h / 2)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" dominant-baseline=\"central\" text-anchor=\"start\"{Guard(sw, guard)} style=\"fill:{color}\">{SvgWriter.Text(text)}</text>");
     }
 
-    private static void EmitPill(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, BeckStyle style)
+    private static void EmitPill(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, BeckStyle style, bool guard)
     {
         StyleGeometry geo = style.Geometry;
         double bi = geo.NodeBorderInset;
@@ -334,12 +352,12 @@ internal static class SvgRenderer
         double titleLine = geo.CardTitleLine, subLine = geo.PillSubLine, gap = geo.PillGap;
         double stackH = titleLine + (node.Subtitle != null ? gap + subLine : 0);
         double top = h / 2 - stackH / 2;
-        CenterLine(sb, node.Title, "beck-node-title", w / 2, top + titleLine / 2, m, style, FontRole.PillTitle);
+        CenterLine(sb, node.Title, "beck-node-title", w / 2, top + titleLine / 2, m, style, FontRole.PillTitle, guard);
         if (node.Subtitle is { } sub)
-            CenterLine(sb, sub, "beck-node-subtitle", w / 2, top + titleLine + gap + subLine / 2, m, style, FontRole.PillSubtitle);
+            CenterLine(sb, sub, "beck-node-subtitle", w / 2, top + titleLine + gap + subLine / 2, m, style, FontRole.PillSubtitle, guard);
     }
 
-    private static void EmitClass(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style)
+    private static void EmitClass(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard)
     {
         StyleGeometry geo = style.Geometry;
         double bi = geo.NodeBorderInset;
@@ -356,10 +374,10 @@ internal static class SvgRenderer
         double ty = headPadY;
         if (hasStereo)
         {
-            CenterLine(sb, $"«{node.Stereotype}»", "beck-class-stereo", w / 2, ty + stereoLine / 2, m, style, FontRole.ClassStereotype);
+            CenterLine(sb, $"«{node.Stereotype}»", "beck-class-stereo", w / 2, ty + stereoLine / 2, m, style, FontRole.ClassStereotype, guard);
             ty += stereoLine;
         }
-        CenterLine(sb, node.Title, "beck-class-title", w / 2, ty + titleLine / 2, m, style, FontRole.ClassTitle);
+        CenterLine(sb, node.Title, "beck-class-title", w / 2, ty + titleLine / 2, m, style, FontRole.ClassTitle, guard);
         sb.Append($"<line class=\"beck-class-head-border\" x1=\"0\" y1=\"{N(headH)}\" x2=\"{N(w)}\" y2=\"{N(headH)}\"/>");
 
         FontRoleSpec memberSpec = style.Typography.Roles.Of(FontRole.ClassMember);
@@ -373,7 +391,7 @@ internal static class SvgRenderer
             double my = y + sectionPadY;
             foreach (var member in members)
             {
-                sb.Append($"<text class=\"{css}\" x=\"{N(memberX)}\" y=\"{N(my + memberLine / 2)}\" font-size=\"{N(memberSpec.SizePx)}\" font-weight=\"{memberSpec.Weight}\" ")
+                sb.Append($"<text class=\"{css}\" x=\"{N(memberX)}\" y=\"{N(my + memberLine / 2)}\" font-size=\"{N(memberSpec.SizePx)}\" font-weight=\"{P(memberSpec.Weight)}\" ")
                   .Append($"dominant-baseline=\"central\" text-anchor=\"start\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(member)}</text>");
                 my += memberLine + memberGap;
             }
@@ -383,17 +401,17 @@ internal static class SvgRenderer
         sb.Append("</g>");
     }
 
-    private static void CenterLine(StringBuilder sb, string text, string cls, double cx, double cy, ITextMeasurer m, BeckStyle style, FontRole role)
+    private static void CenterLine(StringBuilder sb, string text, string cls, double cx, double cy, ITextMeasurer m, BeckStyle style, FontRole role, bool guard)
     {
         FontRoleSpec spec = style.Typography.Roles.Of(role);
         double tl = m.Measure(text, role).Width;
-        sb.Append($"<text class=\"{cls}\" x=\"{N(cx)}\" y=\"{N(cy)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{spec.Weight}\" ")
-          .Append($"dominant-baseline=\"central\" text-anchor=\"middle\" textLength=\"{N(tl)}\" lengthAdjust=\"spacingAndGlyphs\">")
+        sb.Append($"<text class=\"{cls}\" x=\"{N(cx)}\" y=\"{N(cy)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" ")
+          .Append($"dominant-baseline=\"central\" text-anchor=\"middle\"{Guard(tl, guard)}>")
           .Append(SvgWriter.Text(text)).Append("</text>");
     }
 
     private static void EmitCard(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m,
-        int idx, string hash, BeckStyle style, IReadOnlyList<(string Text, string Color)>? states)
+        int idx, string hash, BeckStyle style, bool guard, IReadOnlyList<(string Text, string Color)>? states)
     {
         StyleGeometry geo = style.Geometry;
         double bi = geo.NodeBorderInset;
@@ -426,7 +444,7 @@ internal static class SvgRenderer
         double stackY = top;
         foreach (string line in titleLines)
         {
-            Line(sb, line, "beck-node-title", textX, stackY + titleLine / 2, m, style, FontRole.CardTitle);
+            Line(sb, line, "beck-node-title", textX, stackY + titleLine / 2, m, style, FontRole.CardTitle, guard);
             stackY += titleLine;
         }
         if (subLines != null)
@@ -434,7 +452,7 @@ internal static class SvgRenderer
             stackY += textGap;
             foreach (string line in subLines)
             {
-                Line(sb, line, "beck-node-subtitle", textX, stackY + subLine / 2, m, style, FontRole.CardSubtitle);
+                Line(sb, line, "beck-node-subtitle", textX, stackY + subLine / 2, m, style, FontRole.CardSubtitle, guard);
                 stackY += subLine;
             }
         }
@@ -450,7 +468,7 @@ internal static class SvgRenderer
                 for (int si = 0; si < states!.Count; si++)
                 {
                     sb.Append($"<g class=\"beck-status-state bss{idx}-{si}-{hash}\"{(si == 0 ? "" : " opacity=\"0\"")}>");
-                    if (states[si].Text.Length > 0) StatusPill(sb, states[si].Text, states[si].Color, textX, sy, statusChipH, m, style);
+                    if (states[si].Text.Length > 0) StatusPill(sb, states[si].Text, states[si].Color, textX, sy, statusChipH, m, style, guard);
                     sb.Append("</g>");
                 }
             }
@@ -460,12 +478,12 @@ internal static class SvgRenderer
                 FontRoleSpec statusSpec = style.Typography.Roles.Of(FontRole.Status);
                 double sw = m.Measure(status, FontRole.Status).Width;
                 sb.Append($"<rect class=\"beck-status-bg\" x=\"{N(textX)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(statusChipH)}\" rx=\"{N(statusChipH / 2)}\"/>");
-                sb.Append($"<text class=\"beck-status-text\" x=\"{N(textX + 8)}\" y=\"{N(sy + statusChipH / 2)}\" font-size=\"{N(statusSpec.SizePx)}\" font-weight=\"{statusSpec.Weight}\" dominant-baseline=\"central\" text-anchor=\"start\" textLength=\"{N(sw)}\" lengthAdjust=\"spacingAndGlyphs\">{SvgWriter.Text(status)}</text>");
+                sb.Append($"<text class=\"beck-status-text\" x=\"{N(textX + 8)}\" y=\"{N(sy + statusChipH / 2)}\" font-size=\"{N(statusSpec.SizePx)}\" font-weight=\"{P(statusSpec.Weight)}\" dominant-baseline=\"central\" text-anchor=\"start\"{Guard(sw, guard)}>{SvgWriter.Text(status)}</text>");
             }
         }
     }
 
-    private static void EmitGhost(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, BeckStyle style)
+    private static void EmitGhost(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, BeckStyle style, bool guard)
     {
         StyleGeometry geo = style.Geometry;
         double bi = geo.NodeBorderInset;
@@ -476,15 +494,15 @@ internal static class SvgRenderer
         double ghostPadHalf = geo.GhostPadX / 2;
         double labelX = ghostPadHalf + (hasIcon ? geo.GhostIcon + geo.GhostIconGap : 0);
         if (hasIcon) sb.Append(IconSvg(node.Icon!, ghostPadHalf, rowTop + rowH / 2 - 7, 14));
-        Line(sb, node.Title, "beck-ghost-label", labelX, rowTop + rowH / 2, m, style, FontRole.GhostLabel);
+        Line(sb, node.Title, "beck-ghost-label", labelX, rowTop + rowH / 2, m, style, FontRole.GhostLabel, guard);
     }
 
-    private static void Line(StringBuilder sb, string text, string cls, double x, double cy, ITextMeasurer m, BeckStyle style, FontRole role)
+    private static void Line(StringBuilder sb, string text, string cls, double x, double cy, ITextMeasurer m, BeckStyle style, FontRole role, bool guard)
     {
         FontRoleSpec spec = style.Typography.Roles.Of(role);
         double tl = m.Measure(text, role).Width;
-        sb.Append($"<text class=\"{cls}\" x=\"{N(x)}\" y=\"{N(cy)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{spec.Weight}\" ")
-          .Append($"dominant-baseline=\"central\" text-anchor=\"start\" textLength=\"{N(tl)}\" lengthAdjust=\"spacingAndGlyphs\">")
+        sb.Append($"<text class=\"{cls}\" x=\"{N(x)}\" y=\"{N(cy)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" ")
+          .Append($"dominant-baseline=\"central\" text-anchor=\"start\"{Guard(tl, guard)}>")
           .Append(SvgWriter.Text(text)).Append("</text>");
     }
 

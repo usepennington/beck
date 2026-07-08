@@ -49,10 +49,14 @@ public sealed class ScaffoldingTests
         Assert.Same(InterMetricsMeasurer.Instance, opts.Measurer);
         Assert.Equal(AnimationMode.Full, opts.Animation);
         Assert.Equal(TextLengthGuard.All, opts.TextLengthGuard);
+#pragma warning disable CS0618 // exercising the (obsolete, still-hashed) default
         Assert.False(opts.EmbedFonts);
+#pragma warning restore CS0618
         Assert.Null(opts.Theme);
         Assert.Null(opts.Font);
         Assert.Null(opts.IdSuffix);
+        Assert.Null(opts.Style);
+        Assert.Null(opts.Styles);
     }
 
     [Fact]

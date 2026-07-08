@@ -87,7 +87,7 @@ public sealed record BeckStyle
             ("--beck-danger", "var(--color-red-500, #ef4444)"),
             ("--beck-info", "var(--color-violet-500, #8b5cf6)"),
             ("--beck-neutral", "var(--color-base-400, #94a3b8)"),
-            ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {mix.GroupBorder}%, transparent)"),
+            ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {mix.GroupBorder.ToString(System.Globalization.CultureInfo.InvariantCulture)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
             ("--beck-edge", "var(--color-base-300, #cbd5e1)"),
             ("--beck-packet", "var(--beck-primary)"),
@@ -236,6 +236,14 @@ public sealed record BeckStyle
 }
 
 /// <summary>An ordered <c>--beck-*</c> token table: <c>(name, value)</c> pairs emitted verbatim.</summary>
+/// <remarks>
+/// Token names and values land <em>inside</em> the SVG <c>&lt;style&gt;</c> block verbatim. For a
+/// <em>custom</em> (non-built-in) style — which may be fed from less-trusted config — every such
+/// string is scrubbed of substrings that could break out of the style element or inject a rule
+/// (<c>&lt;/</c>, <c>&lt;!</c>, <c>{</c>, <c>}</c>, <c>@import</c>); the same rule applies to the
+/// typography family strings, dash patterns, and shadow/halo values. Built-in styles are trusted and
+/// bypass the scan, so a token value must not rely on those characters.
+/// </remarks>
 public sealed record StyleTokens(IReadOnlyList<(string Name, string Value)> Entries);
 
 /// <summary>
@@ -399,46 +407,80 @@ public sealed record StyleGeometry
     public double MeasureBorder => 2 * Rendering.Js.Round(NodeStroke / 2);
 
     // ---- card box-model ----
+    /// <summary>Card total horizontal padding (both sides) reserved around the content column.</summary>
     public required double CardPadX { get; init; }
+    /// <summary>Card total vertical padding (both sides) added to the content height.</summary>
     public required double CardPadY { get; init; }
+    /// <summary>Minimum card border-box width.</summary>
     public required double CardMinW { get; init; }
+    /// <summary>Maximum auto-grown card width; past it the title/subtitle wrap.</summary>
     public required double CardMaxW { get; init; }
+    /// <summary>Icon-chip side length (square).</summary>
     public required double IconW { get; init; }
+    /// <summary>Gap between the icon chip and the text column.</summary>
     public required double IconGap { get; init; }
+    /// <summary>Card-title line height (px).</summary>
     public required double CardTitleLine { get; init; }
+    /// <summary>Card-subtitle line height (px).</summary>
     public required double CardSubLine { get; init; }
+    /// <summary>Vertical gap between stacked text rows (title/subtitle/status).</summary>
     public required double TextGap { get; init; }
+    /// <summary>Extra top margin above the status chip.</summary>
     public required double StatusMt { get; init; }
+    /// <summary>Status-chip height (its own vertical padding plus the status line).</summary>
     public required double StatusChipH { get; init; }
 
     // ---- pill box-model ----
+    /// <summary>Pill total horizontal padding (both sides).</summary>
     public required double PillPadX { get; init; }
+    /// <summary>Pill total vertical padding (both sides).</summary>
     public required double PillPadY { get; init; }
+    /// <summary>Minimum pill border-box width.</summary>
     public required double PillMinW { get; init; }
+    /// <summary>Vertical gap between the pill title and its subtitle/status.</summary>
     public required double PillGap { get; init; }
+    /// <summary>Pill-subtitle line height (px).</summary>
     public required double PillSubLine { get; init; }
 
     // ---- ghost box-model ----
+    /// <summary>Ghost node total horizontal padding (both sides).</summary>
     public required double GhostPadX { get; init; }
+    /// <summary>Ghost node total vertical padding (both sides).</summary>
     public required double GhostPadY { get; init; }
+    /// <summary>Ghost node icon side length (square).</summary>
     public required double GhostIcon { get; init; }
+    /// <summary>Gap between the ghost icon and its label.</summary>
     public required double GhostIconGap { get; init; }
+    /// <summary>Vertical gap between the ghost label row and its inline status.</summary>
     public required double GhostGap { get; init; }
+    /// <summary>Ghost-label line height (px).</summary>
     public required double GhostLabelLine { get; init; }
+    /// <summary>Inline-status line height on a ghost node (px).</summary>
     public required double StatusInlineLine { get; init; }
 
     // ---- class box-model ----
+    /// <summary>Minimum class-card border-box width.</summary>
     public required double ClassMinW { get; init; }
+    /// <summary>Class header total horizontal padding (both sides).</summary>
     public required double HeadPadX { get; init; }
+    /// <summary>Class header total vertical padding (both sides).</summary>
     public required double HeadPadY { get; init; }
+    /// <summary>Class header bottom-border thickness (also the between-section divider thickness).</summary>
     public required double HeadBorderBottom { get; init; }
+    /// <summary>Class stereotype line height (px).</summary>
     public required double StereoLine { get; init; }
+    /// <summary>Class-title line height (px).</summary>
     public required double ClassTitleLine { get; init; }
+    /// <summary>Member-section total horizontal padding (both sides).</summary>
     public required double SectionPadX { get; init; }
+    /// <summary>Member-section total vertical padding (both sides).</summary>
     public required double SectionPadY { get; init; }
+    /// <summary>Vertical gap between consecutive class members.</summary>
     public required double MemberGap { get; init; }
+    /// <summary>Class-member line height (px).</summary>
     public required double MemberLine { get; init; }
 
     // ---- start/end pseudo-state ----
+    /// <summary>Side length of the start/end pseudo-state marker box.</summary>
     public required double StartEndSize { get; init; }
 }

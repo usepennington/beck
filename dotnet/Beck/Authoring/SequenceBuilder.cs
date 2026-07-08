@@ -44,6 +44,12 @@ public sealed class SequenceDiagramBuilder
     /// <summary>Set the diagram subtitle.</summary>
     public SequenceDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
 
+    /// <summary>Set the visual style by its <c>meta.style</c> token (e.g. <c>"classic"</c>).</summary>
+    public SequenceDiagramBuilder Style(string name) { _meta.Style = name; return this; }
+
+    /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
+    public SequenceDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
+
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
     public SequenceDiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
 

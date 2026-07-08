@@ -43,4 +43,16 @@ public interface ITextMeasurer
 {
     /// <summary>Measure <paramref name="text"/> as rendered at <paramref name="role"/>.</summary>
     TextMetrics Measure(string text, FontRole role);
+
+    /// <summary>
+    /// True when this measurer <em>approximates</em> widths from an embedded metrics table rather
+    /// than measuring the fonts the SVG actually renders with (the default,
+    /// <see cref="InterMetricsMeasurer"/>, does). Drives <see cref="SvgRenderOptions.TextLengthGuard"/>'s
+    /// <see cref="TextLengthGuard.FallbackOnly"/> mode: the per-text <c>textLength</c> guard is emitted
+    /// only for approximate measurements. Defaults to <c>true</c> (conservative — a custom measurer
+    /// that does not opt out still gets guards), so existing implementations need no change.
+    /// An exact, font-file-backed measurer (e.g. <c>Beck.Skia.SkiaTextMeasurer</c>) overrides this to
+    /// <c>false</c>.
+    /// </summary>
+    bool IsApproximate => true;
 }
