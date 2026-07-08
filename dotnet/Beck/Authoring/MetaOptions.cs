@@ -12,6 +12,7 @@ internal sealed class MetaOptions
 {
     public string? Title;
     public string? Subtitle;
+    public string? Style;
     public Direction? Direction;
     public ThemeMode? Theme;
     public bool? Animate;
@@ -30,7 +31,7 @@ internal sealed class MetaOptions
         var hasSpacing = SpacingRank != null || SpacingNode != null || SpacingCornerRadius != null;
         var hasNarrateKnobs = NarrateWpm != null || NarrateMin != null || NarratePad != null;
         var hasNarrate = Narrate != null || hasNarrateKnobs;
-        var hasMeta = Title != null || Subtitle != null || Direction != null ||
+        var hasMeta = Title != null || Subtitle != null || Style != null || Direction != null ||
                       Theme != null || Animate != null || Loop != null || Fit != null ||
                       hasSpacing || hasNarrate;
         if (!hasMeta) return;
@@ -38,6 +39,7 @@ internal sealed class MetaOptions
         sb.Append("meta:\n");
         if (Title != null) sb.Append("  title: ").Append(YamlWriter.Scalar(Title)).Append('\n');
         if (Subtitle != null) sb.Append("  subtitle: ").Append(YamlWriter.Scalar(Subtitle)).Append('\n');
+        if (Style != null) sb.Append("  style: ").Append(YamlWriter.Scalar(Style)).Append('\n');
         if (Direction is { } d) sb.Append("  direction: ").Append(Tokens.Of(d)).Append('\n');
         if (Theme is { } t) sb.Append("  theme: ").Append(Tokens.Of(t)).Append('\n');
         if (Animate is { } a) sb.Append("  animate: ").Append(a ? "true" : "false").Append('\n');

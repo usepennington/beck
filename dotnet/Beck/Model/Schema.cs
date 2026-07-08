@@ -15,6 +15,10 @@ internal sealed record DiagramMeta
     public required DiagramType Type { get; init; }
     public string? Title { get; init; }
     public string? Subtitle { get; init; }
+    /// <summary>The raw <c>meta.style</c> token (<c>[a-z0-9-]+</c>), or null when unset/malformed.
+    /// Resolved to a <c>BeckStyle</c> in <c>BeckSvg</c> (resolution needs the render options the
+    /// model never sees), mirroring how <see cref="Title"/> stays a plain string here.</summary>
+    public string? StyleName { get; init; }
     public required Direction Direction { get; init; }
     public required ThemeMode Theme { get; init; }
     /// <summary>Mutable: the class builder forces this false when no flow is authored.</summary>

@@ -41,6 +41,8 @@ public static class BeckSchema
     public static IReadOnlyList<string> Sides => Rendering.Tokens.Side.Tokens;
     /// <summary>Boolean values.</summary>
     public static IReadOnlyList<string> Bool { get; } = new[] { "true", "false" };
+    /// <summary>Built-in <c>meta.style</c> names (sourced from the engine registry, never drifts).</summary>
+    public static IReadOnlyList<string> StyleNames { get; } = Beck.BeckStyles.All.Select(s => s.Name).ToArray();
     /// <summary>Named icon keys (an <c>icon:</c> may also be raw inline <c>&lt;svg&gt;</c>).</summary>
     public static IReadOnlyList<string> Icons { get; } = Rendering.Svg.Icons.Registry.Keys.ToArray();
     /// <summary>Flow step discriminators (the key that opens each flow entry).</summary>
@@ -54,7 +56,7 @@ public static class BeckSchema
     /// <summary>Top-level document keys.</summary>
     public static IReadOnlyList<string> TopKeys { get; } = new[] { "type", "meta", "nodes", "edges", "groups", "flow" };
     /// <summary><c>meta:</c> keys.</summary>
-    public static IReadOnlyList<string> MetaKeys { get; } = new[] { "title", "subtitle", "direction", "theme", "animate", "loop", "fit", "spacing", "narration" };
+    public static IReadOnlyList<string> MetaKeys { get; } = new[] { "title", "subtitle", "style", "direction", "theme", "animate", "loop", "fit", "spacing", "narration" };
     /// <summary>Node entry keys.</summary>
     public static IReadOnlyList<string> NodeKeys { get; } = new[] { "id", "title", "subtitle", "icon", "kind", "variant", "status", "accent", "href", "target", "surface", "textColor", "width", "rank", "order", "group", "stereotype", "fields", "methods" };
     /// <summary>Edge entry keys.</summary>
@@ -77,7 +79,8 @@ public static class BeckSchema
         "theme" => Themes,
         "fit" => Fits,
         "variant" => Variants,
-        "style" => EdgeStyles,
+        // `style` is overloaded: meta.style names a visual style; edge.style is the line style.
+        "style" => section == "meta" ? StyleNames : EdgeStyles,
         "curve" => Curves,
         "arrow" => Arrows,
         "icon" => Icons,
@@ -133,7 +136,7 @@ public static class BeckSchema
         ["label"] = "Text drawn on the edge (or the group box heading).",
         ["curve"] = "Edge shape: `step-round`, `straight` or `s`.",
         ["arrow"] = "Arrowheads: `none`, `end`, `start`, `both` (or `true`/`false`).",
-        ["style"] = "Line style: `solid` or `dashed`.",
+        ["style"] = "Under `meta`: the visual style (e.g. `classic`). On an edge: line style `solid` or `dashed`.",
         ["color"] = "Edge stroke colour — an accent token or a CSS colour.",
         ["fromSide"] = "Pin the edge start to a side: top, bottom, left, right.",
         ["toSide"] = "Pin the edge end to a side: top, bottom, left, right.",
@@ -150,5 +153,6 @@ public static class BeckSchema
         ["data"] = "Solid data edge (default).", ["control"] = "A control-flow edge.", ["async"] = "A dashed asynchronous edge.",
         ["dependency"] = "A dashed dependency edge.",
         ["TB"] = "Top → bottom.", ["BT"] = "Bottom → top.", ["LR"] = "Left → right.", ["RL"] = "Right → left.",
+        ["classic"] = "The default Beck look (unchanged when no `meta.style` is set).",
     };
 }

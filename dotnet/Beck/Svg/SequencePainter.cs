@@ -38,6 +38,7 @@ internal sealed class SequencePainter
 
     private static string N(double n) => SvgWriter.Num(n);
     private static string I(double n) => Js.Str(Js.Round(n));
+    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public string Render(DiagramModel model, SequenceLayoutResult layout)
     {
@@ -98,7 +99,7 @@ internal sealed class SequencePainter
                 sb.Append(MsgPath(edge, selfD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, selfD));
                 if (!string.IsNullOrEmpty(edge.Label))
-                    sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"{N(msgSpec.SizePx)}\" font-weight=\"{msgSpec.Weight}\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
+                    sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"{N(msgSpec.SizePx)}\" font-weight=\"{P(msgSpec.Weight)}\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
             }
             else
             {
@@ -139,7 +140,7 @@ internal sealed class SequencePainter
         double bw = w + padX * 2, bh = h + padY * 2;
         string ls = extraStyle != null ? ";" + extraStyle : "";
         return $"<rect class=\"{chipCls}\" x=\"{I(cx - bw / 2)}\" y=\"{I(cy - bh / 2)}\" width=\"{I(bw)}\" height=\"{I(bh)}\" rx=\"{SvgWriter.Num(bh / 2)}\"/>"
-             + $"<text class=\"{textCls}\" x=\"{I(cx)}\" y=\"{I(cy)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"{SvgWriter.Num(size)}\" font-weight=\"{weight}\" style=\"{fontStyle}{ls}\">{SvgWriter.Text(text)}</text>";
+             + $"<text class=\"{textCls}\" x=\"{I(cx)}\" y=\"{I(cy)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"{SvgWriter.Num(size)}\" font-weight=\"{P(weight)}\" style=\"{fontStyle}{ls}\">{SvgWriter.Text(text)}</text>";
     }
 
     private string Lifeline(double y1, double y2)

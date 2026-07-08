@@ -34,6 +34,7 @@ internal static class ModelJson
         var o = new Dictionary<string, object?> { ["type"] = Tokens.DiagramType.Wire(m.Type) };
         if (m.Title != null) o["title"] = m.Title;
         if (m.Subtitle != null) o["subtitle"] = m.Subtitle;
+        if (m.StyleName != null) o["style"] = m.StyleName;
         o["direction"] = Tokens.Direction.Wire(m.Direction);
         o["theme"] = Tokens.Theme.Wire(m.Theme);
         o["animate"] = m.Animate;

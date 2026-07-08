@@ -58,8 +58,25 @@ public sealed class SvgRenderOptions
     public TextLengthGuard TextLengthGuard { get; init; } = TextLengthGuard.All;
 
     /// <summary>Embed the font files as <c>@font-face</c> <c>data:</c> URIs so the SVG is correct standalone.</summary>
+    [Obsolete("Font embedding is not yet implemented and has no effect. This option is retained (and still " +
+              "hashed) for output determinism and may be removed in a future release.")]
     public bool EmbedFonts { get; init; }
 
     /// <summary>Overrides the derived content-hash id suffix. Testing hook (goal G6); leave null in production.</summary>
     public string? IdSuffix { get; init; }
+
+    /// <summary>
+    /// The site-wide default <see cref="BeckStyle"/>. Lowest precedence: a diagram's own
+    /// <c>meta.style</c> (resolved by name) overrides it, and it in turn overrides
+    /// <see cref="BeckStyle.Classic"/> — deliberately the opposite of <see cref="Theme"/>, where the
+    /// option wins over the document. Null keeps the default (<see cref="BeckStyle.Classic"/>).
+    /// </summary>
+    public BeckStyle? Style { get; init; }
+
+    /// <summary>
+    /// A registry of custom styles that a diagram's <c>meta.style</c> token can name (looked up after
+    /// the built-in <see cref="BeckStyles.ByName"/> table). Keys are the YAML tokens; values are the
+    /// styles to resolve to. An unknown token warns and falls back to <see cref="Style"/> (or Classic).
+    /// </summary>
+    public IReadOnlyDictionary<string, BeckStyle>? Styles { get; init; }
 }

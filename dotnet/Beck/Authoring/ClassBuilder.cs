@@ -55,6 +55,12 @@ public sealed class ClassDiagramBuilder
     /// <summary>Set the diagram subtitle.</summary>
     public ClassDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
 
+    /// <summary>Set the visual style by its <c>meta.style</c> token (e.g. <c>"classic"</c>).</summary>
+    public ClassDiagramBuilder Style(string name) { _meta.Style = name; return this; }
+
+    /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
+    public ClassDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
+
     /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default) reads the hierarchy top-down.</summary>
     public ClassDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 

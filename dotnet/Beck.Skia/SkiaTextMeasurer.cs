@@ -30,6 +30,10 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         _spec = spec;
     }
 
+    /// <summary>Exact, font-file-backed measurement — never an approximation, so
+    /// <see cref="TextLengthGuard.FallbackOnly"/> suppresses the <c>textLength</c> guard under it.</summary>
+    public bool IsApproximate => false;
+
     /// <inheritdoc />
     public TextMetrics Measure(string text, FontRole role)
     {

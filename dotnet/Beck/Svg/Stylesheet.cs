@@ -12,6 +12,9 @@ namespace Beck.Rendering.Svg;
 internal static class Stylesheet
 {
     private static string Sw(double n) => SvgWriter.Num(n);
+    /// <summary>Format a style integer (mix percentage, font weight) invariantly so a comma-decimal
+    /// locale can never perturb the emitted CSS.</summary>
+    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style)
     {
@@ -59,12 +62,12 @@ internal static class Stylesheet
         // distinct from the FontRoles.PacketLabel measurement spec (sans 10.56); the label is never
         // measured, so the rendered type stands on its own style seam.
         var pl = style.Typography.PacketLabel;
-        sb.Append($"{scope} .beck-packet-label{{font-family:{(pl.Mono ? "var(--beck-font-mono)" : "var(--beck-font)")};font-size:{Sw(pl.SizePx)}px;font-weight:{pl.Weight};}}");
+        sb.Append($"{scope} .beck-packet-label{{font-family:{(pl.Mono ? "var(--beck-font-mono)" : "var(--beck-font)")};font-size:{Sw(pl.SizePx)}px;font-weight:{P(pl.Weight)};}}");
 
         // node card
         sb.Append($"{scope} .beck-node{{")
           .Append("fill:var(--beck-node-bg);")
-          .Append($"stroke:color-mix(in srgb, var(--beck-accent) {mix.NodeStroke}%, var(--beck-node-border));")
+          .Append($"stroke:color-mix(in srgb, var(--beck-accent) {P(mix.NodeStroke)}%, var(--beck-node-border));")
           .Append($"stroke-width:{Sw(geo.NodeStroke)};")
           .Append($"filter:{geo.NodeShadow};")
           .Append("}");
@@ -74,7 +77,7 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-node--ghost{{fill:transparent;stroke-dasharray:{strokes.NodeDash};filter:none;}}");
 
         // icon chip
-        sb.Append($"{scope} .beck-icon-chip{{fill:color-mix(in srgb, var(--beck-accent) {mix.IconChip}%, var(--beck-icon-bg));}}");
+        sb.Append($"{scope} .beck-icon-chip{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.IconChip)}%, var(--beck-icon-bg));}}");
         sb.Append($"{scope} .beck-node--ghost .beck-icon-chip{{fill:transparent;}}");
         sb.Append($"{scope} .beck-icon{{color:var(--beck-accent);}}");
 
@@ -84,7 +87,7 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-status-inline{{fill:var(--beck-accent);}}");
 
         // status pill
-        sb.Append($"{scope} .beck-status-bg{{fill:color-mix(in srgb, var(--beck-accent) {mix.StatusPill}%, transparent);}}");
+        sb.Append($"{scope} .beck-status-bg{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.StatusPill)}%, transparent);}}");
         sb.Append($"{scope} .beck-status-text{{fill:var(--beck-accent);}}");
 
         // group
@@ -98,8 +101,8 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-end-dot{{fill:var(--beck-text-muted);}}");
 
         // class compartment card
-        sb.Append($"{scope} .beck-class-head{{fill:color-mix(in srgb, var(--beck-accent) {mix.ClassHead}%, transparent);}}");
-        sb.Append($"{scope} .beck-class-head-border{{stroke:color-mix(in srgb, var(--beck-accent) {mix.ClassHeadBorder}%, var(--beck-node-border));stroke-width:{Sw(geo.HairlineStroke)};}}");
+        sb.Append($"{scope} .beck-class-head{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.ClassHead)}%, transparent);}}");
+        sb.Append($"{scope} .beck-class-head-border{{stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ClassHeadBorder)}%, var(--beck-node-border));stroke-width:{Sw(geo.HairlineStroke)};}}");
         sb.Append($"{scope} .beck-class-divider{{stroke:var(--beck-node-border);stroke-width:{Sw(geo.HairlineStroke)};}}");
         sb.Append($"{scope} .beck-class-stereo{{fill:var(--beck-text-muted);}}");
         sb.Append($"{scope} .beck-class-title{{fill:var(--beck-text);}}");
@@ -108,14 +111,14 @@ internal static class Stylesheet
 
         // sequence scenery
         sb.Append($"{scope} .beck-lifeline{{stroke-width:{Sw(geo.LifelineStroke)};stroke-dasharray:{strokes.LifelineDash};}}");
-        sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) {mix.ActivationGlow}%, transparent));}}");
-        sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) {mix.ChipStroke}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
-        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {mix.MsgText}%, var(--beck-text));}}");
+        sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) {P(mix.ActivationGlow)}%, transparent));}}");
+        sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ChipStroke)}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
+        sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.MsgText)}%, var(--beck-text));}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-chip{{stroke:none;}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-text,{scope} .beck-msg-text--bare{{fill:var(--beck-text-muted);}}");
-        sb.Append($"{scope} .beck-band-box{{fill:color-mix(in srgb, var(--beck-accent) {mix.BandFill}%, transparent);stroke:color-mix(in srgb, var(--beck-accent) {mix.BandStroke}%, transparent);stroke-width:{Sw(geo.BandBoxStroke)};stroke-dasharray:{strokes.GroupDash};}}");
-        sb.Append($"{scope} .beck-band-chip{{fill:var(--beck-surface);stroke:color-mix(in srgb, var(--beck-accent) {mix.ChipStroke}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
-        sb.Append($"{scope} .beck-band-label{{fill:color-mix(in srgb, var(--beck-accent) {mix.BandLabel}%, var(--beck-text));}}");
+        sb.Append($"{scope} .beck-band-box{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.BandFill)}%, transparent);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.BandStroke)}%, transparent);stroke-width:{Sw(geo.BandBoxStroke)};stroke-dasharray:{strokes.GroupDash};}}");
+        sb.Append($"{scope} .beck-band-chip{{fill:var(--beck-surface);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ChipStroke)}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
+        sb.Append($"{scope} .beck-band-label{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.BandLabel)}%, var(--beck-text));}}");
 
         // edges + labels
         sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:round;stroke-linejoin:round;}}");

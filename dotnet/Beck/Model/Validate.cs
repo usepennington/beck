@@ -27,6 +27,20 @@ internal static class Validate
             Pad: Math.Max(0, OptNumber(o.GetValueOrDefault("pad"), "meta.narrate.pad") ?? d.Pad));
     }
 
+    /// <summary>Parse <c>meta.style</c>: a well-formed <c>[a-z0-9-]+</c> token passes through; a
+    /// malformed one warns (per-render, unconditionally — unlike the untyped-document latch) and is
+    /// ignored so the resolver falls back to the default. Resolution to a concrete style happens in
+    /// <c>BeckSvg</c>, which sees both the built-in table and the options registry.</summary>
+    private static string? BuildStyleName(object? v)
+    {
+        string? s = OptString(v);
+        if (s is null) return null;
+        if (Beck.BeckStyles.IsValidName(s)) return s;
+        BeckDiagnostics.Warn(
+            $"Beck: ignoring invalid `meta.style` \"{s}\" — a style name must match [a-z0-9-]+.");
+        return null;
+    }
+
     public static DiagramMeta BuildMeta(IReadOnlyDictionary<string, object?> m, DiagramType type)
     {
         var sp = AsObject(m.GetValueOrDefault("spacing"), "meta.spacing");
@@ -36,6 +50,7 @@ internal static class Validate
             Type = type,
             Title = OptString(m.GetValueOrDefault("title")),
             Subtitle = OptString(m.GetValueOrDefault("subtitle")),
+            StyleName = BuildStyleName(m.GetValueOrDefault("style")),
             Direction = OneOf(m.GetValueOrDefault("direction"), Tokens.Direction, "meta.direction", Direction.TB),
             Theme = OneOf(m.GetValueOrDefault("theme"), Tokens.Theme, "meta.theme", ThemeMode.Auto),
             Animate = OptBool(m.GetValueOrDefault("animate"), "meta.animate", true),
