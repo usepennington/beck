@@ -1,30 +1,39 @@
 namespace Beck;
 
 /// <summary>
-/// The <c>glow</c> built-in style (Phase 3, mock 1g) — the design brief's "baseline to beat". A
-/// luminous, darker-leaning look built from three restrained effects: a single hash-scoped
-/// <em>gradient stroke</em> on default-coloured edges (defined once in <c>&lt;defs&gt;</c> via
-/// <c>color-mix</c> over the <c>--beck-*</c> tokens), a <em>soft accent bloom</em> painted through the
-/// node/narration drop-shadow filters (the bloom colour is <c>var(--beck-accent)</c>, which each node
-/// inherits, so every card blooms in its own accent), and a <em>breathing pulse</em> on flow-active
-/// nodes — the existing scheduled pulse/highlight windows lengthened so the swell reads as a breath
-/// rather than a snap. No always-on wobble: all motion still rides the compiled shared cycle and only
-/// fires where the flow lights a node.
+/// The <c>glow</c> built-in style (mock 1g) — the design brief's "baseline to beat", rebuilt around the
+/// per-style <em>edge-presentation</em> seam (<see cref="StyleEdges"/>) so its identity is carried by the
+/// edge treatment + glass surfaces + bloom, not by token tweaks alone:
+/// <list type="bullet">
+/// <item><b>Two-layer edges.</b> A faint slate <em>base rail</em> (the default <c>--beck-edge</c> stroke
+/// at width 1, <see cref="StyleEdges.BaseOpacity"/> dimmed; replies/dashed at <c>3 4</c>) under a bright
+/// <em>comet</em> overlay (<see cref="EdgeOverlay.Comet"/>, ~2.5px round-capped, a 10px lit dash that
+/// travels the whole path). The comet is glow's ambient packet/trail presentation — an additional path
+/// sharing the edge's exact <c>d</c>, its per-edge hue alternating cyan/light-cyan/violet
+/// (<see cref="StyleEdges.OverlayPalette"/>) and its phase baked from the content hash, compiled onto a
+/// shared-cycle <c>linear infinite</c> loop by <c>CssCompiler.EdgeOverlayCss</c> (no delay chain) and
+/// killed under reduced motion. The comet blooms via <see cref="StyleEdges.OverlayBloom"/>; arrowheads are
+/// small filled triangles in the comet hue (<see cref="StyleEdges.MarkerColor"/>).</item>
+/// <item><b>Glass nodes.</b> Very translucent slate surfaces (<c>--beck-node-bg</c>) rimmed with a real
+/// cyan→violet <c>&lt;linearGradient&gt;</c> stroke (<see cref="StyleStrokes.GradientNodes"/>, ~1.2px), the
+/// flow-active node brightened + bloomed + breathing through the existing pulse/highlight windows
+/// (stretched to read as a breath).</item>
+/// <item><b>Sequence scenery.</b> Faint <em>solid</em> 1px lifelines (<see cref="LifelineShape.FaintSolid"/>),
+/// strokeless bloomed activation bars (inherited), mono members / muted-slate labels.</item>
+/// </list>
 /// </summary>
 /// <remarks>
-/// <para>Darker-leaning but light-safe: the light table keeps white surfaces with a luminous indigo/
-/// violet accent ramp and a faint accent-tinted edge; the dark table (partial overrides layered over
-/// the light block, which is always emitted first) drops to a deep near-black surface, brightens the
-/// accents a ramp step, and pushes the bloom harder. Every entry keeps the three-tier
-/// <c>var(--beck-X, var(--color-Y, literal))</c> indirection, so a host that defines <c>--color-*</c>
-/// (or <c>--beck-*</c>) always wins.</para>
-/// <para>Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression, so every feature
-/// (all node shapes/variants, groups, icons, edges/labels/UML markers, packets + labels, trails,
-/// highlight/pulse/fail, status pills, narration, impact/working rings, sequence choreography incl.
-/// dimming, state + class diagrams, scrub, reduced motion, light/dark) stays available by
-/// construction — only the tokens, edge paint, bloom filters, and pulse timing change. The gradient
-/// edge is a stroke treatment on the same single continuous <c>&lt;path&gt;</c>, so routing, packets,
-/// and trails are untouched.</para>
+/// <para><b>Seam vs. glow-specific.</b> Everything above rides the generalizable seam: <see cref="StyleEdges"/>
+/// (base opacity, comet overlay + palette + bloom, marker colour, faint-solid lifeline), the reusable node
+/// gradient (<see cref="StyleStrokes.GradientNodes"/> + the shared <c>beck-node-grad-{hash}</c> def), and the
+/// classic token/mix/motion fields. No artwork branch, no bespoke markup — a custom style could compose the
+/// same look. Deriving from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression keeps every feature
+/// available by construction.</para>
+/// <para><b>Dark is home turf; light stays legible.</b> The light table keeps a white surface, a slate base
+/// rail and glass panels tasteful on white, and the lifted sequence dim floors so a static viewer can still
+/// read a dimmed row. The dark overrides drop to a deep night surface and brighten the accents a ramp step so
+/// the gradient/comet/bloom read as light. Every entry keeps the three-tier
+/// <c>var(--beck-X, var(--color-Y, literal))</c> indirection, so a host palette always wins.</para>
 /// </remarks>
 public static class GlowStyle
 {
@@ -34,13 +43,14 @@ public static class GlowStyle
     {
         BeckStyle c = BeckStyle.Classic;
 
-        // Luminous indigo/violet accent ramp over the host colours; a faint accent-tinted edge so the
-        // arrow markers (which stay --beck-edge) sit inside the gradient's endpoint tone; an
-        // accent-washed icon chip. Surfaces stay light so the style still adopts a light host page.
+        // Light table. Glass node surface (very translucent slate); a faint slate base rail; an indigo/
+        // violet accent ramp for the bloom + active read; and the cyan→violet gradient / cyan·light-cyan·
+        // violet comet hues carried by dedicated --beck-* tokens over the host ramp. Surfaces stay light so
+        // the style still adopts a light host page.
         var light = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
-            ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
+            ("--beck-node-bg", "color-mix(in srgb, var(--color-base-400, #94a3b8) 7%, transparent)"),
             ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 30%, var(--color-base-200, #e2e8f0))"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.05), 0 4px 12px rgb(0 0 0 / 0.06)"),
             ("--beck-text", "var(--color-base-800, #1e293b)"),
@@ -54,18 +64,27 @@ public static class GlowStyle
             ("--beck-neutral", "var(--color-base-400, #94a3b8)"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {P(c.Mix.GroupBorder)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
-            ("--beck-edge", "color-mix(in srgb, var(--beck-accent) 46%, var(--color-base-300, #cbd5e1))"),
+            // A step darker than base-400 so the faint comet base rail actually reads on a white page
+            // (the previous base-400 rail was near-invisible in light mode); still a tasteful slate.
+            ("--beck-edge", "var(--color-base-500, #64748b)"),
             ("--beck-packet", "var(--beck-accent)"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-accent) 8%, var(--color-base-100, #f1f5f9))"),
             ("--beck-accent", "var(--beck-primary)"),
+            // glow hues (cyan / light-cyan / violet) — the gradient endpoints + comet palette.
+            ("--beck-node-grad-a", "var(--color-cyan-400, #22d3ee)"),
+            ("--beck-node-grad-b", "var(--color-violet-400, #a78bfa)"),
+            ("--beck-comet-1", "var(--color-cyan-400, #22d3ee)"),
+            ("--beck-comet-2", "var(--color-cyan-300, #67e8f9)"),
+            ("--beck-comet-3", "var(--color-violet-400, #a78bfa)"),
         });
 
-        // Dark is the showpiece: a deep near-black surface, a ramp-step-brighter accent ramp so the
-        // bloom and gradient read as light, and luminous accent-tinted borders/edges.
+        // Dark is the showpiece: a deep night surface, a ramp-step-brighter accent ramp so bloom + gradient
+        // read as light, and a slightly brighter slate rail. The glow hues stay vivid on both themes, so
+        // they are not overridden here.
         var dark = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-950, #080b16)"),
-            ("--beck-node-bg", "var(--color-base-900, #10131f)"),
+            ("--beck-node-bg", "color-mix(in srgb, var(--color-base-400, #94a3b8) 8%, transparent)"),
             ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 42%, var(--color-base-700, #30363d))"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.4)"),
             ("--beck-text", "var(--color-base-50, #f0f6fc)"),
@@ -73,13 +92,13 @@ public static class GlowStyle
             ("--beck-text-faint", "var(--color-base-500, #6e7681)"),
             ("--beck-primary", "var(--color-primary-400, #818cf8)"),
             ("--beck-info", "var(--color-violet-400, #c084fc)"),
-            ("--beck-edge", "color-mix(in srgb, var(--beck-accent) 62%, var(--color-base-700, #30363d))"),
+            ("--beck-edge", "var(--color-base-500, #64748b)"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-accent) 16%, var(--color-base-800, #21262d))"),
         });
 
         StyleGeometry geo = c.Geometry with
         {
-            // Slightly softer corners than classic so the bloom haloes a rounded edge.
+            // Softer corners so the bloom haloes a rounded edge.
             CardRadius = 16,
             ClassRadius = 14,
             GhostRadius = 18,
@@ -88,17 +107,22 @@ public static class GlowStyle
             NarrationRadius = 14,
             BandRadius = 16,
 
-            // Accent bloom via the card drop-shadow filter. The bloom colour is var(--beck-accent),
-            // which every node inherits from its own inline --beck-accent, so a card blooms in its own
-            // accent. Amplified from the first-cut subtlety (which read as "classic with faded edges")
-            // into a perceptible glow: a crisp accent rim, a medium halo, and a wide low-alpha wash over
-            // the ambient shadow. Light must hold, so its washes stay lower-alpha than dark's.
+            // Thin, luminous chrome (mock 1g): a 1.2px gradient node rim, width-1 base edge/message rails
+            // under the 2.5px comet, and faint 1px lifelines. NodeStroke 1.2 keeps MeasureBorder at 2
+            // (2·round(1.2/2)) — identical to classic's card-sizing budget — so no card golden drifts.
+            NodeStroke = 1.2,
+            EdgeStroke = 1,
+            MessageStroke = 1,
+            LifelineStroke = 1,
+
+            // Accent bloom via the card drop-shadow filter (bloom colour = each node's own --beck-accent):
+            // a crisp rim, a medium halo, and a wide low-alpha wash. Light holds a lower-alpha wash; dark —
+            // glow's home turf — pushes it hardest.
             NodeShadow =
-                "drop-shadow(0 0 1px color-mix(in srgb, var(--beck-accent) 40%, transparent)) " +
-                "drop-shadow(0 0 9px color-mix(in srgb, var(--beck-accent) 24%, transparent)) " +
-                "drop-shadow(0 3px 14px color-mix(in srgb, var(--beck-accent) 14%, transparent)) " +
+                "drop-shadow(0 0 1px color-mix(in srgb, var(--beck-accent) 52%, transparent)) " +
+                "drop-shadow(0 0 10px color-mix(in srgb, var(--beck-accent) 34%, transparent)) " +
+                "drop-shadow(0 3px 16px color-mix(in srgb, var(--beck-accent) 20%, transparent)) " +
                 "drop-shadow(0 1px 2px rgb(0 0 0/.06))",
-            // Dark is glow's home turf — push the bloom hardest here.
             NodeShadowDark =
                 "drop-shadow(0 0 2px color-mix(in srgb, var(--beck-accent) 58%, transparent)) " +
                 "drop-shadow(0 0 14px color-mix(in srgb, var(--beck-accent) 40%, transparent)) " +
@@ -111,8 +135,9 @@ public static class GlowStyle
 
         StyleMix mix = c.Mix with
         {
-            // More accent in card borders and icon chips, and a brighter activation glow, so the
-            // luminous read carries into class cards and sequence activation bars too.
+            // Brighter icon chips + activation glow so the luminous read carries into class cards and
+            // sequence activation bars. (NodeStroke mix is unused for node surfaces now — the gradient rim
+            // replaces it — but stays set for any accent-mix consumer.)
             NodeStroke = 50,
             IconChip = 24,
             ActivationGlow = 66,
@@ -120,35 +145,53 @@ public static class GlowStyle
 
         StyleStrokes strokes = c.Strokes with
         {
-            // The luminous edge gradient (defined once in <defs>, scoped by the content hash).
-            GradientEdges = true,
+            // Real cyan→violet gradient rim on every node surface (shared beck-node-grad def).
+            GradientNodes = true,
+            // Replies / author-dashed edges: the mock's 3 4 dash on the faint base rail.
+            EdgeDash = "3 4",
         };
 
         StyleMotion motion = c.Motion with
         {
-            // Breathing pulse: the scheduled pulse/highlight swells stretched from classic's snap
-            // (0.6/0.7s) to a slower, softer rise-and-settle. Still flow-active-only and still compiled
-            // onto the shared cycle — no always-on animation. Both ScheduleBuilder and CssCompiler read
-            // these same fields, so the window stays synced.
+            // Breathing pulse on the flow-active node: classic's snap (0.6/0.7s) stretched to a slower
+            // rise-and-settle. Still flow-active-only and compiled onto the shared cycle (no always-on loop).
             PulseDur = 1.0,
             HighlightDur = 1.2,
-            // Raise the sequence-storytelling dim floor. glow's accents are a ramp step softer than
-            // classic's (primary-500 #6366f1 vs primary-600 #175ddc), and its low-saturation edge/
-            // gradient read means the *resting* frame — every message before the flow reaches it —
-            // is painted at these dim opacities. At classic's 0.15/0.35/0.45 the arrows, labels, and
-            // section bands drop below legibility on glow-light's white surface (a static viewer
-            // can't read the flow at all). Lift the floors so the dimmed state stays readable while
-            // the reveal still swells each active row to full opacity — a clear storytelling
-            // contrast remains (0.42→1 line, 0.58→1 label, 0.6→1 band). Uniform across themes: dark
-            // holds up better but a matching lift only helps it (the accents brighten a step there).
+            // Lifted sequence dim floors: glow's soft accents/edges paint the resting (pre-reveal) frame at
+            // these opacities; classic's 0.15/0.35/0.45 drop below legibility on glow-light's white surface.
+            // A static viewer keeps reading the dimmed rows while the reveal still swells each active row to
+            // full — a clear storytelling contrast remains.
             DimLine = 0.42,
             DimLabel = 0.58,
             DimBand = 0.6,
-            // Packet bloom stays on (classic default) — it is core to the glow identity — and its blur
-            // is widened past classic's 3px so the travelling packet dot (the judges' favourite element)
-            // carries a soft, clearly-perceptible halo rather than a hard dot with a faint fringe.
+            // Packet bloom stays on (core to glow) with a wider blur so the travelling dot carries a soft halo.
             GlowEnabled = true,
             PacketGlowBlur = 5,
+        };
+
+        StyleEdges edges = c.Edges with
+        {
+            // Faint slate base rail under the bright comet. 0.4 (vs the mock's dark-only .35) keeps the rail
+            // legible on both themes.
+            BaseOpacity = 0.4,
+            // The travelling comet — glow's ambient packet/trail presentation on every edge/message.
+            // A longer lit dash + a touch more width so the comet reads clearly on the long architecture
+            // edges too (a 10px dot got lost on a ~100px hop where the short sequence messages carried it
+            // fine); still a single travelling comet, just with more presence in the static frame.
+            Overlay = EdgeOverlay.Comet,
+            OverlayWidth = 3,
+            OverlayLinecap = "round",
+            CometDash = 15,
+            OverlayPeriod = 2.4,
+            // Per-edge hue alternation cyan → light-cyan → violet.
+            OverlayPalette = new[] { "var(--beck-comet-1)", "var(--beck-comet-2)", "var(--beck-comet-3)" },
+            // Comet bloom — a fixed cyan halo on the bright overlay (keeps labels crisp; matches the mock's
+            // group drop-shadow read without blooming text).
+            OverlayBloom = "drop-shadow(0 0 6px color-mix(in srgb, var(--beck-comet-1) 55%, transparent))",
+            // Arrowheads: small filled triangles in the comet hue over the faint base rail.
+            MarkerColor = "var(--beck-comet-2)",
+            // Faint SOLID 1px lifelines (not dashed).
+            Lifeline = LifelineShape.FaintSolid,
         };
 
         return c with
@@ -160,6 +203,7 @@ public static class GlowStyle
             Mix = mix,
             Strokes = strokes,
             Motion = motion,
+            Edges = edges,
         };
     }
 

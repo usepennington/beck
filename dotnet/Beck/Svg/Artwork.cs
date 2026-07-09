@@ -175,8 +175,14 @@ internal static class Artwork
     /// </summary>
     private static string WobbleRoundRect(double x, double y, double w, double h, double r, string seed)
     {
-        r = Math.Max(0, Math.Min(r, Math.Min(w, h) / 2));
         var rng = new Rng(seed);
+        // Per-node corner-radius variety (sketch, brief §1b: rx 6–9): a rectangular card carries a small
+        // incoming radius (sketch sets card/class/ghost to 8), so give it a hash-derived rounding in [6,9]
+        // — no two cards round alike, the classic hand-drawn tell. Pills (large h/2 radius) and group boxes
+        // (larger radius) keep their shape. Drawn from the same deterministic seed stream, so it's stable
+        // forever and consumes one value before the wobble (which is why the sketch golden was regenerated).
+        if (r <= 10) r = 6 + Math.Floor(rng.Next() * 4);
+        r = Math.Max(0, Math.Min(r, Math.Min(w, h) / 2));
         // Amplitude grows with node size so the hand-drawn wobble stays legible on large rectangular
         // cards/group boxes (where a fixed few-px jitter proportionally vanished and the sketch read
         // rested on the Shantell font alone) while small pills/ghosts stay subtly wobbled. Keyed off the

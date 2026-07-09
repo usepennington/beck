@@ -12,6 +12,15 @@ internal readonly record struct NodeBox(double X, double Y, double W, double H, 
 internal sealed record SeqChoreo(IReadOnlyList<(string Start, string End)> Bars, int BandCount);
 
 /// <summary>
+/// One per-edge overlay layer (<see cref="EdgeOverlay"/>): the class-indexed decoration path sharing
+/// the edge's exact <c>d</c>, its measured length (for the comet/draw-on dash window), and a baked
+/// phase fraction in [0,1) (the per-edge comet offset). The markup (the <c>&lt;path&gt;</c> with its
+/// static dasharray) is emitted by the edge/message painters; <see cref="CssCompiler.EdgeOverlayCss"/>
+/// compiles the motion.
+/// </summary>
+internal sealed record EdgeOverlaySpec(int Index, EdgeOverlay Mode, double Length, double Phase);
+
+/// <summary>
 /// Compiles a <see cref="Schedule"/> into CSS keyframes on the shared-cycle model
 /// (§10): every element animates over the whole cycle <c>T = Duration +
 /// RepeatDelay</c>, its action a percentage window, all in lockstep and looping.
@@ -154,6 +163,51 @@ internal sealed class CssCompiler
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg;transform:translateY(-{Nm(p.Size + 6)}px)\">{SvgWriter.Text(p.Label!)}</text>");
         }
         return sb.Append("</g>").ToString();
+    }
+
+    /// <summary>
+    /// Compiles the per-edge overlay layer (<see cref="EdgeOverlaySpec"/>) into CSS: each overlay path
+    /// runs a self-contained <c>linear infinite</c> loop over <see cref="StyleEdges.OverlayPeriod"/> —
+    /// the same compiled, delay-chain-free discipline as the flow <c>stream</c> march — with every
+    /// keyframe stop baked (comet phase folded into the starting <c>stroke-dashoffset</c>, never an
+    /// <c>animation-delay</c>). Returns <c>""</c> when there are no overlays (classic), so the motion
+    /// block stays byte-identical. The caller wraps the result in the reduced-motion guard, so a
+    /// reduced-motion / static viewer sees only the overlay's baked resting frame.
+    /// </summary>
+    public static string EdgeOverlayCss(string hash, IReadOnlyList<EdgeOverlaySpec> overlays, StyleEdges edges)
+    {
+        if (overlays.Count == 0) return "";
+        var sb = new StringBuilder();
+        string dur = Nm(edges.OverlayPeriod);
+        foreach (EdgeOverlaySpec o in overlays)
+        {
+            string cls = $"beo{o.Index}-{hash}", kf = $"kbeo{o.Index}-{hash}";
+            sb.Append($".b-{hash} .{cls}{{animation:{kf} {dur}s linear infinite;}}");
+            sb.Append($"@keyframes {kf}{{");
+            switch (o.Mode)
+            {
+                case EdgeOverlay.Comet:
+                {
+                    // A single lit dash (CometDash) over a full-length gap sweeps one dot end-to-end; the
+                    // per-edge phase is baked into the start offset so comets on different edges are out of
+                    // step without any delay chain.
+                    double span = edges.CometDash + o.Length;
+                    double start = o.Phase * span;
+                    sb.Append($"from{{stroke-dashoffset:{Nm(start)};}}to{{stroke-dashoffset:{Nm(start - span)};}}");
+                    break;
+                }
+                case EdgeOverlay.DrawOn:
+                    // Wipe from fully hidden (offset = len) to fully drawn, hold, then reset each period.
+                    sb.Append($"0%{{stroke-dashoffset:{Nm(o.Length)};}}55%{{stroke-dashoffset:0;}}")
+                      .Append($"82%{{stroke-dashoffset:0;}}100%{{stroke-dashoffset:{Nm(o.Length)};}}");
+                    break;
+                default: // Marching
+                    sb.Append($"from{{stroke-dashoffset:0;}}to{{stroke-dashoffset:{Nm(-2 * edges.CometDash)};}}");
+                    break;
+            }
+            sb.Append('}');
+        }
+        return sb.ToString();
     }
 
     /// <summary>The glow filter def (only if a packet needs it — call after Markup()).</summary>

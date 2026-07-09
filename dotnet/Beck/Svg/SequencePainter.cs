@@ -21,6 +21,8 @@ internal sealed class SequencePainter
     private readonly StringBuilder _defs = new();
     private readonly Dictionary<string, string> _actFills = new();
     private int _gradSeq;
+    private bool _motion;
+    private int _overlaySeq;
 
     public SequencePainter(string hash, Markers markers, ITextMeasurer measurer, BeckStyle style)
     {
@@ -36,12 +38,16 @@ internal sealed class SequencePainter
     /// <summary>Message paths, for the flow schedule (each packet rides a message row).</summary>
     public List<FlowEdge> MessageEdges { get; } = new();
 
+    /// <summary>Per-message overlay specs (comet/draw-on/marching), compiled to motion CSS by the caller.</summary>
+    public List<EdgeOverlaySpec> Overlays { get; } = new();
+
     private static string N(double n) => SvgWriter.Num(n);
     private static string I(double n) => Js.Str(Js.Round(n));
     private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-    public string Render(DiagramModel model, SequenceLayoutResult layout)
+    public string Render(DiagramModel model, SequenceLayoutResult layout, bool motion = false)
     {
+        _motion = motion;
         var sb = new StringBuilder();
         FontRoleSpec bandSpec = _style.Typography.Roles.Of(FontRole.BandLabel);
         FontRoleSpec msgSpec = _style.Typography.Roles.Of(FontRole.MsgText);
@@ -65,7 +71,17 @@ internal sealed class SequencePainter
         {
             double cx = layout.Centers[p.Id];
             Rect card = layout.Nodes[p.Id];
-            sb.Append($"<line class=\"beck-lifeline\" x1=\"{N(cx)}\" y1=\"{N(card.Y + card.H + 2)}\" x2=\"{N(cx)}\" y2=\"{N(layout.LifelineBottom)}\" style=\"stroke:{stroke}\"/>");
+            double y1 = card.Y + card.H + 2, y2 = layout.LifelineBottom;
+            // Lifeline treatment (StyleEdges.Lifeline): classic Dashed + FaintSolid are the straight
+            // <line> (the dash on/off is a CSS concern); Wobbly swaps to a single sideways-bowed <path>
+            // with its endpoints preserved. Classic is byte-identical.
+            if (_style.Edges.Lifeline == LifelineShape.Wobbly)
+            {
+                string llD = Shaping.BowLine(cx, y1, cx, y2, Math.Max(_style.Edges.BowAmplitude, 2), _hash + ":ll:" + p.Id);
+                sb.Append($"<path class=\"beck-lifeline\" d=\"{llD}\" fill=\"none\" style=\"stroke:{stroke}\"/>");
+            }
+            else
+                sb.Append($"<line class=\"beck-lifeline\" x1=\"{N(cx)}\" y1=\"{N(y1)}\" x2=\"{N(cx)}\" y2=\"{N(y2)}\" style=\"stroke:{stroke}\"/>");
         }
 
         // ---- activation bars ----
@@ -75,8 +91,25 @@ internal sealed class SequencePainter
             double cx = layout.Centers[b.Participant];
             double x = cx - SequenceLayout.BarHalf + b.Level * SequenceLayout.LevelStep;
             double h = Math.Max(SequenceLayout.BarHalf * 2, b.Y2 - b.Y1);
+            // Activation fill: classic is a vertical accent gradient (with a CSS bloom filter). Sketch (§1b)
+            // redraws the bar as a hand-drawn OUTLINED rect — a translucent accent fill + accent stroke —
+            // and drops the bloom (mix.ActivationGlow = 0 makes the `.beck-activation` drop-shadow
+            // transparent). Both keep the same rect/class/data-* so the flow reveal + dimming choreography
+            // are untouched; classic emits the exact historical attribute → byte-identical.
+            string actAccent = SvgWriter.Attr(b.Accent);
+            string actFill, actStroke;
+            if (_style.Artwork == StyleArtwork.Sketch)
+            {
+                actFill = "";
+                actStroke = $";fill:color-mix(in srgb, var(--beck-accent) 20%, transparent);stroke:var(--beck-accent);stroke-width:{N(_style.Geometry.HairlineStroke)}";
+            }
+            else
+            {
+                actFill = $"fill=\"{ActivationFill(b.Accent)}\" ";
+                actStroke = "";
+            }
             sb.Append($"<rect class=\"beck-activation\" data-bar=\"{bi}\" x=\"{N(x)}\" y=\"{N(b.Y1)}\" width=\"{N(SequenceLayout.BarHalf * 2)}\" height=\"{N(h)}\" rx=\"{N(SequenceLayout.BarHalf)}\" ")
-              .Append($"fill=\"{ActivationFill(b.Accent)}\" style=\"--beck-accent:{SvgWriter.Attr(b.Accent)}\" data-start=\"{SvgWriter.Attr(b.StartEdge)}\" data-end=\"{SvgWriter.Attr(b.EndEdge)}\"/>");
+              .Append($"{actFill}style=\"--beck-accent:{actAccent}{actStroke}\" data-start=\"{SvgWriter.Attr(b.StartEdge)}\" data-end=\"{SvgWriter.Attr(b.EndEdge)}\"/>");
         }
 
         // ---- messages ----
@@ -97,6 +130,7 @@ internal sealed class SequencePainter
                 };
                 string selfD = StepRound.RoundedPath(poly, 9);
                 sb.Append(MsgPath(edge, selfD));
+                sb.Append(MsgOverlay(selfD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, selfD));
                 // Metro station dots at the self-loop's two lifeline anchors (over the line).
                 sb.Append(Artwork.Station(_style, sx, row.Y, edge.Color));
@@ -109,8 +143,12 @@ internal sealed class SequencePainter
                 double dir = Math.Sign(cxTo - cxFrom); if (dir == 0) dir = 1;
                 double x1 = cxFrom + dir * SequenceLayout.ActivationOffset(layout.Activations, edge.From, row.Y);
                 double x2 = cxTo - dir * SequenceLayout.ActivationOffset(layout.Activations, edge.To, row.Y);
-                string msgD = $"M {N(x1)} {N(row.Y)} L {N(x2)} {N(row.Y)}";
+                string msgD0 = $"M {N(x1)} {N(row.Y)} L {N(x2)} {N(row.Y)}";
+                // Bow the straight message when the style opts in (endpoints preserved); classic → verbatim.
+                string msgD = Shaping.EdgePath(_style, msgD0,
+                    new[] { new Point(x1, row.Y), new Point(x2, row.Y) }, _hash + ":" + edge.Id);
                 sb.Append(MsgPath(edge, msgD));
+                sb.Append(MsgOverlay(msgD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, msgD));
                 // Metro station dots at each message's two endpoints (over the line).
                 sb.Append(Artwork.Station(_style, x1, row.Y, edge.Color));
@@ -130,13 +168,31 @@ internal sealed class SequencePainter
 
     private string MsgPath(EdgeModel edge, string d)
     {
+        StyleEdges es = _style.Edges;
         var sb = new StringBuilder();
-        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(edge.Kind)}\" d=\"{d}\" style=\"stroke:{SvgWriter.Attr(edge.Color)}\" stroke-width=\"{SvgWriter.Num(_style.Geometry.MessageStroke)}\"");
+        // Optional faint base-layer opacity (glow's dim rail under the bright comet) — matches the
+        // architecture edge painter's BaseOpacity treatment. null → no attribute (classic, byte-identical).
+        string baseOp = es.BaseOpacity is { } bo ? $";stroke-opacity:{SvgWriter.Num(bo)}" : "";
+        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(edge.Kind)}\" d=\"{d}\" style=\"stroke:{SvgWriter.Attr(edge.Color)}{baseOp}\" stroke-width=\"{SvgWriter.Num(_style.Geometry.MessageStroke)}\"");
         if (edge.Style == EdgeStyle.Dashed) sb.Append($" stroke-dasharray=\"{_style.Strokes.EdgeDash}\"");
+        // Marker colour: the message's own colour, or the style's comet-hue override (glow) when the
+        // message uses the default colour — a bright arrowhead over a faint slate base rail.
+        string markerColor = es.MarkerColor is { } mkc && edge.Color == "var(--beck-edge)" ? mkc : edge.Color;
         if ((edge.MarkerEnd ?? (edge.Arrow is ArrowEnds.End or ArrowEnds.Both ? MarkerShape.Arrow : (MarkerShape?)null)) is { } m)
-            sb.Append($" marker-end=\"url(#{_markers.Ensure(edge.Color, m)})\"");
+            sb.Append($" marker-end=\"url(#{_markers.Ensure(markerColor, m, _style.Edges, _style.Geometry.MessageStroke)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(edge.Id)}\"/>");
         return sb.ToString();
+    }
+
+    /// <summary>The optional per-message overlay layer (comet/draw-on/marching) sharing the message's
+    /// exact <paramref name="d"/> — an additional sibling path, never a split. Emitted only when motion
+    /// is live and the style opts in; classic (Overlay=None) returns <c>""</c> — byte-identical.</summary>
+    private string MsgOverlay(string d)
+    {
+        if (!_motion || _style.Edges.Overlay == EdgeOverlay.None) return "";
+        var (markup, spec) = SvgRenderer.OverlayPath(_style, d, _overlaySeq++, _hash);
+        Overlays.Add(spec);
+        return markup;
     }
 
     private static string Chip(double cx, double cy, string text, double w, string chipCls, string textCls,

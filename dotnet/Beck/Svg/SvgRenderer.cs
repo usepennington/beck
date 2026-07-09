@@ -49,6 +49,13 @@ internal static class SvgRenderer
         IReadOnlyList<(string Text, string Color)>? StatesFor(string id) =>
             animating && statusMap.TryGetValue(id, out var s) && s.Count > 1 ? s : null;
         string extraDefs = "";
+        // Per-edge gradient <defs> collected by Edge() when the style paints luminous gradient edges
+        // (glow). One userSpaceOnUse gradient per gradient-stroked edge, run along that edge's own
+        // endpoints — see Edge() for why per-edge (the degenerate-bbox fix).
+        var edgeDefs = new StringBuilder();
+        // Per-edge overlay specs (comet/draw-on/marching) collected by the edge/message painters when the
+        // style opts in; compiled to motion CSS below. Empty for classic (Overlay=None) — byte-identical.
+        var overlays = new List<EdgeOverlaySpec>();
         LayoutResult layout;
         var body = new StringBuilder();
         var flowEdges = new List<FlowEdge>();
@@ -59,9 +66,10 @@ internal static class SvgRenderer
             SequenceLayoutResult seq = SequenceLayout.Compute(model, sizes);
             layout = seq.AsLayout();
             var painter = new SequencePainter(hash, markers, measurer, style);
-            body.Append("<g class=\"beck-overlay\">").Append(painter.Render(model, seq)).Append("</g>");
+            body.Append("<g class=\"beck-overlay\">").Append(painter.Render(model, seq, animating)).Append("</g>");
             extraDefs = painter.Defs;
             flowEdges = painter.MessageEdges;
+            overlays.AddRange(painter.Overlays);
             // Sequence storytelling applies only to a DERIVED flow (authored message order).
             if (model.Flow.Derived)
                 choreo = new SeqChoreo(
@@ -76,7 +84,11 @@ internal static class SvgRenderer
         {
             layout = LayeredLayout.Compute(model, sizes);
             var edges = EdgePainter.RouteEdges(model, layout);
-            flowEdges = edges.Select(e => new FlowEdge(e.Edge.Id, e.Edge.From, e.Edge.To, e.Edge.Kind, e.D)).ToList();
+            // The effective (possibly bowed) path per edge — computed once and reused for both the
+            // rendered edge and its FlowEdge, so a packet rides exactly the drawn curve. At classic
+            // (BowAmplitude 0) this is e.D verbatim, so flowEdges + edges stay byte-identical.
+            var effD = edges.Select(e => Shaping.EdgePath(style, e.D, e.Points, hash + ":" + e.Edge.Id)).ToList();
+            flowEdges = edges.Select((e, i) => new FlowEdge(e.Edge.Id, e.Edge.From, e.Edge.To, e.Edge.Kind, effD[i])).ToList();
 
             // z1 groups (largest-area first so nested boxes stack on top)
             body.Append("<g class=\"beck-groups\">");
@@ -94,7 +106,7 @@ internal static class SvgRenderer
 
             // z2 edges (+ markers), then labels (pass 2 — mid labels dodge every line)
             body.Append("<g class=\"beck-overlay\">");
-            foreach (var e in edges) body.Append(Edge(e, markers, style, hash));
+            for (int i = 0; i < edges.Count; i++) body.Append(Edge(edges[i], effD[i], markers, style, hash, i, edgeDefs, animating, overlays));
             var placer = new LabelPlacer(layout.Nodes.Values, layout.Width, layout.Height, style, guard);
             foreach (var e in edges)
             {
@@ -154,6 +166,7 @@ internal static class SvgRenderer
         // Animation compiler (§9–10): simulate the flow → CSS keyframes + fx layer.
         // Full loops on load; Scrub drives the same keyframes off scroll position.
         string animCss = "", animDefs = "";
+        string motionCss = "";
         if (options.Animation is AnimationMode.Full or AnimationMode.Scrub
             && model.Meta.Animate && model.Flow.Steps.Count > 0 && flowEdges.Count > 0)
         {
@@ -164,15 +177,18 @@ internal static class SvgRenderer
             var compiler = new CssCompiler(schedule, hash, boxes, style.Motion, style.Strokes, choreo, options.Animation == AnimationMode.Scrub);
             body.Append(compiler.Markup());
             animDefs = compiler.Defs();
-            string css = compiler.Css();
-            if (!string.IsNullOrEmpty(css)) animCss = "@media (prefers-reduced-motion:no-preference){" + css + "}";
+            motionCss += compiler.Css();
         }
+        // Per-edge overlay motion (comet/draw-on/marching) — compiled independently of the flow schedule
+        // (a glow diagram with edges but no flow still gets travelling comets). Empty for classic.
+        motionCss += CssCompiler.EdgeOverlayCss(hash, overlays, style.Edges);
+        if (!string.IsNullOrEmpty(motionCss)) animCss = "@media (prefers-reduced-motion:no-preference){" + motionCss + "}";
 
         var svg = new StringBuilder();
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
            .Append($"style=\"max-width:{N(w)}px;height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
         svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style)).Append(animCss).Append("</style>");
-        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append(Stylesheet.StyleDefs(hash, style)).Append("</defs>");
+        svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append(edgeDefs).Append(Stylesheet.StyleDefs(hash, style)).Append("</defs>");
         svg.Append(TitleBlock(model, w, style));
         svg.Append($"<g class=\"beck-canvas\" transform=\"translate(0,{N(titleH)})\">").Append(body).Append("</g>");
         svg.Append("</svg>");
@@ -288,24 +304,61 @@ internal static class SvgRenderer
         return lines;
     }
 
-    private static string Edge(RoutedEdge e, Markers markers, BeckStyle style, string hash)
+    private static string Edge(RoutedEdge e, string d, Markers markers, BeckStyle style, string hash, int idx,
+        StringBuilder edgeDefs, bool motion, List<EdgeOverlaySpec> overlays)
     {
         EdgeModel m = e.Edge;
+        StyleEdges es = style.Edges;
         var sb = new StringBuilder();
-        // Glow's luminous edges: an edge that uses the *default* colour (var(--beck-edge)) paints with
-        // the style's single hash-scoped gradient defined in <defs>; author-coloured edges keep their
-        // explicit colour, and the arrow markers (still edge-coloured) match the gradient's endpoints.
-        string stroke = style.Strokes.GradientEdges && m.Color == "var(--beck-edge)"
-            ? $"url(#beck-edge-grad-{hash})"
-            : SvgWriter.Attr(m.Color);
-        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(m.Kind)}\" d=\"{e.D}\" ")
-          .Append($"style=\"stroke:{stroke}\"");
+        // Glow's luminous edges: an edge that uses the *default* colour (var(--beck-edge)) paints with a
+        // per-edge gradient. Author-coloured edges keep their explicit colour, and the arrow markers
+        // (still edge-coloured) match the gradient's faint endpoints.
+        //
+        // The gradient MUST use gradientUnits="userSpaceOnUse" with the edge's own endpoint coords, NOT
+        // the default objectBoundingBox: an axis-aligned straight edge (e.g. a horizontal Client→API
+        // hop, d="M 336 180.5 L 216 180.5") has a zero-height/zero-width bounding box, and an
+        // objectBoundingBox gradient over a degenerate bbox paints nothing — the edge vanishes. Running
+        // the gradient along the edge's actual first→last route point keeps it always visible AND makes
+        // the edge→bright-midpoint→edge bloom travel each connector (the intended look, with the faint
+        // endpoints matching the edge-coloured arrow markers). One gradient per gradient-stroked edge.
+        string stroke;
+        if (style.Strokes.GradientEdges && m.Color == "var(--beck-edge)" && e.Points.Count > 0)
+        {
+            Point a = e.Points[0], b = e.Points[^1];
+            string gid = $"beck-edge-grad-{hash}-{P(idx)}";
+            edgeDefs.Append($"<linearGradient id=\"{gid}\" gradientUnits=\"userSpaceOnUse\" x1=\"{N(a.X)}\" y1=\"{N(a.Y)}\" x2=\"{N(b.X)}\" y2=\"{N(b.Y)}\">")
+                    .Append("<stop offset=\"0\" stop-color=\"var(--beck-edge)\"/>")
+                    .Append("<stop offset=\"0.5\" stop-color=\"color-mix(in srgb, var(--beck-info) 50%, var(--beck-accent))\"/>")
+                    .Append("<stop offset=\"1\" stop-color=\"var(--beck-edge)\"/>")
+                    .Append("</linearGradient>");
+            stroke = $"url(#{gid})";
+        }
+        else
+        {
+            stroke = SvgWriter.Attr(m.Color);
+        }
+        // Optional faint base-layer opacity (glow's dim rail under a bright comet). null → no attr (classic).
+        string baseOp = es.BaseOpacity is { } bo ? $";stroke-opacity:{SvgWriter.Num(bo)}" : "";
+        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(m.Kind)}\" d=\"{d}\" ")
+          .Append($"style=\"stroke:{stroke}{baseOp}\"");
         if (m.Style == EdgeStyle.Dashed) sb.Append($" stroke-dasharray=\"{style.Strokes.EdgeDash}\"");
         MarkerShape? end = m.MarkerEnd ?? (m.Arrow is ArrowEnds.End or ArrowEnds.Both ? MarkerShape.Arrow : null);
         MarkerShape? start = m.MarkerStart ?? (m.Arrow is ArrowEnds.Start or ArrowEnds.Both ? MarkerShape.Arrow : null);
-        if (end is { } es) sb.Append($" marker-end=\"url(#{markers.Ensure(m.Color, es)})\"");
-        if (start is { } ss) sb.Append($" marker-start=\"url(#{markers.Ensure(m.Color, ss)})\"");
+        // Marker colour: the edge's own colour (classic), or the style's comet-hue override (glow) when
+        // this edge uses the default colour — a bright arrowhead over a faint slate base rail.
+        string markerColor = es.MarkerColor is { } mkc && m.Color == "var(--beck-edge)" ? mkc : m.Color;
+        if (end is { } ee) sb.Append($" marker-end=\"url(#{markers.Ensure(markerColor, ee, es, style.Geometry.EdgeStroke)})\"");
+        if (start is { } ss) sb.Append($" marker-start=\"url(#{markers.Ensure(markerColor, ss, es, style.Geometry.EdgeStroke)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(m.Id)}\"/>");
+        // Optional overlay layer (comet/draw-on/marching) — an additional path sharing this edge's exact
+        // d, never a split of the base edge. Only when motion is live and the style opts in; the compiled
+        // keyframes come from CssCompiler.EdgeOverlayCss (collected via `overlays`). Classic (None) adds nothing.
+        if (motion && es.Overlay != EdgeOverlay.None)
+        {
+            var (markup, spec) = OverlayPath(style, d, idx, hash);
+            sb.Append(markup);
+            overlays.Add(spec);
+        }
         // Circuit's via dots: a small circle at every genuine bend of the edge's already-computed route
         // polyline (the elbow where a right-angle trace turns). Read straight off the existing route
         // geometry (e.Points) — the router is untouched and the edge stays one continuous <path> above;
@@ -323,6 +376,35 @@ internal static class SvgRenderer
             sb.Append(Artwork.Station(style, e.Points[^1].X, e.Points[^1].Y, m.Color));
         }
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// The overlay decoration path for one edge (<see cref="EdgeOverlay"/>): an additional
+    /// <c>&lt;path&gt;</c> sharing the edge's exact <paramref name="d"/> (never a split), token-coloured
+    /// through <c>var(--beck-edge-overlay, var(--beck-accent))</c> so it theme-adapts. Its static dash
+    /// window is the resting frame a reduced-motion viewer sees; <see cref="CssCompiler.EdgeOverlayCss"/>
+    /// animates it. Shared by the architecture edge painter and the sequence message painter.
+    /// </summary>
+    internal static (string Markup, EdgeOverlaySpec Spec) OverlayPath(BeckStyle style, string d, int idx, string hash)
+    {
+        StyleEdges e = style.Edges;
+        double len = PathLength.Of(d);
+        double phase = Shaping.Phase(hash + ":o:" + P(idx));
+        string dash = e.Overlay switch
+        {
+            EdgeOverlay.Comet => $"stroke-dasharray:{N(e.CometDash)} {N(len)};stroke-dashoffset:{N(phase * (e.CometDash + len))}",
+            EdgeOverlay.DrawOn => $"stroke-dasharray:{N(len)} {N(len)};stroke-dashoffset:{N(len)}",
+            _ => $"stroke-dasharray:{N(e.CometDash)} {N(e.CometDash)}",
+        };
+        // Per-edge comet colour (glow alternates cyan/light-cyan/violet by draw order); the single
+        // --beck-edge-overlay token is the fallback for a palette-less overlay style (sketch's DrawOn).
+        string color = e.OverlayPalette.Count > 0
+            ? e.OverlayPalette[((idx % e.OverlayPalette.Count) + e.OverlayPalette.Count) % e.OverlayPalette.Count]
+            : "var(--beck-edge-overlay, var(--beck-accent))";
+        string bloom = e.OverlayBloom.Length > 0 ? $"filter:{e.OverlayBloom};" : "";
+        string markup = $"<path class=\"beck-edge-overlay beo{idx}-{hash}\" d=\"{d}\" "
+            + $"style=\"fill:none;stroke:{color};stroke-width:{N(e.OverlayWidth)};stroke-linecap:{e.OverlayLinecap};{bloom}{dash}\"/>";
+        return (markup, new EdgeOverlaySpec(idx, e.Overlay, len, phase));
     }
 
     /// <summary>The genuine bends (interior direction-changes) of a route polyline — the elbows where a
@@ -450,7 +532,7 @@ internal static class SvgRenderer
             ty += stereoLine;
         }
         CenterLine(sb, style.Typography.DecorateTitle(node.Title), "beck-class-title", w / 2, ty + titleLine / 2, m, style, FontRole.ClassTitle, guard);
-        sb.Append($"<line class=\"beck-class-head-border\" x1=\"0\" y1=\"{N(headH)}\" x2=\"{N(w)}\" y2=\"{N(headH)}\"/>");
+        sb.Append(ClassSeparator(style, "beck-class-head-border", w, headH, hash + ":" + node.Id + ":hb"));
 
         FontRoleSpec memberSpec = style.Typography.Roles.Of(FontRole.ClassMember);
         double memberX = geo.SectionPadX / 2;
@@ -459,7 +541,7 @@ internal static class SvgRenderer
         foreach (var (members, css) in new[] { (node.Fields, "beck-class-field"), (node.Methods, "beck-class-method") })
         {
             if (members.Count == 0) continue;
-            if (prior) { sb.Append($"<line class=\"beck-class-divider\" x1=\"0\" y1=\"{N(y)}\" x2=\"{N(w)}\" y2=\"{N(y)}\"/>"); y += geo.HeadBorderBottom; }
+            if (prior) { sb.Append(ClassSeparator(style, "beck-class-divider", w, y, hash + ":" + node.Id + ":dv" + N(y))); y += geo.HeadBorderBottom; }
             double my = y + sectionPadY;
             foreach (var member in members)
             {
@@ -471,6 +553,19 @@ internal static class SvgRenderer
             prior = true;
         }
         sb.Append("</g>");
+    }
+
+    /// <summary>A class compartment separator: the straight <c>&lt;line&gt;</c> (classic — byte-identical),
+    /// or, when the style sets <see cref="StyleEdges.WobblySeparators"/> (sketch), a subtle wobbly
+    /// <c>&lt;path&gt;</c> carrying the same class with its two endpoints preserved and jitter hash-seeded.
+    /// The wobble path needs an explicit <c>fill="none"</c> (a <c>&lt;line&gt;</c> is unfillable, so the
+    /// shared CSS never sets it).</summary>
+    private static string ClassSeparator(BeckStyle style, string cls, double w, double y, string seed)
+    {
+        if (!style.Edges.WobblySeparators)
+            return $"<line class=\"{cls}\" x1=\"0\" y1=\"{N(y)}\" x2=\"{N(w)}\" y2=\"{N(y)}\"/>";
+        double amp = Math.Max(style.Edges.BowAmplitude, 2);
+        return $"<path class=\"{cls}\" d=\"{Shaping.BowLine(0, y, w, y, amp, seed)}\" fill=\"none\"/>";
     }
 
     private static void CenterLine(StringBuilder sb, string text, string cls, double cx, double cy, ITextMeasurer m, BeckStyle style, FontRole role, bool guard)

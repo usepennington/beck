@@ -176,6 +176,17 @@ public sealed record BeckStyle
     public StyleArtwork Artwork { get; init; } = StyleArtwork.Plain;
 
     /// <summary>
+    /// The per-style <em>edge-presentation</em> seam: how every architecture edge / sequence message
+    /// is painted — base-layer treatment, an optional overlay layer sharing the edge's exact <c>d</c>,
+    /// arrowhead presentation + marker scaling, deterministic path <em>bow</em> shaping, and the
+    /// lifeline/separator treatment. Defaults to <see cref="StyleEdges.Classic"/> (all knobs at their
+    /// historical values), so classic and every style that doesn't customise edges stay byte-identical.
+    /// Consumed by the edge/message emitters, <see cref="Rendering.Svg.Markers"/>, and the overlay
+    /// compiler in <see cref="Rendering.Animate.CssCompiler"/>.
+    /// </summary>
+    public StyleEdges Edges { get; init; } = StyleEdges.Classic;
+
+    /// <summary>
     /// The reference style: constructed from the engine's exact historical literals. This is the
     /// single source of truth those literals moved to, and the byte-identity anchor for Phase 1.
     /// </summary>
@@ -522,6 +533,191 @@ public sealed record StyleStrokes
     /// flat — byte-identical.
     /// </summary>
     public bool GradientEdges { get; init; }
+
+    /// <summary>
+    /// When <c>true</c> (glow's glass panels), every <c>.beck-node</c> surface (card/pill/class/ghost)
+    /// strokes with a single <c>&lt;linearGradient&gt;</c> — defined once in the diagram
+    /// <c>&lt;defs&gt;</c> with an id scoped by the 8-char content hash (<c>beck-node-grad-{hash}</c>)
+    /// and stops built from the <c>--beck-node-grad-a</c>/<c>--beck-node-grad-b</c> tokens (falling back
+    /// to <c>--beck-accent</c>/<c>--beck-info</c>) — instead of the flat accent-mix stroke. The gradient
+    /// uses the default <c>objectBoundingBox</c> units, which is the correct and only way a <em>single
+    /// shared</em> def can paint each node's own corner-to-corner cyan→violet rim: a node rect always has
+    /// positive area, so — unlike the degenerate zero-area straight <em>edge</em> the userSpaceOnUse edge
+    /// fix addresses — an objectBoundingBox gradient renders identically to a per-node userSpaceOnUse one
+    /// while letting all nodes share one def (exactly the mock's single <c>gg-a</c> gradient). Internal
+    /// dividers/head-borders keep their flat token stroke. <c>false</c> (classic, and every style that
+    /// doesn't set it) emits no gradient and keeps the flat accent-mix node stroke — byte-identical.
+    /// </summary>
+    public bool GradientNodes { get; init; }
+}
+
+/// <summary>How a style draws an edge's <em>arrowhead</em> (<see cref="StyleEdges.Arrow"/>).</summary>
+public enum EdgeArrow
+{
+    /// <summary>The classic filled/closed marker bodies (filled polygon arrow, closed triangle/diamond) —
+    /// byte-identical to today. The marker fill is the edge's own token colour, so a style that recolours
+    /// its edges already gets style-coloured fills for free.</summary>
+    Filled,
+
+    /// <summary>
+    /// A hand-drawn <em>open V</em> arrowhead (sketch): the filled <see cref="Rendering.MarkerShape.Arrow"/> is
+    /// replaced by <em>two</em> short round-capped strokes running back from the tip, so the arrow reads
+    /// as two pen strokes rather than a solid triangle. Closed UML ends (inheritance triangle, composition
+    /// diamond) intentionally keep their bodies — only the plain arrowhead opens up.
+    /// </summary>
+    OpenV,
+}
+
+/// <summary>The optional <em>overlay layer</em> a style rides on top of every edge
+/// (<see cref="StyleEdges.Overlay"/>) — an additional element sharing the edge's exact <c>d</c>.</summary>
+public enum EdgeOverlay
+{
+    /// <summary>No overlay — classic. The edge is a single continuous <c>&lt;path&gt;</c> and nothing else.</summary>
+    None,
+
+    /// <summary>A short bright <em>comet</em> dash that travels the edge continuously (glow's luminous
+    /// connectors): a second path sharing the edge's <c>d</c> with a
+    /// <c>stroke-dasharray:{CometDash} {pathLength}</c> window whose <c>stroke-dashoffset</c> sweeps one
+    /// dot end-to-end each <see cref="StyleEdges.OverlayPeriod"/>, phased per edge by a baked dash-offset
+    /// (content-hash derived) — never an <c>animation-delay</c> chain.</summary>
+    Comet,
+
+    /// <summary>A <em>draw-on</em> overlay: the edge redraws itself once per
+    /// <see cref="StyleEdges.OverlayPeriod"/> (sketch's self-drawing connectors) via a
+    /// <c>stroke-dasharray:{len} {len}</c> whose offset wipes from hidden to fully drawn, holds, then
+    /// resets — all baked keyframe stops, no delay chain.</summary>
+    DrawOn,
+
+    /// <summary>A <em>marching-ants</em> overlay: a repeating dash pattern that flows along the edge
+    /// continuously (a per-edge cousin of the flow <c>stream</c> effect).</summary>
+    Marching,
+}
+
+/// <summary>How a style paints sequence <em>lifelines</em> and class compartment separators
+/// (<see cref="StyleEdges.Lifeline"/> / <see cref="StyleEdges.WobblySeparators"/>).</summary>
+public enum LifelineShape
+{
+    /// <summary>A straight dashed line (classic) — <c>&lt;line&gt;</c> + <see cref="StyleStrokes.LifelineDash"/>.</summary>
+    Dashed,
+
+    /// <summary>A straight <em>solid</em> line with no dash (glow's faint solid lifelines).</summary>
+    FaintSolid,
+
+    /// <summary>A single subtle sideways <em>bow</em> (sketch's hand-drawn lifeline) — one continuous
+    /// <c>&lt;path&gt;</c> whose two endpoints match the straight line's, jittered from the content hash.</summary>
+    Wobbly,
+}
+
+/// <summary>
+/// The per-style edge-presentation seam: base-layer treatment, an optional overlay layer sharing the
+/// edge's <c>d</c>, arrowhead presentation + marker scaling, deterministic path bow shaping, and the
+/// lifeline/separator treatment. Every field defaults to the classic value, so
+/// <see cref="Classic"/> and any style that leaves <see cref="BeckStyle.Edges"/> unset render
+/// byte-identically to today. Data only — the emitters and the overlay compiler branch on it.
+/// </summary>
+public sealed record StyleEdges
+{
+    // ---- base layer ----
+    /// <summary>The base edge stroke's <c>stroke-linecap</c> (the <c>.beck-edge</c> CSS). <c>round</c>
+    /// (classic) is byte-identical; a hard-edged style can pick <c>butt</c> or <c>square</c>.</summary>
+    public string BaseLinecap { get; init; } = "round";
+
+    /// <summary>Optional base-edge <c>stroke-opacity</c> (glow's faint slate base layer). <c>null</c>
+    /// (classic) emits no attribute — byte-identical; a value in [0,1] fades the base stroke so an
+    /// overlay/comet reads as the bright layer over a dim rail.</summary>
+    public double? BaseOpacity { get; init; }
+
+    // ---- arrowhead ----
+    /// <summary>The arrowhead presentation. <see cref="EdgeArrow.Filled"/> (classic) is byte-identical.</summary>
+    public EdgeArrow Arrow { get; init; } = EdgeArrow.Filled;
+
+    /// <summary>A multiplier on the emitted marker geometry. <c>1.0</c> (classic) is byte-identical.
+    /// With <see cref="MarkerScaleToWidth"/> off it scales the marker in the default strokeWidth units;
+    /// with it on it scales the absolute (userSpaceOnUse) marker size.</summary>
+    public double MarkerScale { get; init; } = 1.0;
+
+    /// <summary>
+    /// An optional override colour for the edge's arrowhead marker (glow's comet-coloured filled
+    /// triangles): when set <em>and</em> the edge uses the default colour (<c>var(--beck-edge)</c>), the
+    /// marker is drawn in this colour instead of the edge's own faint-slate stroke, so a dim base rail can
+    /// carry a bright comet-hued arrowhead. Author-coloured edges keep their explicit colour + matching
+    /// marker. A CSS colour, normally a token expression (<c>var(--beck-comet-2)</c>). <c>null</c>
+    /// (classic, and every style that doesn't set it) leaves markers on the edge's own colour —
+    /// byte-identical.
+    /// </summary>
+    public string? MarkerColor { get; init; }
+
+    /// <summary>
+    /// When <c>true</c>, markers switch from the SVG default <c>markerUnits="strokeWidth"</c> (where a
+    /// marker's size multiplies by the edge's stroke-width — so a thick metro/brutalist edge blows the
+    /// arrowhead up into a blob) to <c>markerUnits="userSpaceOnUse"</c> with an <em>absolute</em> size
+    /// that grows only <em>sub-linearly</em> with the edge stroke width (<c>base · MarkerScale ·
+    /// √width</c>). This is the seam the metro/brutalist juries wanted: the arrowhead stays sanely sized
+    /// on a thick line. <c>false</c> (classic) keeps the historical marker element verbatim — byte-identical.
+    /// </summary>
+    public bool MarkerScaleToWidth { get; init; }
+
+    // ---- overlay layer ----
+    /// <summary>The overlay treatment sharing each edge's <c>d</c>. <see cref="EdgeOverlay.None"/>
+    /// (classic) emits no overlay — byte-identical.</summary>
+    public EdgeOverlay Overlay { get; init; } = EdgeOverlay.None;
+
+    /// <summary>The overlay path's stroke width (only in play when <see cref="Overlay"/> ≠ None).</summary>
+    public double OverlayWidth { get; init; } = 2.5;
+
+    /// <summary>
+    /// The per-edge overlay <em>colour palette</em> (glow's cyan / light-cyan / violet comets): the
+    /// overlay path on edge <c>i</c> takes <c>OverlayPalette[i % Count]</c>, so consecutive edges/messages
+    /// alternate hues deterministically (index is the edge's own draw order — no RNG). Each entry is a CSS
+    /// colour, normally a token expression (<c>var(--beck-comet-1)</c>). Empty (classic, and every style
+    /// that leaves it unset — including a DrawOn/Marching overlay style like sketch) falls back to the
+    /// single <c>var(--beck-edge-overlay, var(--beck-accent))</c> token — byte-identical.
+    /// </summary>
+    public IReadOnlyList<string> OverlayPalette { get; init; } = System.Array.Empty<string>();
+
+    /// <summary>
+    /// An optional CSS <c>filter</c> applied to the overlay path only (glow's comet bloom): a
+    /// <c>drop-shadow(…)</c> that haloes the travelling comet without blooming the faint base rail or the
+    /// diagram's labels (the mock blooms the whole edge group; blooming just the bright overlay is the
+    /// clean equivalent and keeps text crisp). Keep the colour in a <c>--beck-*</c> token /
+    /// <c>color-mix</c> so it theme-adapts. <c>""</c> (classic, and every style that doesn't set it) emits
+    /// no filter — byte-identical.
+    /// </summary>
+    public string OverlayBloom { get; init; } = "";
+
+    /// <summary>The overlay path's <c>stroke-linecap</c> (round makes the comet a rounded pill).</summary>
+    public string OverlayLinecap { get; init; } = "round";
+
+    /// <summary>The lit dash length (px) of the comet / marching overlay.</summary>
+    public double CometDash { get; init; } = 10;
+
+    /// <summary>Seconds for one overlay cycle: a comet traverses the whole edge once, a draw-on redraws
+    /// once, marching ants advance one dash pattern. A continuous <c>linear infinite</c> loop (like the
+    /// existing flow <c>stream</c> march), compiled — never a per-element delay chain.</summary>
+    public double OverlayPeriod { get; init; } = 2.2;
+
+    // ---- path shaping ----
+    /// <summary>
+    /// The amplitude (px) of a deterministic quadratic <em>bow</em> applied to every straight run of the
+    /// emitted edge path at the SVG layer (sketch's hand-drawn connectors): each segment between route
+    /// anchors bows through a perpendicular-displaced midpoint, its sign/size derived from the content
+    /// hash, with the endpoints and every elbow anchor preserved and the edge still <em>one</em>
+    /// continuous path. <c>0</c> (classic) leaves the router's path verbatim — byte-identical.
+    /// </summary>
+    public double BowAmplitude { get; init; }
+
+    // ---- lifelines / separators ----
+    /// <summary>The sequence lifeline treatment. <see cref="LifelineShape.Dashed"/> (classic) is byte-identical.</summary>
+    public LifelineShape Lifeline { get; init; } = LifelineShape.Dashed;
+
+    /// <summary>When <c>true</c> (sketch), class compartment separators (the header rule + between-section
+    /// dividers) are drawn as subtle wobbly <c>&lt;path&gt;</c>s instead of straight <c>&lt;line&gt;</c>s,
+    /// their endpoints preserved and jitter hash-derived. <c>false</c> (classic) keeps straight lines —
+    /// byte-identical.</summary>
+    public bool WobblySeparators { get; init; }
+
+    /// <summary>The classic reference: every knob at its historical value (byte-identical output).</summary>
+    public static StyleEdges Classic { get; } = new();
 }
 
 /// <summary>Effect durations, sequence-dim ratios, and effect stroke widths.</summary>

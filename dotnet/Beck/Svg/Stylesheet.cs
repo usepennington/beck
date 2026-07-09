@@ -69,9 +69,16 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-packet-label{{font-family:{(pl.Mono ? "var(--beck-font-mono)" : "var(--beck-font)")};font-size:{Sw(pl.SizePx)}px;font-weight:{P(pl.Weight)};}}");
 
         // node card
+        // Node stroke: the flat accent-mix rim (classic), or — when the style opts into gradient node
+        // surfaces (glow's glass panels) — the single shared cyan→violet linearGradient defined in
+        // StyleDefs. Only the outer node rects pick this up; internal dividers/head-borders keep their
+        // flat token stroke below. Classic emits the identical mix rule → byte-identical.
+        string nodeStroke = strokes.GradientNodes
+            ? $"url(#beck-node-grad-{h})"
+            : $"color-mix(in srgb, var(--beck-accent) {P(mix.NodeStroke)}%, var(--beck-node-border))";
         sb.Append($"{scope} .beck-node{{")
           .Append("fill:var(--beck-node-bg);")
-          .Append($"stroke:color-mix(in srgb, var(--beck-accent) {P(mix.NodeStroke)}%, var(--beck-node-border));")
+          .Append($"stroke:{nodeStroke};")
           .Append($"stroke-width:{Sw(geo.NodeStroke)};")
           .Append($"filter:{geo.NodeShadow};")
           .Append("}");
@@ -117,7 +124,10 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-class-method{{fill:var(--beck-text);}}");
 
         // sequence scenery
-        sb.Append($"{scope} .beck-lifeline{{stroke-width:{Sw(geo.LifelineStroke)};stroke-dasharray:{strokes.LifelineDash};}}");
+        // Lifeline dash: classic Dashed (and Wobbly) keep the dash; FaintSolid (glow) drops it. Classic
+        // emits the identical rule — byte-identical.
+        string llDash = style.Edges.Lifeline == LifelineShape.FaintSolid ? "" : $"stroke-dasharray:{strokes.LifelineDash};";
+        sb.Append($"{scope} .beck-lifeline{{stroke-width:{Sw(geo.LifelineStroke)};{llDash}}}");
         sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) {P(mix.ActivationGlow)}%, transparent));}}");
         sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ChipStroke)}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
         // Message labels honour the MsgText role's uppercase flag (blueprint's mono-uppercase
@@ -135,7 +145,7 @@ internal static class Stylesheet
         // edges + labels
         // DashedEdges (blueprint) dashes every base edge; classic leaves it solid (byte-identical).
         string edgeDash = strokes.DashedEdges ? $"stroke-dasharray:{strokes.EdgeDash};" : "";
-        sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:round;stroke-linejoin:round;{edgeDash}}}");
+        sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:{style.Edges.BaseLinecap};stroke-linejoin:round;{edgeDash}}}");
         // Edge-label type honours the EdgeLabel role's family/case flags (mono uppercase for blueprint);
         // the textLength guard keeps the run inside its measured box, so this is layout-safe. Classic's
         // EdgeLabel is sans/non-uppercase → nothing appended → byte-identical.
@@ -147,27 +157,42 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-title{{fill:var(--beck-text);}}");
         sb.Append($"{scope} .beck-subtitle{{fill:var(--beck-text-muted);}}");
 
+        // ---- sketch-specific colour overrides (brief §1b) ----
+        // Node/class titles take the SAME colour as the node's stroke — which sketch sets to the node's
+        // pure accent (mix.NodeStroke = 100), so an accent node gets accent-inked text and a neutral one
+        // reads as pencil ink. Class compartment dividers pick up the accent too (the mock draws every
+        // separator in the node's stroke colour). These are appended last so they win over the base rules
+        // above; the whole block is gated on the Sketch artwork, so classic and every other style are
+        // byte-identical (nothing appended).
+        if (style.Artwork == StyleArtwork.Sketch)
+        {
+            sb.Append($"{scope} .beck-node-title{{fill:var(--beck-accent);}}");
+            sb.Append($"{scope} .beck-class-title{{fill:var(--beck-accent);}}");
+            sb.Append($"{scope} .beck-class-divider{{stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ClassHeadBorder)}%, var(--beck-node-border));}}");
+        }
+
         return sb.ToString();
     }
 
     /// <summary>
     /// Style-scoped SVG <c>&lt;defs&gt;</c> content (concatenated after the markers + animation defs).
-    /// Today this is only glow's luminous edge gradient (<see cref="StyleStrokes.GradientEdges"/>): a
-    /// single <c>&lt;linearGradient&gt;</c> whose id is scoped by the content hash and whose stops are
-    /// <c>color-mix</c> expressions over <c>--beck-*</c> tokens — deterministic, theme-adaptive, and
-    /// never a resolved literal. Endpoints hold the plain <c>--beck-edge</c> tone (matching the arrow
-    /// markers, which stay edge-coloured) while the midpoint blooms toward accent/info. Returns
-    /// <c>""</c> for every style that doesn't opt in (classic included), so the <c>&lt;defs&gt;</c>
-    /// block is byte-identical.
+    /// <para>Glow's <em>node</em> gradient (<see cref="StyleStrokes.GradientNodes"/>): one shared
+    /// <c>&lt;linearGradient&gt;</c> (id scoped by the content hash, stops built from
+    /// <c>--beck-node-grad-a</c>/<c>--beck-node-grad-b</c> tokens — no resolved literals) painting every
+    /// node's own corner-to-corner cyan→violet rim. This uses the default <c>objectBoundingBox</c> units
+    /// deliberately: a node rect always has positive area, so a single objectBoundingBox def renders
+    /// identically to a per-node userSpaceOnUse gradient while serving all nodes at once — unlike the
+    /// degenerate zero-area straight <em>edge</em> case, where the gradient is emitted per-edge in
+    /// <c>SvgRenderer.Edge</c> with <c>gradientUnits="userSpaceOnUse"</c> along the edge's own endpoints.</para>
+    /// Returns <c>""</c> for every style that doesn't opt in (classic included), so the <c>&lt;defs&gt;</c>
+    /// block stays byte-identical to classic.
     /// </summary>
     public static string StyleDefs(string h, BeckStyle style)
     {
-        if (!style.Strokes.GradientEdges) return "";
-        string id = $"beck-edge-grad-{h}";
-        return $"<linearGradient id=\"{id}\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">" +
-               "<stop offset=\"0\" stop-color=\"var(--beck-edge)\"/>" +
-               "<stop offset=\"0.5\" stop-color=\"color-mix(in srgb, var(--beck-info) 50%, var(--beck-accent))\"/>" +
-               "<stop offset=\"1\" stop-color=\"var(--beck-edge)\"/>" +
+        if (!style.Strokes.GradientNodes) return "";
+        return $"<linearGradient id=\"beck-node-grad-{h}\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">" +
+               "<stop offset=\"0\" stop-color=\"var(--beck-node-grad-a, var(--beck-accent))\"/>" +
+               "<stop offset=\"1\" stop-color=\"var(--beck-node-grad-b, var(--beck-info))\"/>" +
                "</linearGradient>";
     }
 }
