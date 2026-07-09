@@ -50,6 +50,19 @@
     <PackageReference Include="Pennington" />
     <PackageReference Include="Pennington.TreeSitter" />
     <PackageReference Include="Pennington.MonorailCss" />
+    <!-- Composes the per-page social-card PNGs (og:image) that Pennington's SocialCards
+         hook requests — text drawn over the pre-baked diagram art in assets/. -->
+    <PackageReference Include="Ashcroft" />
+    <!-- Skia/HarfBuzz natives for the ubuntu deploy runner (base packages ship only
+         Win32/macOS natives). Harmless elsewhere — RID-selected at publish/run time. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The social-card background art (pattern + ghosted diagram, no text) — baked once
+         from a real rendered diagram; see assets/README.md for the regeneration recipe. -->
+    <None Update="assets\*.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

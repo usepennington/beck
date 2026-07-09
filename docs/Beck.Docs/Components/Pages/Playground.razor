@@ -2,6 +2,9 @@
 @using Beck.Docs.Client
 
 <PageTitle>Playground — Beck</PageTitle>
+<SocialMeta Title="Playground — Beck"
+            Description="Edit Beck YAML in the browser and watch the diagram render live — the same C# engine, compiled to WebAssembly."
+            CardPath="@RazorPageSocialCardService.CardPath("playground")" />
 
 @* Static-SSR route so Pennington's crawler emits /playground into the static export; the
    interactive UI is a WebAssembly island (Beck.Docs.Client) that renders diagrams in the

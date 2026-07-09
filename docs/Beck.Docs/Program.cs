@@ -5,6 +5,7 @@ using Mdazor;
 using Pennington.FrontMatter;
 using Pennington.Infrastructure;
 using Pennington.MonorailCss;
+using Pennington.SocialCards;
 using Pennington.TreeSitter;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,11 +25,28 @@ builder.Services.AddPennington(penn =>
     });
 
     penn.AddLlmsTxt();
+
+    // Absolute origin for canonical/sitemap/og URLs — GitHub Pages, sub-path = repo name.
+    // Social scrapers require absolute og:image URLs, so this must match the deployed site.
+    penn.CanonicalBaseUrl = SiteInfo.CanonicalBaseUrl;
+
+    // One social card (og:image / twitter:card) per page: Pennington discovers, serves, bakes,
+    // and meta-tags them; SocialCardGenerator draws the page title over the pre-baked diagram
+    // art with Ashcroft (see assets/README.md).
+    penn.SocialCards = new SocialCardOptions
+    {
+        Render = (request, _, _) => SocialCardGenerator.Build(request),
+    };
 });
 
 // The shared C# Beck renderer: one Skia measurer over the site's fonts, reused by the
 // build-time fence preprocessor and the live playground (see BeckDiagramRenderer).
 builder.Services.AddSingleton<BeckDiagramRenderer>();
+
+// Social cards for the hand-built Razor pages (home/playground/api/syntax) — outside the
+// markdown pipeline, so Pennington's SocialCards discovery never sees them. Served at
+// /og/*.png in dev and baked by the static build; SocialMeta points each page at its card.
+builder.Services.AddTransient<Pennington.Artifacts.IArtifactContentService, RazorPageSocialCardService>();
 
 // Render ```beck fences to static, self-animating inline SVG at build time via the
 // pure-C# engine — content diagrams need no client JS. Priority

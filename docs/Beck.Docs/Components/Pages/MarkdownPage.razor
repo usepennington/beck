@@ -6,6 +6,9 @@
 @if (_html is not null)
 {
     <PageTitle>@_title — Beck</PageTitle>
+    @* og:title/og:description + meta description. Pennington itself contributes the
+       og:image/twitter tags for these markdown pages (SocialCardHeadContributor). *@
+    <SocialMeta Title="@($"{_title} — Beck")" Description="@_description" />
     <div class="mx-auto max-w-[1240px] px-8 grid grid-cols-[230px_1fr] gap-x-12 items-start max-lg:grid-cols-1">
         <Sidebar />
         <article class="py-[34px] pb-[90px] min-w-0 max-w-[760px]">
@@ -59,6 +62,7 @@ else
     private sealed record Neighbor(string Title, string Url, string? Description);
 
     private string? _title;
+    private string? _description;
     private string? _html;
     private string _areaLabel = "Docs";
     private string _areaHref = "/docs/";
@@ -75,6 +79,7 @@ else
         }
 
         _title = page.Metadata.Title;
+        _description = page.Metadata.Description;
         _html = page.Content.Html;
 
         var path = requested.Value;

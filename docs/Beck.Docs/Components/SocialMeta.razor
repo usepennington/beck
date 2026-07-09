@@ -1,0 +1,27 @@
+@* Per-page social/OG head tags. Pennington already contributes og:image + twitter tags for
+   markdown pages (SocialCardHeadContributor), so those pages pass only Title/Description here;
+   the hand-built Razor pages also pass CardPath (an /og/*.png from RazorPageSocialCardService)
+   to get the image tags Pennington can't know about. Image URLs are absolute — social scrapers
+   ignore relative ones — built on the same canonical origin Program.cs configures. *@
+<HeadContent>
+    @if (Description is not null)
+    {
+        <meta name="description" content="@Description" />
+        <meta property="og:description" content="@Description" />
+    }
+    <meta property="og:title" content="@Title" />
+    <meta property="og:type" content="website" />
+    @if (CardPath is not null)
+    {
+        <meta property="og:image" content="@(SiteInfo.CanonicalBaseUrl + CardPath)" />
+        <meta name="twitter:image" content="@(SiteInfo.CanonicalBaseUrl + CardPath)" />
+        <meta name="twitter:card" content="summary_large_image" />
+    }
+</HeadContent>
+
+@code {
+    [Parameter, EditorRequired] public required string Title { get; set; }
+    [Parameter] public string? Description { get; set; }
+    /// <summary>Root-relative card path (e.g. /og/home.png) — only for pages outside the markdown pipeline.</summary>
+    [Parameter] public string? CardPath { get; set; }
+}
