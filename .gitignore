@@ -7,6 +7,10 @@ obj/
 
 # Local dogfooding / verification scratch (not product code)
 /scratch/
+/gallery.html
+/sample-flow.yaml
+/new-designs.md
+/*.png
 .playwright-mcp/
 /local-feed/
 

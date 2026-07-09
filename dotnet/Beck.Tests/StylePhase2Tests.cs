@@ -184,6 +184,48 @@ public sealed class StylePhase2Tests
     }
 
     [Fact]
+    public void Sanitization_HostileStyleEdges_AreCleaned()
+    {
+        var evil = BeckStyle.Classic with
+        {
+            Name = "evil-edges",
+            Edges = BeckStyle.Classic.Edges with
+            {
+                UnderlayWidth = 4,
+                Overlay = EdgeOverlay.Comet,
+                BaseLinecap = "round}@import url(//evil)",
+                OverlayLinecap = "round\"/><script>alert(1)",
+                OverlayBloom = "drop-shadow(0 0 1px red)}.evil{x:y}",
+                UnderlayColor = "red}.evil{color:red}",
+                MarkerColor = "red</style><script>x",
+                MarkerOutline = "red{@import url(//x)",
+                BaseColorPalette = new[] { "red</style>" },
+                OverlayPalette = new[] { "blue}@import url(//x)" },
+            },
+        };
+
+        StyleEdges cleaned = StyleSanitizer.Ensure(evil).Edges;
+        foreach (string bad in new[] { "</", "<!", "@import", "url(", "{", "}" })
+        {
+            Assert.DoesNotContain(bad, cleaned.BaseLinecap);
+            Assert.DoesNotContain(bad, cleaned.OverlayLinecap);
+            Assert.DoesNotContain(bad, cleaned.OverlayBloom);
+            Assert.DoesNotContain(bad, cleaned.UnderlayColor);
+            Assert.DoesNotContain(bad, cleaned.MarkerColor!);
+            Assert.DoesNotContain(bad, cleaned.MarkerOutline!);
+            Assert.DoesNotContain(bad, cleaned.BaseColorPalette[0]);
+            Assert.DoesNotContain(bad, cleaned.OverlayPalette[0]);
+        }
+
+        // End-to-end: nothing hostile survives into the emitted SVG (sanitiser + Attr defense).
+        string svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = evil });
+        Assert.DoesNotContain("@import", svg);
+        Assert.DoesNotContain("url(//", svg);
+        Assert.DoesNotContain("<script>", svg);
+        Assert.DoesNotContain(".evil{", svg);
+    }
+
+    [Fact]
     public void Sanitization_BuiltInClassic_IsUntouched()
     {
         // Classic is trusted and reference-bypassed: Ensure returns the very same instance.

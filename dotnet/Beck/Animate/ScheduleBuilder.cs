@@ -140,17 +140,22 @@ internal static class ScheduleBuilder
                 foreach (var m in members) AddCard(m, CardFxKind.Pulse, at, color, PulseDur);
         }
 
+        // Precomputed once so chain hops (and burst expansion) don't each re-scan every edge:
+        // first-match-wins per key, mirroring the FirstOrDefault precedence this replaces.
+        var edgeById = new Dictionary<string, FlowEdge>();
+        var edgeByFromTo = new Dictionary<(string From, string To), FlowEdge>();
+        foreach (var e in edges)
+        {
+            edgeById.TryAdd(e.Id, e);
+            edgeByFromTo.TryAdd((e.From, e.To), e);
+        }
+
         (FlowEdge Edge, bool Reversed)? PathOf(string from, string to, string? edgeId)
         {
-            if (edgeId != null)
-            {
-                var hit = edges.FirstOrDefault(e => e.Id == edgeId);
-                if (hit != null) return (hit, false);
-            }
-            var direct = edges.FirstOrDefault(e => e.From == from && e.To == to);
-            if (direct != null) return (direct, false);
-            var rev = edges.FirstOrDefault(e => e.From == to && e.To == from);
-            return rev != null ? (rev, true) : null;
+            if (edgeId != null && edgeById.TryGetValue(edgeId, out var hit)) return (hit, false);
+            if (edgeByFromTo.TryGetValue((from, to), out var direct)) return (direct, false);
+            if (edgeByFromTo.TryGetValue((to, from), out var rev)) return (rev, true);
+            return null;
         }
 
         double EmitDot(IReadOnlyList<string> chain, PacketKnobs k, string color, string? label, double startAt, string? edgeId)

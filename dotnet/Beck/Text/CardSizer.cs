@@ -80,7 +80,6 @@ internal static class CardSizer
 
         double h = g.CardTitleLine;
         if (node.Subtitle != null) h += g.PillGap + g.PillSubLine;
-        if (node.Status != null) h += g.PillGap + g.StatusMt + g.StatusChipH;
         return new Size(Round(width), Round(h + g.PillPadY + g.MeasureBorder));
     }
 

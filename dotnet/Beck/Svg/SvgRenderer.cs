@@ -14,9 +14,7 @@ internal static class SvgRenderer
 {
     private static string N(double n) => SvgWriter.Num(n);
 
-    /// <summary>Format a style integer (mix percentage, font weight) invariantly, so a comma-decimal
-    /// locale can never perturb the emitted CSS/SVG.</summary>
-    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    private static string P(int n) => SvgWriter.Int(n);
 
     /// <summary>The <c>textLength</c>/<c>lengthAdjust</c> guard attributes for a measured run, or
     /// empty when the active <see cref="TextLengthGuard"/> mode suppresses them. Prefixed with a
@@ -116,11 +114,13 @@ internal static class SvgRenderer
                 if (!string.IsNullOrEmpty(e.Edge.FromLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.FromLabel!, true, measurer));
                 if (!string.IsNullOrEmpty(e.Edge.ToLabel)) body.Append(placer.EndLabel(e.Points, e.Edge.ToLabel!, false, measurer));
             }
+            // Built once — MidLabel skips this edge's own index rather than each call allocating a
+            // fresh (E-1)-element list of every other edge's polyline.
+            var edgeLines = edges.Select(o => (IReadOnlyList<Point>)o.Points).ToList();
             for (int i = 0; i < edges.Count; i++)
             {
                 if (string.IsNullOrEmpty(edges[i].Edge.Label)) continue;
-                var otherLines = edges.Where((_, j) => j != i).Select(o => (IReadOnlyList<Point>)o.Points).ToList();
-                body.Append(placer.MidLabel(edges[i].Points, edges[i].Edge.Label!, otherLines, measurer));
+                body.Append(placer.MidLabel(edges[i].Points, edges[i].Edge.Label!, edgeLines, i, measurer));
             }
             body.Append("</g>");
 
@@ -162,8 +162,11 @@ internal static class SvgRenderer
         }
 
         double totalH = titleH + bodyH;
-        string font = options.Font is { } f ? $"'{f.Family}', system-ui, sans-serif" : style.Typography.SansFamily;
-        string mono = options.Font?.MonoFamily is { } mf ? $"'{mf}', ui-monospace, monospace" : style.Typography.MonoFamily;
+        // options.Font is the host's base font: it applies to the default (classic) style only.
+        // A named style's Typography is part of its visual identity and wins over the host default.
+        bool styleFont = style.Name != BeckStyle.Classic.Name;
+        string font = !styleFont && options.Font is { } f ? $"'{f.Family}', system-ui, sans-serif" : style.Typography.SansFamily;
+        string mono = !styleFont && options.Font?.MonoFamily is { } mf ? $"'{mf}', ui-monospace, monospace" : style.Typography.MonoFamily;
         ThemeMode theme = options.Theme ?? model.Meta.Theme;
 
         // Animation compiler (§9–10): simulate the flow → CSS keyframes + fx layer.
@@ -230,8 +233,13 @@ internal static class SvgRenderer
 
     /// <summary>
     /// The narration bar (§8.6): one pre-built <c>&lt;g class="beck-beat"&gt;</c> per
-    /// caption, stacked at the same spot (opacity 0; the compiler cross-fades them).
-    /// Each reserves two lines so the layout never jumps as beats come and go.
+    /// caption, stacked at the same spot; the compiler cross-fades them. Each reserves two
+    /// lines so the layout never jumps as beats come and go. The first beat renders visible
+    /// (no markup <c>opacity</c>) as the designated static caption, so a reduced-motion viewer
+    /// — who gets none of the motion-guarded keyframes — sees the opening caption instead of an
+    /// empty reserved block; its keyframe still starts at <c>opacity:0</c> and drives the fade
+    /// under motion. Beats 2..N stay markup <c>opacity="0"</c> (their reveal is animation-only,
+    /// exactly like flow packets/trails), so reduced motion never stacks every caption at once.
     /// </summary>
     private static (string Markup, double BlockH) NarrationBar(
         IReadOnlyList<NarrateStep> beats, double canvasW, double topY, ITextMeasurer m, string hash, BeckStyle style)
@@ -257,14 +265,17 @@ internal static class SvgRenderer
             string beatText = figCaption
                 ? $"Fig. {(i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)} — {beats[i].Text}"
                 : beats[i].Text;
-            var lines = WrapNarration(beatText, maxTextW, m, nSpec);
+            var lines = WrapNarration(beatText, maxTextW, m, style);
             double textW = lines.Max(l => m.Measure(l, FontRole.Narration, nSpec).Width);
             double left = cx - (dotD + gap + textW) / 2;
             double textCx = left + dotD + gap + textW / 2;
             double firstY = midY - (lines.Count - 1) * lineHt / 2;
             string color = beats[i].Color ?? "var(--beck-text)";
 
-            sb.Append($"<g class=\"beck-beat bbeat{i}-{hash}\" opacity=\"0\" style=\"color:{color}\">");
+            // Beat 0 stays visible in markup (the static caption reduced-motion sees); beats 2..N hide
+            // like packets — the motion-guarded keyframes reveal them, so the invariant holds both ways.
+            string hidden = i == 0 ? "" : " opacity=\"0\"";
+            sb.Append($"<g class=\"beck-beat bbeat{i}-{hash}\"{hidden} style=\"color:{color}\">");
             if (figCaption)
                 // Editorial's figure caption: no filled/bordered bar (a solid surface-filled box reads
                 // as a black block on a dark page, at odds with the serif "Fig. N —" identity). Instead a
@@ -284,26 +295,13 @@ internal static class SvgRenderer
         return (sb.ToString(), margin + barH);
     }
 
-    /// <summary>Greedy word-wrap into ≤2 lines at the Narration role (overflow folds into line 2).</summary>
-    private static List<string> WrapNarration(string text, double maxW, ITextMeasurer m, FontRoleSpec nSpec)
+    /// <summary>Greedy word-wrap into ≤2 lines at the Narration role (overflow folds into line 2).
+    /// Reuses <see cref="CardSizer.WrapText"/>'s greedy loop (same measurer/role/avail contract);
+    /// narration just folds anything past 2 lines into the second line instead of letting it grow.</summary>
+    private static List<string> WrapNarration(string text, double maxW, ITextMeasurer m, BeckStyle style)
     {
-        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        var lines = new List<string>();
-        var cur = new StringBuilder();
-        foreach (var word in words)
-        {
-            string cand = cur.Length == 0 ? word : cur + " " + word;
-            if (cur.Length > 0 && m.Measure(cand, FontRole.Narration, nSpec).Width > maxW)
-            {
-                lines.Add(cur.ToString());
-                cur.Clear();
-                cur.Append(word);
-            }
-            else { cur.Clear(); cur.Append(cand); }
-        }
-        if (cur.Length > 0) lines.Add(cur.ToString());
+        var lines = CardSizer.WrapText(m, text, FontRole.Narration, maxW, style.Typography.Roles);
         if (lines.Count > 2) lines = new List<string> { lines[0], string.Join(" ", lines.Skip(1)) };
-        if (lines.Count == 0) lines.Add(text);
         return lines;
     }
 
@@ -394,13 +392,6 @@ internal static class SvgRenderer
     }
 
     /// <summary>
-    /// The overlay decoration path for one edge (<see cref="EdgeOverlay"/>): an additional
-    /// <c>&lt;path&gt;</c> sharing the edge's exact <paramref name="d"/> (never a split), token-coloured
-    /// through <c>var(--beck-edge-overlay, var(--beck-accent))</c> so it theme-adapts. Its static dash
-    /// window is the resting frame a reduced-motion viewer sees; <see cref="CssCompiler.EdgeOverlayCss"/>
-    /// animates it. Shared by the architecture edge painter and the sequence message painter.
-    /// </summary>
-    /// <summary>
     /// The static <em>trace-bed underlay</em> for one edge/message (<see cref="StyleEdges.UnderlayWidth"/>):
     /// a second, wider, darker <c>&lt;path&gt;</c> sharing the edge's exact <paramref name="d"/>, meant to
     /// be emitted <em>before</em> the base <c>.beck-edge</c> path so the thin bright line reads as a trace
@@ -417,7 +408,7 @@ internal static class SvgRenderer
         if (e.UnderlayWidth <= 0) return "";
         string color = e.UnderlayColor.Length > 0 ? e.UnderlayColor : "var(--beck-edge-underlay, var(--beck-edge))";
         return $"<path class=\"beck-edge-bed\" d=\"{d}\" "
-             + $"style=\"fill:none;stroke:{color};stroke-width:{N(e.UnderlayWidth)};stroke-linecap:{e.BaseLinecap};stroke-linejoin:round\"/>";
+             + $"style=\"fill:none;stroke:{SvgWriter.Attr(color)};stroke-width:{N(e.UnderlayWidth)};stroke-linecap:{SvgWriter.Attr(e.BaseLinecap)};stroke-linejoin:round\"/>";
     }
 
     internal static (string Markup, EdgeOverlaySpec Spec) OverlayPath(BeckStyle style, string d, int idx, string hash)
@@ -436,9 +427,9 @@ internal static class SvgRenderer
         string color = e.OverlayPalette.Count > 0
             ? StyleEdges.Cycle(e.OverlayPalette, idx)
             : "var(--beck-edge-overlay, var(--beck-accent))";
-        string bloom = e.OverlayBloom.Length > 0 ? $"filter:{e.OverlayBloom};" : "";
+        string bloom = e.OverlayBloom.Length > 0 ? $"filter:{SvgWriter.Attr(e.OverlayBloom)};" : "";
         string markup = $"<path class=\"beck-edge-overlay beo{idx}-{hash}\" d=\"{d}\" "
-            + $"style=\"fill:none;stroke:{color};stroke-width:{N(e.OverlayWidth)};stroke-linecap:{e.OverlayLinecap};{bloom}{dash}\"/>";
+            + $"style=\"fill:none;stroke:{SvgWriter.Attr(color)};stroke-width:{N(e.OverlayWidth)};stroke-linecap:{SvgWriter.Attr(e.OverlayLinecap)};{bloom}{dash}\"/>";
         return (markup, new EdgeOverlaySpec(idx, e.Overlay, len, phase));
     }
 
@@ -452,25 +443,13 @@ internal static class SvgRenderer
     }
 
     /// <summary>The genuine bends (interior direction-changes) of a route polyline — the elbows where a
-    /// step-round trace turns. Replicates the router's own dedupe (drop near-duplicate vertices) and
-    /// collinearity test (a straight-through vertex is not a corner) so the returned points line up one-
-    /// for-one with the <c>Q</c> corners in the emitted path <c>d</c>. Pure read of route geometry — no
-    /// mutation of <c>Route/</c>.</summary>
+    /// step-round trace turns. <see cref="Shaping.Simplify"/> already reduces the polyline to
+    /// <c>[first, …corners…, last]</c> via the same dedupe + collinearity test the router uses, so the
+    /// bends are exactly its interior elements — no separate geometry pass needed.</summary>
     private static IEnumerable<Point> Bends(IReadOnlyList<Point> pts)
     {
-        var dedup = new List<Point>();
-        foreach (Point p in pts)
-        {
-            if (dedup.Count == 0) { dedup.Add(p); continue; }
-            Point prev = dedup[^1];
-            if (Math.Abs(prev.X - p.X) > 0.5 || Math.Abs(prev.Y - p.Y) > 0.5) dedup.Add(p);
-        }
-        for (int i = 1; i < dedup.Count - 1; i++)
-        {
-            Point a = dedup[i - 1], c = dedup[i], d = dedup[i + 1];
-            double cross = (c.X - a.X) * (d.Y - a.Y) - (c.Y - a.Y) * (d.X - a.X);
-            if (Math.Abs(cross) >= 0.01) yield return c;
-        }
+        var simplified = Shaping.Simplify(pts);
+        for (int i = 1; i < simplified.Count - 1; i++) yield return simplified[i];
     }
 
     private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash, int idx, BeckStyle style,
@@ -532,15 +511,28 @@ internal static class SvgRenderer
         return new NodeBox(r.X + inset, r.Y + inset, r.W - 2 * inset, r.H - 2 * inset, rx);
     }
 
-    /// <summary>A status pill — chip bg tinted by the status-pill ratio + coloured text — at (x, sy).</summary>
-    private static void StatusPill(StringBuilder sb, string text, string color, double x, double sy, double h, ITextMeasurer m, BeckStyle style, bool guard)
+    /// <summary>Shared status-chip markup (rect + text at the Status role, measured/cased once) for both
+    /// the flow-status pill (inline-styled, no class) and a card's static status chip (classed, styled via
+    /// CSS). <paramref name="rectSuffix"/>/<paramref name="textSuffix"/> land right before the closing
+    /// <c>/&gt;</c>/<c>&gt;</c> (after the textLength guard) and <paramref name="rectPrefix"/>/
+    /// <paramref name="textPrefix"/> right after the tag name — exactly where each call site's
+    /// class/style attribute sat before the extraction, so both callers stay byte-identical.</summary>
+    private static void StatusChip(StringBuilder sb, string text, double x, double sy, double h,
+        ITextMeasurer m, BeckStyle style, bool guard,
+        string rectPrefix, string rectSuffix, string textPrefix, string textSuffix)
     {
         FontRoleSpec spec = style.Typography.Roles.Of(FontRole.Status);
         double sw = m.Measure(text, FontRole.Status, spec).Width;
         string shown = Cased(spec, text);
-        sb.Append($"<rect x=\"{N(x)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(h)}\" rx=\"{N(h / 2)}\" style=\"fill:color-mix(in srgb,{color} {P(style.Mix.StatusPill)}%,transparent)\"/>");
-        sb.Append($"<text x=\"{N(x + 8)}\" y=\"{N(sy + h / 2)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" dominant-baseline=\"central\" text-anchor=\"start\"{Guard(sw, guard)} style=\"fill:{color}\">{SvgWriter.Text(shown)}</text>");
+        sb.Append($"<rect{rectPrefix} x=\"{N(x)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(h)}\" rx=\"{N(h / 2)}\"{rectSuffix}/>");
+        sb.Append($"<text{textPrefix} x=\"{N(x + 8)}\" y=\"{N(sy + h / 2)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" dominant-baseline=\"central\" text-anchor=\"start\"{Guard(sw, guard)}{textSuffix}>{SvgWriter.Text(shown)}</text>");
     }
+
+    /// <summary>A status pill — chip bg tinted by the status-pill ratio + coloured text — at (x, sy).</summary>
+    private static void StatusPill(StringBuilder sb, string text, string color, double x, double sy, double h, ITextMeasurer m, BeckStyle style, bool guard) =>
+        StatusChip(sb, text, x, sy, h, m, style, guard,
+            "", $" style=\"fill:color-mix(in srgb,{color} {P(style.Mix.StatusPill)}%,transparent)\"",
+            "", $" style=\"fill:{color}\"");
 
     private static void EmitPill(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard)
     {
@@ -689,11 +681,8 @@ internal static class SvgRenderer
             }
             else
             {
-                string status = node.Status!;
-                FontRoleSpec statusSpec = style.Typography.Roles.Of(FontRole.Status);
-                double sw = m.Measure(status, FontRole.Status, statusSpec).Width;
-                sb.Append($"<rect class=\"beck-status-bg\" x=\"{N(textX)}\" y=\"{N(sy)}\" width=\"{N(sw + 16)}\" height=\"{N(statusChipH)}\" rx=\"{N(statusChipH / 2)}\"/>");
-                sb.Append($"<text class=\"beck-status-text\" x=\"{N(textX + 8)}\" y=\"{N(sy + statusChipH / 2)}\" font-size=\"{N(statusSpec.SizePx)}\" font-weight=\"{P(statusSpec.Weight)}\" dominant-baseline=\"central\" text-anchor=\"start\"{Guard(sw, guard)}>{SvgWriter.Text(Cased(statusSpec, status))}</text>");
+                StatusChip(sb, node.Status!, textX, sy, statusChipH, m, style, guard,
+                    " class=\"beck-status-bg\"", "", " class=\"beck-status-text\"", "");
             }
         }
     }
@@ -705,11 +694,16 @@ internal static class SvgRenderer
         sb.Append(Artwork.Rect(style, "beck-node beck-node--ghost", bi, bi, w - 2 * bi, h - 2 * bi, geo.GhostRadius, hash + ":" + node.Id));
         bool hasIcon = Icons.ResolveIcon(node.Icon) != null;
         double rowH = Math.Max(hasIcon ? geo.GhostIcon : 0, geo.GhostLabelLine);
-        double rowTop = h / 2 - (node.Status != null ? (rowH + geo.TextGap + geo.StatusInlineLine) / 2 : rowH / 2);
+        double rowTop = h / 2 - (node.Status != null ? (rowH + geo.GhostGap + geo.StatusInlineLine) / 2 : rowH / 2);
         double ghostPadHalf = geo.GhostPadX / 2;
         double labelX = ghostPadHalf + (hasIcon ? geo.GhostIcon + geo.GhostIconGap : 0);
         if (hasIcon) sb.Append(IconSvg(node.Icon!, ghostPadHalf, rowTop + rowH / 2 - 7, 14));
         Line(sb, style.Typography.DecorateTitle(node.Title), "beck-ghost-label", labelX, rowTop + rowH / 2, m, style, FontRole.GhostLabel, guard);
+        if (node.Status is { } status)
+        {
+            double statusY = rowTop + rowH + geo.GhostGap;
+            Line(sb, status, "beck-status-inline", ghostPadHalf, statusY + geo.StatusInlineLine / 2, m, style, FontRole.StatusInline, guard);
+        }
     }
 
     private static void Line(StringBuilder sb, string text, string cls, double x, double cy, ITextMeasurer m, BeckStyle style, FontRole role, bool guard)

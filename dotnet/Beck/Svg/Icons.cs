@@ -1,10 +1,14 @@
+using System.Text.RegularExpressions;
+
 namespace Beck.Rendering.Svg;
 
 /// <summary>
 /// Built-in icon set — a verbatim port of <c>src/render/icons.ts</c>. Each icon
 /// uses <c>stroke="currentColor"</c> so it inherits the node's accent via CSS. A
 /// node's <c>icon</c> may also be a raw inline <c>&lt;svg&gt;…&lt;/svg&gt;</c>
-/// string, used verbatim.
+/// string; because YAML can come from untrusted authors (shared playground
+/// snippets), such markup is passed through <see cref="IsSafeInlineSvg"/> before
+/// it is accepted and spliced into the document — a stored-XSS guard.
 /// </summary>
 internal static class Icons
 {
@@ -95,19 +99,102 @@ internal static class Icons
         ["repo"] = Svg("""<path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M5 16h14M9 4v12"/>"""),
     };
 
-    /// <summary>Resolve an icon key (or raw inline svg) to svg markup, or null if unknown.</summary>
+    /// <summary>Resolve an icon key (or raw inline svg) to svg markup, or null if unknown/unsafe.</summary>
     public static string? ResolveIcon(string? key)
     {
         if (string.IsNullOrEmpty(key)) return null;
         string trimmed = key.Trim();
-        if (trimmed.StartsWith("<svg", StringComparison.Ordinal)) return trimmed;
+        if (trimmed.StartsWith("<svg", StringComparison.Ordinal))
+            return IsSafeInlineSvg(trimmed) ? trimmed : null;
         return Registry.GetValueOrDefault(trimmed);
     }
 
-    /// <summary>True if <paramref name="key"/> is renderable: a known name or inline <c>&lt;svg&gt;</c>.</summary>
+    /// <summary>True if <paramref name="key"/> is renderable: a known name or a safe inline <c>&lt;svg&gt;</c>.</summary>
     public static bool IsKnownIcon(string key)
     {
         string trimmed = key.Trim();
-        return trimmed.StartsWith("<svg", StringComparison.Ordinal) || Registry.ContainsKey(trimmed);
+        if (trimmed.StartsWith("<svg", StringComparison.Ordinal)) return IsSafeInlineSvg(trimmed);
+        return Registry.ContainsKey(trimmed);
+    }
+
+    // ---- inline-svg sanitizer -------------------------------------------------
+    //
+    // Allowlist validation, not rewriting: a benign icon is accepted verbatim (so
+    // it renders byte-for-byte as authored), while anything containing an element
+    // or attribute outside the static-vector allowlist — <script>, <foreignObject>,
+    // <use>/<image>, on* handlers, javascript:/external url() references — is
+    // rejected wholesale so the node falls back to its kind-default icon. Purely
+    // deterministic (regex scan, no RNG).
+
+    private static readonly HashSet<string> AllowedElements = new(StringComparer.Ordinal)
+    {
+        "svg", "g", "defs", "title", "desc",
+        "path", "rect", "circle", "ellipse", "line", "polyline", "polygon",
+        "linearGradient", "radialGradient", "stop", "clipPath",
+    };
+
+    private static readonly HashSet<string> AllowedAttributes = new(StringComparer.Ordinal)
+    {
+        "xmlns", "viewBox", "version", "class", "id", "style", "role",
+        "aria-hidden", "aria-label", "focusable", "preserveAspectRatio", "overflow",
+        "x", "y", "width", "height", "cx", "cy", "r", "rx", "ry",
+        "x1", "y1", "x2", "y2", "fx", "fy", "points", "d", "transform",
+        "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin",
+        "stroke-dasharray", "stroke-dashoffset", "stroke-miterlimit", "vector-effect",
+        "fill-rule", "clip-rule", "clip-path", "fill-opacity", "stroke-opacity", "opacity",
+        "color", "paint-order", "gradientUnits", "gradientTransform", "spreadMethod",
+        "offset", "stop-color", "stop-opacity",
+    };
+
+    // Tag names: opening/closing/self-closing element names.
+    private static readonly Regex TagRe =
+        new(@"</?\s*([A-Za-z][A-Za-z0-9:_-]*)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    // Attribute pairs — quoted OR unquoted (the icon is inlined into HTML, whose
+    // parser accepts unquoted values, so onload=alert(1) must be caught too).
+    private static readonly Regex AttrRe =
+        new("""([A-Za-z_:][A-Za-z0-9_.:-]*)\s*=\s*("[^"]*"|'[^']*'|[^\s"'<>`]+)""", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static bool IsSafeInlineSvg(string markup)
+    {
+        // Comments, CDATA, doctype and processing instructions can smuggle markup
+        // past a naive element scan; hand-authored icons never need them.
+        if (markup.Contains("<!", StringComparison.Ordinal) || markup.Contains("<?", StringComparison.Ordinal))
+            return false;
+
+        foreach (Match m in TagRe.Matches(markup))
+            if (!AllowedElements.Contains(m.Groups[1].Value))
+                return false;
+
+        foreach (Match m in AttrRe.Matches(markup))
+        {
+            if (!AllowedAttributes.Contains(m.Groups[1].Value)) return false;
+            // Strip surrounding quotes (if any) before inspecting the value.
+            string raw = m.Groups[2].Value;
+            string value = raw.Length >= 2 && (raw[0] == '"' || raw[0] == '\'') ? raw[1..^1] : raw;
+            if (!IsSafeAttributeValue(value)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsSafeAttributeValue(string value)
+    {
+        // A quote-delimited value can still carry angle brackets or dangerous
+        // schemes; only local (#fragment) url() references are permitted.
+        if (value.IndexOf('<') >= 0 || value.IndexOf('>') >= 0) return false;
+        if (value.Contains("javascript:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (value.Contains("data:", StringComparison.OrdinalIgnoreCase)) return false;
+        if (value.Contains("expression(", StringComparison.OrdinalIgnoreCase)) return false;
+
+        int idx = 0;
+        while ((idx = value.IndexOf("url(", idx, StringComparison.OrdinalIgnoreCase)) >= 0)
+        {
+            int j = idx + 4;
+            while (j < value.Length && (value[j] == ' ' || value[j] == '\'' || value[j] == '"')) j++;
+            if (j >= value.Length || value[j] != '#') return false;
+            idx += 4;
+        }
+
+        return true;
     }
 }

@@ -31,6 +31,14 @@ internal sealed record EdgeOverlaySpec(int Index, EdgeOverlay Mode, double Lengt
 /// </summary>
 internal sealed class CssCompiler
 {
+    // Card-effect eases are parameter-fixed and deterministic, so their sampled CSS is hoisted
+    // once here instead of re-running Easing.ToCss per element per render.
+    private static readonly string PulseInCss = Easing.ToCss(Easing.BackOut(3));
+    private static readonly string PulsePeakCss = Easing.ToCss(Easing.ElasticOut(1, 0.5));
+    private static readonly string HighlightInCss = Easing.ToCss(Easing.BackOut(2));
+    private static readonly string HighlightPeakCss = Easing.ToCss(Easing.ElasticOut(1, 0.4));
+    private static readonly string Power2OutCss = Easing.ToCss(Easing.Power2Out);
+
     private readonly string _h;
     private readonly Schedule _s;
     private readonly IReadOnlyList<NodeBox> _boxes;
@@ -266,7 +274,9 @@ internal sealed class CssCompiler
                 sb.Append($"@keyframes {kf}{{");
                 double e = 0.01;
                 int prev = 0;
-                for (int k = 0; k < sw.Count - 1; k++)
+                // Process every swap, including the trailing restore-to-0 entry — it must still
+                // emit its keyframe so the pill resets at a mid-flow restore, not just the cycle end.
+                for (int k = 0; k < sw.Count; k++)
                 {
                     int val = sw[k].State == st ? 1 : 0;
                     double at = Pct(sw[k].At);
@@ -530,20 +540,20 @@ internal sealed class CssCompiler
 
     private void TransformTrack(StringBuilder sb, int node, List<CardFx> list)
     {
-        var pts = new List<(double T, string Tf, Ease? E)> { (0, "none", null) };
+        var pts = new List<(double T, string Tf, string? EaseCss)> { (0, "none", null) };
         foreach (CardFx c in list.OrderBy(c => c.Start))
         {
             double s = c.Start;
             switch (c.Kind)
             {
                 case CardFxKind.Pulse:
-                    pts.Add((s, "none", Easing.BackOut(3)));
-                    pts.Add((s + 0.18, ActivePeak, Easing.ElasticOut(1, 0.5)));
+                    pts.Add((s, "none", PulseInCss));
+                    pts.Add((s + 0.18, ActivePeak, PulsePeakCss));
                     pts.Add((s + _motion.PulseDur, "none", null));
                     break;
                 case CardFxKind.Highlight:
-                    pts.Add((s, "none", Easing.BackOut(2)));
-                    pts.Add((s + 0.21, ActivePeak, Easing.ElasticOut(1, 0.4)));
+                    pts.Add((s, "none", HighlightInCss));
+                    pts.Add((s + 0.21, ActivePeak, HighlightPeakCss));
                     pts.Add((s + _motion.HighlightDur, "none", null));
                     break;
                 case CardFxKind.Fail:
@@ -561,13 +571,13 @@ internal sealed class CssCompiler
         sb.Append($".b-{_h} .bn{node}-{_h} .beck-fx-node{{animation:kn{node}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kn{node}-{_h}{{");
         string lastPct = "";
-        foreach (var (t, tf, e) in pts)
+        foreach (var (t, tf, easeCss) in pts)
         {
             string pct = P(Pct(t));
             if (pct == lastPct) continue; // collapse coincident keyframes (last effect wins)
             lastPct = pct;
             sb.Append($"{pct}%{{transform:{tf};");
-            if (e is { } ee) sb.Append($"animation-timing-function:{Easing.ToCss(ee)};");
+            if (easeCss is not null) sb.Append($"animation-timing-function:{easeCss};");
             sb.Append('}');
         }
         sb.Append('}');
@@ -576,7 +586,7 @@ internal sealed class CssCompiler
     private void RippleCss(StringBuilder sb, int j, double start)
     {
         double s = Pct(start), end = Pct(start + 0.48), e = 0.01;
-        string po = Easing.ToCss(Easing.Power2Out);
+        string po = Power2OutCss;
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{");
         sb.Append("0%{opacity:0;transform:scale(1);}");
@@ -603,7 +613,7 @@ internal sealed class CssCompiler
     private void ImpactCss(StringBuilder sb, int j, double start)
     {
         double s = Pct(start), end = Pct(start + 0.55), e = 0.01;
-        string po = Easing.ToCss(Easing.Power2Out);
+        string po = Power2OutCss;
         // stroke-width sweeps from the style's ring stroke down to a fifth of it (classic:
         // 2.5 -> 0.5) as the ring expands — proportional to RingStroke so a thinner style ring
         // sweeps thinner too.

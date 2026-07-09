@@ -44,7 +44,7 @@ internal sealed class SequencePainter
 
     private static string N(double n) => SvgWriter.Num(n);
     private static string I(double n) => Js.Str(Js.Round(n));
-    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    private static string P(int n) => SvgWriter.Int(n);
 
     public string Render(DiagramModel model, SequenceLayoutResult layout, bool motion = false)
     {
