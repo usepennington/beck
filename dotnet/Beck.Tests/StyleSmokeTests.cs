@@ -95,6 +95,51 @@ public sealed class StyleSmokeTests
         Assert.Contains("prefers-reduced-motion:no-preference", full);
     }
 
+    // Glow (rebuilt to mock 1g) moves the gradient off edges and onto the node RIM, and paints edges as a
+    // faint slate base rail. Two regressions guarded here on a single horizontal Client→API hop — the exact
+    // axis-aligned case that used to vanish:
+    //   1. The straight base edge paints with a visible SOLID (non-gradient, non-empty) stroke — no
+    //      degenerate-bbox gradient can eat an axis-aligned connector, because edges no longer gradient.
+    //   2. Every glass node rim references the ONE shared node gradient, which is defined. That gradient
+    //      may legitimately use objectBoundingBox units: a node rect always has positive area (unlike the
+    //      zero-area straight edge the userSpaceOnUse edge fix addressed), so a single objectBoundingBox
+    //      def paints each node's own corner-to-corner cyan→violet rim identically to a per-node
+    //      userSpaceOnUse gradient while serving all nodes at once (the mock's single gg-a gradient).
+    [Fact]
+    public void Glow_StraightEdgePaints_NodesUseGradientRim()
+    {
+        const string yaml = """
+            type: architecture
+            meta: { title: straight, direction: LR }
+            nodes:
+              - { id: client, title: Client }
+              - { id: api, title: API }
+            edges:
+              - { from: client, to: api }
+            """;
+        string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = GlowStyle.Instance });
+
+        // (1) Every base edge carries a visible, non-gradient solid stroke — the connector is present.
+        // Match only base edges (their inline style starts with "stroke:"); the comet overlay's style
+        // starts with "fill:none;" so it is excluded here.
+        var edgeStroke = new Regex("<path class=\"beck-edge beck-edge--[^\"]*\"[^>]*style=\"stroke:([^\"]*)\"", RegexOptions.Compiled);
+        var matches = edgeStroke.Matches(svg);
+        Assert.NotEmpty(matches);
+        foreach (Match m in matches)
+        {
+            string stroke = m.Groups[1].Value;
+            Assert.False(string.IsNullOrWhiteSpace(stroke), "edge has empty stroke");
+            Assert.DoesNotContain("none", stroke);
+            Assert.DoesNotContain("url(", stroke);   // edges are solid rails now, never a gradient
+        }
+
+        // (2) The node stroke rule points at the shared node gradient, which is defined in <defs>.
+        Assert.Contains("<linearGradient id=\"beck-node-grad-", svg);
+        Match rimGrad = Regex.Match(svg, "\\.beck-node\\{[^}]*stroke:url\\(#(beck-node-grad-[^)]+)\\)");
+        Assert.True(rimGrad.Success, "glow's .beck-node rule should stroke with the node gradient");
+        Assert.Contains($"<linearGradient id=\"{rimGrad.Groups[1].Value}\"", svg);
+    }
+
     // Only the router's *edge* paths live on the always-positive canvas — icon glyphs (feather-style
     // paths in their own local 24x24 box) legitimately use negative coordinates, so this scopes to
     // <path class="beck-edge ..."> only, matching CLAUDE.md's "off-canvas edge routes" signature.

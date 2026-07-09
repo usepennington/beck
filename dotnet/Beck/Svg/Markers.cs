@@ -3,10 +3,13 @@ using System.Text;
 namespace Beck.Rendering.Svg;
 
 /// <summary>
-/// Edge end-marker defs — a port of the marker bodies in <c>src/route/svg.ts</c>.
-/// Every shape points +x with its tip at <c>refX</c>, so one def serves either end
-/// via <c>orient="auto-start-reverse"</c>. Deduped per (shape, color); ids carry
-/// the content hash so multiple diagrams don't collide.
+/// Edge end-marker defs — a port of the marker bodies in <c>src/route/svg.ts</c>, now
+/// <em>style-aware</em> (<see cref="StyleEdges"/>): the arrowhead presentation (filled vs. hand-drawn
+/// open-V) and the marker sizing model (default strokeWidth units vs. sanely-scaled
+/// <c>userSpaceOnUse</c>) come from the style. Every shape points +x with its tip at <c>refX</c>, so
+/// one def serves either end via <c>orient="auto-start-reverse"</c>. Deduped per (shape, color,
+/// presentation, size); ids carry the content hash so multiple diagrams don't collide. At classic
+/// edge settings (filled, scale 1, strokeWidth units) the emitted element is byte-identical to today.
 /// </summary>
 internal sealed class Markers
 {
@@ -20,25 +23,62 @@ internal sealed class Markers
     /// <summary>The accumulated <c>&lt;marker&gt;</c> defs.</summary>
     public string Defs => _defs.ToString();
 
-    /// <summary>Ensure a marker for a shape+color exists; returns its id.</summary>
-    public string Ensure(string color, MarkerShape shape)
+    /// <summary>
+    /// Ensure a marker for a shape+color under the given edge presentation exists; returns its id.
+    /// <paramref name="edgeWidth"/> only matters when the style scales markers to the edge width
+    /// (<see cref="StyleEdges.MarkerScaleToWidth"/>).
+    /// </summary>
+    public string Ensure(string color, MarkerShape shape, StyleEdges edges, double edgeWidth)
     {
-        string key = $"{shape}|{color}";
+        // The dedupe key carries the presentation + size discriminants so distinct styles never share a
+        // marker — but at classic values (filled, scale 1, strokeWidth units) they collapse to the exact
+        // historical "{shape}|{color}" behaviour, so dedupe order → _seq → ids stay byte-identical.
+        string disc = edges.Arrow == EdgeArrow.OpenV ? "|v" : "";
+        string sizeDisc = edges.MarkerScaleToWidth
+            ? "|w" + SvgWriter.Num(edgeWidth) + "x" + SvgWriter.Num(edges.MarkerScale)
+            : edges.MarkerScale != 1.0 ? "|x" + SvgWriter.Num(edges.MarkerScale) : "";
+        string key = $"{shape}|{color}{disc}{sizeDisc}";
         if (_byKey.TryGetValue(key, out string? hit)) return hit;
 
         string id = $"beck-arrow-{_seq++}-{_hash}";
-        var (body, viewBox, refX, w, h) = Body(shape, color);
+        var (body, viewBox, refX, w, h) = Body(shape, color, edges);
         string refY = viewBox.Split(' ')[3] == "12" ? "6" : "5";
-        _defs.Append($"<marker id=\"{id}\" viewBox=\"{viewBox}\" refX=\"{SvgWriter.Num(refX)}\" refY=\"{refY}\" ")
-             .Append($"markerWidth=\"{SvgWriter.Num(w)}\" markerHeight=\"{SvgWriter.Num(h)}\" orient=\"auto-start-reverse\">")
+        // Marker size + units. Classic (no width-scaling, scale 1) emits the historical markerWidth/
+        // markerHeight and NO markerUnits attribute (SVG default = strokeWidth) — byte-identical. A
+        // scaling style either multiplies those strokeWidth-unit dims (MarkerScale) or switches to an
+        // absolute userSpaceOnUse size that grows sub-linearly (√) with the edge width, so a thick line
+        // no longer blows the arrowhead into a blob.
+        string units;
+        double mw, mh;
+        if (edges.MarkerScaleToWidth)
+        {
+            double f = edges.MarkerScale * Math.Sqrt(Math.Max(edgeWidth, 1));
+            (mw, mh) = (w * f, h * f);
+            units = " markerUnits=\"userSpaceOnUse\"";
+        }
+        else
+        {
+            (mw, mh) = (w * edges.MarkerScale, h * edges.MarkerScale);
+            units = "";
+        }
+        _defs.Append($"<marker id=\"{id}\" viewBox=\"{viewBox}\" refX=\"{SvgWriter.Num(refX)}\" refY=\"{refY}\"{units} ")
+             .Append($"markerWidth=\"{SvgWriter.Num(mw)}\" markerHeight=\"{SvgWriter.Num(mh)}\" orient=\"auto-start-reverse\">")
              .Append(body).Append("</marker>");
         _byKey[key] = id;
         return id;
     }
 
-    private static (string Body, string ViewBox, double RefX, double W, double H) Body(MarkerShape shape, string color)
+    private static (string Body, string ViewBox, double RefX, double W, double H) Body(MarkerShape shape, string color, StyleEdges edges)
     {
         string c = SvgWriter.Attr(color);
+        // OpenV (sketch): the plain filled arrowhead becomes TWO round-capped strokes running back from
+        // the tip — a hand-drawn open V — as two separate <line> elements. Closed UML ends keep their
+        // bodies (the inheritance triangle / composition diamond stay solid, per the sketch brief).
+        if (edges.Arrow == EdgeArrow.OpenV && shape == MarkerShape.Arrow)
+            return (
+                $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"{c}\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>"
+                + $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"{c}\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
+                "0 0 12 10", 10, 8, 8);
         return shape switch
         {
             MarkerShape.ArrowOpen => (
