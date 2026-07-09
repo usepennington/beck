@@ -139,8 +139,10 @@ public static class MinimalStyle
             RingsEnabled = false,
             // The quiet arrival beat (mock 1c): the receiving card tints in the packet's colour for a
             // moment instead of ringing — the flash is the style's ONE arrival accent, scaled by the
-            // 0.4 amplitude above so it stays a whisper.
+            // 0.4 amplitude above so it stays a whisper. No lift/zoom: the card never moves; the
+            // tint alone carries the pulse and highlight reads.
             Pulse = PulseEffect.Flash,
+            LiftEnabled = false,
             // Raise the sequence-storytelling dim floor. On the dark token set the dimmed message
             // edges (var(--beck-edge) = base-700) and the activation bar's gradient tail (0.35 stop)
             // drop to near-invisible at classic's 0.15/0.25 floors — a static viewer can't read the

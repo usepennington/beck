@@ -6,7 +6,7 @@ sectionLabel: Cross-cutting
 uid: docs.guide.custom-styles
 ---
 
-This guide shows you how to build your own style when none of the [eleven
+This guide shows you how to build your own style when none of the [nine
 built-ins](/docs/guides/styles) is quite right. A style is the public `BeckStyle` record, so you
 compose one by deriving from the closest built-in with a `with` expression, then registering it so a
 document's `meta.style` can name it. You do not build a `BeckStyle` from scratch — every field is
@@ -29,9 +29,9 @@ BeckStyle ocean = BeckStyles.ByName["minimal"] with
 ```
 
 Sub-records are records too, so nest `with` expressions to change one field without restating the
-rest. Pick the base by what you are keeping: `minimal` for a flat token-only look, `glow` or
-`editorial` for their motion character, or an artwork style (`sketch`, `metro`, …) when you want its
-chrome. `BeckStyle.Classic` is the safe baseline if you want to change one thing about the default.
+rest. Pick the base by what you are keeping: `minimal` for a flat token-only look, `glow` for its
+motion character, or an artwork style (`sketch`, `circuit`, …) when you want its chrome.
+`BeckStyle.Classic` is the safe baseline if you want to change one thing about the default.
 
 ## Register it and render
 
@@ -60,7 +60,7 @@ meta: { style: ocean }
 ```
 
 The registry key and the token in `meta.style` must match. Built-in names are resolved first, so a
-custom style cannot reuse a built-in name — if you name yours `metro`, the built-in wins and yours is
+custom style cannot reuse a built-in name — if you name yours `sketch`, the built-in wins and yours is
 never reached. An unknown token warns and falls back to `Style` (or `classic`). For the exact
 resolution order and precedence, see the [style-system reference](/docs/reference/styles#resolving-a-name).
 
@@ -93,7 +93,7 @@ run an exact `SvgRenderOptions.Measurer` (Skia over your real font files), it ov
 the metrics table is irrelevant.
 
 ```csharp
-Typography = BeckStyles.ByName["editorial"].Typography with
+Typography = BeckStyle.Classic.Typography with
 {
     SansFamily = "'Source Serif 4', Georgia, serif",
     MetricsFont = MetricsFont.SourceSerif,
@@ -107,7 +107,7 @@ layout.
 ## Compose an artwork
 
 Chrome that cannot be expressed in CSS — the brutalist shadow, sketch wobble, extrude faces, circuit
-pins, metro stations, blueprint dimension lines — comes from the `Artwork` field plus its
+pins, transit station dots, blueprint dimension lines — comes from the `Artwork` field plus its
 `StyleGeometry` offset. You **compose** an existing one; you cannot supply new geometry. Set both the
 enum value and the offset that gates it (a `0` offset draws nothing):
 

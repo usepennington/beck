@@ -84,17 +84,6 @@ public sealed class ClassicSvgGoldenTests
         Assert.Equal(golden, actual);
     }
 
-    private const string EditorialPinnedSuffix = "ed1t0r1a";
-
-    [Fact]
-    public void EditorialSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = EditorialPinnedSuffix, Style = EditorialStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "editorial.svg"));
-        Assert.Equal(golden, actual);
-    }
-
     private const string BrutalistPinnedSuffix = "brut4115";
 
     [Fact]
@@ -139,14 +128,4 @@ public sealed class ClassicSvgGoldenTests
         Assert.Equal(golden, actual);
     }
 
-    private const string MetroPinnedSuffix = "m3tr0000";
-
-    [Fact]
-    public void MetroSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = MetroPinnedSuffix, Style = MetroStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "metro.svg"));
-        Assert.Equal(golden, actual);
-    }
 }

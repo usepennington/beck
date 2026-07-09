@@ -28,7 +28,7 @@ namespace Beck.Docs;
 /// position. Flags work on the inline form too (<c>```beck,static</c>).
 ///
 /// <para>
-/// <c>```beck,style=metro</c> (or <c>```beck:symbol,style=metro</c>) injects/overrides
+/// <c>```beck,style=sketch</c> (or <c>```beck:symbol,style=sketch</c>) injects/overrides
 /// <c>meta.style</c> on the document before rendering, so one shared YAML snippet can be
 /// shown in every built-in look without hand-editing eleven copies (this is what the style
 /// gallery uses). The flag <em>wins</em> over the fence's own <c>meta.style</c> — it is a
@@ -182,7 +182,7 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
 
     /// <summary>
     /// Parses a fence info-string such as <c>beck</c>, <c>beck:symbol</c>,
-    /// <c>beck:symbol,static</c>, or <c>beck,style=metro</c> into whether it is a Beck fence,
+    /// <c>beck:symbol,static</c>, or <c>beck,style=sketch</c> into whether it is a Beck fence,
     /// whether the body is a file path (<c>:symbol</c>), the resolved <see cref="AnimationMode"/>,
     /// and an optional <c>style=</c> override. Non-Beck fences return <see cref="FenceInfo.IsBeck"/>
     /// false. Every token after the language is comma-separated — the historical <c>:symbol</c>

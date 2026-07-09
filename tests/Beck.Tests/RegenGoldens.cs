@@ -50,12 +50,10 @@ public sealed class RegenGoldens
             ("terminal", "arch-kitchen", "term1na1", TerminalStyle.Instance),
             ("blueprint", "arch-kitchen", "b1uepr1n", BlueprintStyle.Instance),
             ("glow", "arch-kitchen", "g10wg10w", GlowStyle.Instance),
-            ("editorial", "arch-kitchen", "ed1t0r1a", EditorialStyle.Instance),
             ("brutalist", "arch-kitchen", "brut4115", BrutalistStyle.Instance),
             ("sketch", "arch-kitchen", "sk3tchg0", SketchStyle.Instance),
             ("extrude", "arch-kitchen", "extrud30", ExtrudeStyle.Instance),
             ("circuit", "arch-kitchen", "c1rcu1t0", CircuitStyle.Instance),
-            ("metro", "arch-kitchen", "m3tr0000", MetroStyle.Instance),
         };
         string svgDir = Path.Combine(GoldenDir, "svg");
         int edits = 0;

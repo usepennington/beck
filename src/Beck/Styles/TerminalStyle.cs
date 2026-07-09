@@ -180,7 +180,9 @@ public static class TerminalStyle
             GlowEnabled = false,
             // The CRT blink (mock 1f's `crt`): a card receiving a packet invert-flickers twice —
             // two instant-on/off fill flashes, phosphor-style, matching the stepped packets above.
+            // No lift/zoom — a phosphor cell doesn't move, it flashes.
             Pulse = PulseEffect.Flicker,
+            LiftEnabled = false,
         };
 
         return c with

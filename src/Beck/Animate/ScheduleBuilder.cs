@@ -177,7 +177,9 @@ internal static class ScheduleBuilder
                 Ease ease = Easing.ForPacket(k.Ease ?? ks.Ease);
 
                 double len = PathLength.Of(fe.D);
-                double dur = Math.Max(0.3, len / speed);
+                // 0.6s floor — doubled with the halved PacketKindStyle speeds so degenerate short
+                // hops slow down in step with the rest of the choreography.
+                double dur = Math.Max(0.6, len / speed);
                 packets.Add(new PacketHop(at, dur, fe.D, len, fr.Reversed, color, shape, size, glow, ease, hopLabel, impact, fe.Id));
                 at += dur;
 

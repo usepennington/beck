@@ -41,8 +41,22 @@ public sealed class StylePulseTests
         Assert.Equal(PulseEffect.Flicker, TerminalStyle.Instance.Motion.Pulse);
         Assert.Equal(PulseEffect.GlowRing, GlowStyle.Instance.Motion.Pulse);
         Assert.Equal(PulseEffect.Led, CircuitStyle.Instance.Motion.Pulse);
-        Assert.Equal(PulseEffect.StationRipple, MetroStyle.Instance.Motion.Pulse);
-        Assert.Equal(PulseEffect.InkFrame, EditorialStyle.Instance.Motion.Pulse);
+    }
+
+    // The "no zoom" rule: these styles pin the card in place — the overlay cue carries the whole
+    // arrival/highlight read. Classic, sketch (whose pop IS the transform), blueprint, and extrude
+    // (whose press-down is its identity) keep their transforms.
+    [Fact]
+    public void NoZoomStyles_DisableTheLift()
+    {
+        Assert.False(MinimalStyle.Instance.Motion.LiftEnabled);
+        Assert.False(TerminalStyle.Instance.Motion.LiftEnabled);
+        Assert.False(GlowStyle.Instance.Motion.LiftEnabled);
+        Assert.False(CircuitStyle.Instance.Motion.LiftEnabled);
+        Assert.False(BrutalistStyle.Instance.Motion.LiftEnabled);
+        Assert.True(BeckStyle.Classic.Motion.LiftEnabled);
+        Assert.True(SketchStyle.Instance.Motion.LiftEnabled);
+        Assert.True(ExtrudeStyle.Instance.Motion.LiftEnabled);
     }
 
     [Fact]
@@ -76,23 +90,27 @@ public sealed class StylePulseTests
     }
 
     [Fact]
-    public void Minimal_Flash_TintsTheCardFace()
+    public void Minimal_Flash_TintsTheCardFace_WithoutMoving()
     {
         string svg = Render(MinimalStyle.Instance);
         // A filled wash (no stroke ring), peaking at 0.45 × the 0.4 amplitude.
         Assert.Contains("fill=\"var(--beck-packet)\" opacity=\"0\"/>", svg);
         Assert.Contains("opacity:0.18;", svg);
         Assert.DoesNotContain("transform:scale(1.15)", svg);
+        // LiftEnabled=false: the card never zooms — no lift transform anywhere.
+        Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
     }
 
     [Fact]
-    public void Brutalist_Slam_SnapsAThickBorder_NoEasingNoScaling()
+    public void Brutalist_Slam_SnapsAThickBorder_NoEasingNoScalingNoZoom()
     {
         string svg = Render(BrutalistStyle.Instance);
         // OverlayStroke 2 × 2.4 — the slammed border.
         Assert.Contains("stroke-width=\"4.8\"", svg);
-        // Hard cuts: the slam keyframes carry no timing function and no transform.
+        // Hard cuts: the slam keyframes carry no timing function and no transform, and the card
+        // itself never lifts (LiftEnabled=false).
         Assert.DoesNotContain("transform:scale(1.15)", svg);
+        Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
     }
 
     [Fact]
@@ -104,40 +122,26 @@ public sealed class StylePulseTests
         Assert.Contains("fill=\"var(--beck-packet)\" opacity=\"0\"/>", svg);
         int on = svg.Split("opacity:0.5;").Length - 1;
         Assert.True(on >= 4, $"expected two on/off flicker windows (≥4 stops at 0.5), saw {on}");
+        // LiftEnabled=false: phosphor cells don't move.
+        Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
     }
 
     [Fact]
-    public void Glow_GlowRing_CarriesABloomHalo()
+    public void Glow_GlowRing_CarriesABloomHalo_WithoutMoving()
     {
         string svg = Render(GlowStyle.Instance);
         Assert.Contains("filter:drop-shadow(0 0 6px var(--beck-packet))", svg);
         Assert.Contains("transform:scale(1.3)", svg);
+        Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
     }
 
     [Fact]
-    public void Circuit_Led_BlinksAnAmberCornerDot()
+    public void Circuit_Led_BlinksAnAmberCornerDot_WithoutMoving()
     {
         string svg = Render(CircuitStyle.Instance);
         Assert.Contains("r=\"3\" fill=\"var(--beck-gold)\"", svg);
         Assert.DoesNotContain("transform:scale(1.15)", svg);
-    }
-
-    [Fact]
-    public void Metro_StationRipple_RadiatesFromTheCardCentre()
-    {
-        string svg = Render(MetroStyle.Instance);
-        Assert.Contains("r=\"9\" fill=\"none\"", svg);
-        Assert.Contains("transform:scale(2.6)", svg);
-    }
-
-    [Fact]
-    public void Editorial_InkFrame_IsRedHeldAndPacedByPulseDur()
-    {
-        string svg = Render(EditorialStyle.Instance);
-        Assert.Contains("rx=\"2\" fill=\"none\" stroke=\"var(--beck-danger)\"", svg);
-        // No scaling — the frame inks in and lifts, it never expands.
-        Assert.DoesNotContain("transform:scale(1.15)", svg);
-        Assert.Equal(1.4, EditorialStyle.Instance.Motion.PulseDur);
+        Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
     }
 
     [Fact]

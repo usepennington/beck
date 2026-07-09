@@ -45,10 +45,10 @@ below), and `EmbedFonts`.
 ## Styles
 
 A **style** is a complete visual identity — shapes, strokes, typography, colour bias, and motion —
-chosen with a single token. Beck ships eleven (`classic` the default, plus `minimal`, `terminal`,
-`blueprint`, `glow`, `editorial`, `brutalist`, `sketch`, `extrude`, `circuit`, `metro`). A style only
+chosen with a single token. Beck ships nine (`classic` the default, plus `minimal`, `terminal`,
+`blueprint`, `glow`, `brutalist`, `sketch`, `extrude`, `circuit`). A style only
 redefines the *defaults* of the `--beck-*` tokens, so a themed diagram still adopts the host palette
-and flips with light and dark. Select one per document with `meta: { style: metro }`, or set a
+and flips with light and dark. Select one per document with `meta: { style: sketch }`, or set a
 site-wide default from C#:
 
 ```csharp
