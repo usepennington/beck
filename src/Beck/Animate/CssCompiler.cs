@@ -89,7 +89,7 @@ internal sealed class CssCompiler
             string col = SvgWriter.Attr(c.Color);
             string box = $"x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\"";
             if (c.Kind == CardFxKind.Pulse)
-                sb.Append($"<rect class=\"brip{j}-{_h}\" {box} stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+                PulseMarkup(sb, j, b, c);
             else // highlight / fail — a glowing border overlay
                 sb.Append($"<rect class=\"bgl{j}-{_h}\" {box} stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"filter:drop-shadow(0 0 {Nm(6 * _motion.EffectAmplitude)}px {c.Color})\"/>");
         }
@@ -171,6 +171,65 @@ internal sealed class CssCompiler
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg;transform:translateY(-{Nm(p.Size + 6)}px)\">{SvgWriter.Text(p.Label!)}</text>");
         }
         return sb.Append("</g>").ToString();
+    }
+
+    /// <summary>
+    /// The pulse overlay element for one card effect — the arrival cue's per-style body
+    /// (<see cref="StyleMotion.Pulse"/>). Every variant keeps the classic <c>brip{j}</c> class (one
+    /// keyframe track per element, chosen by <see cref="PulseCss"/>), rests at <c>opacity:0</c>, and
+    /// derives all geometry from the node box — deterministic, no injected markup.
+    /// <see cref="PulseEffect.Ripple"/> reproduces the historical element byte-for-byte;
+    /// <see cref="PulseEffect.MarkerPop"/> emits nothing (the jolt lives on the node transform).
+    /// </summary>
+    private void PulseMarkup(StringBuilder sb, int j, NodeBox b, CardFx c)
+    {
+        string cls = $"class=\"brip{j}-{_h}\"";
+        string col = SvgWriter.Attr(_motion.PulseColor ?? c.Color);
+        string boxScale = "style=\"transform-box:fill-box;transform-origin:center\"";
+        switch (_motion.Pulse)
+        {
+            case PulseEffect.MarkerPop:
+                break; // no overlay — the card itself pops (see PulsePeak).
+            case PulseEffect.SurveyRing:
+                // An offset rectangular ring 4px off the card, scaling linearly outward — the
+                // blueprint surveyor ping (mock 1a's `ringx` rect).
+                sb.Append($"<rect {cls} x=\"{Nm(b.X - 4)}\" y=\"{Nm(b.Y - 4)}\" width=\"{Nm(b.W + 8)}\" height=\"{Nm(b.H + 8)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" {boxScale}/>");
+                break;
+            case PulseEffect.Flash:
+            case PulseEffect.Flicker:
+                // A filled wash over the card face (minimal/extrude's tint flash, terminal's CRT
+                // blink) — the keyframes differ, the element is the same tinted rect.
+                sb.Append($"<rect {cls} x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"{col}\" opacity=\"0\"/>");
+                break;
+            case PulseEffect.Slam:
+                // The card border snapped thick — a static extra-wide stroke whose visibility gates
+                // in hard cuts (mock 1d's `slam`).
+                sb.Append($"<rect {cls} x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.OverlayStroke * 2.4)}\" opacity=\"0\"/>");
+                break;
+            case PulseEffect.GlowRing:
+                // The classic ripple ring, bloomed: a drop-shadow halo rides the expanding stroke
+                // (mock 1g's glowing `ringx`).
+                sb.Append($"<rect {cls} x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center;filter:drop-shadow(0 0 {Nm(6 * _motion.EffectAmplitude)}px {_motion.PulseColor ?? c.Color})\"/>");
+                break;
+            case PulseEffect.Led:
+                // A small status LED inset in the card's top-right corner (mock 1h) — position is
+                // baked geometry, only opacity animates.
+                sb.Append($"<circle {cls} cx=\"{Nm(b.X + b.W - 9)}\" cy=\"{Nm(b.Y + 9)}\" r=\"3\" fill=\"{col}\" opacity=\"0\"/>");
+                break;
+            case PulseEffect.StationRipple:
+                // A circular ring radiating from the card centre in the arriving line's colour
+                // (mock 1i's `ringc`).
+                sb.Append($"<circle {cls} cx=\"{Nm(b.X + b.W / 2)}\" cy=\"{Nm(b.Y + b.H / 2)}\" r=\"9\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" {boxScale}/>");
+                break;
+            case PulseEffect.InkFrame:
+                // A thin annotation frame 4px off the card (mock 1j's red editor circle) — inked in
+                // slowly, held, lifted; no scaling.
+                sb.Append($"<rect {cls} x=\"{Nm(b.X - 4)}\" y=\"{Nm(b.Y - 4)}\" width=\"{Nm(b.W + 8)}\" height=\"{Nm(b.H + 8)}\" rx=\"2\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\"/>");
+                break;
+            default: // Ripple — classic, byte-identical.
+                sb.Append($"<rect {cls} x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" {boxScale}/>");
+                break;
+        }
     }
 
     /// <summary>
@@ -521,7 +580,7 @@ internal sealed class CssCompiler
         {
             CardFx c = _s.Cards[j];
             if (Box(c.Node) is null) continue;
-            if (c.Kind == CardFxKind.Pulse) RippleCss(sb, j, c.Start);
+            if (c.Kind == CardFxKind.Pulse) PulseCss(sb, j, c.Start);
             else GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? _motion.HighlightDur : _motion.FailDur);
         }
 
@@ -538,6 +597,13 @@ internal sealed class CssCompiler
     /// </summary>
     private string ActivePeak => _motion.PressDown ? "translate(2px,2px)" : "translateY(-2px) scale(1.04)";
 
+    /// <summary>
+    /// The pulse peak transform. <see cref="PulseEffect.MarkerPop"/> (sketch) swaps the classic lift
+    /// for a plain scale jolt — the whole arrival cue, since MarkerPop emits no overlay element.
+    /// Every other effect keeps <see cref="ActivePeak"/> (lift, or extrude's press) — byte-identical.
+    /// </summary>
+    private string PulsePeak => _motion.Pulse == PulseEffect.MarkerPop ? "scale(1.08)" : ActivePeak;
+
     private void TransformTrack(StringBuilder sb, int node, List<CardFx> list)
     {
         var pts = new List<(double T, string Tf, string? EaseCss)> { (0, "none", null) };
@@ -548,7 +614,7 @@ internal sealed class CssCompiler
             {
                 case CardFxKind.Pulse:
                     pts.Add((s, "none", PulseInCss));
-                    pts.Add((s + 0.18, ActivePeak, PulsePeakCss));
+                    pts.Add((s + 0.18, PulsePeak, PulsePeakCss));
                     pts.Add((s + _motion.PulseDur, "none", null));
                     break;
                 case CardFxKind.Highlight:
@@ -581,6 +647,125 @@ internal sealed class CssCompiler
             sb.Append('}');
         }
         sb.Append('}');
+    }
+
+    /// <summary>
+    /// The pulse overlay's keyframe track — one recipe per <see cref="StyleMotion.Pulse"/> member,
+    /// matching the element <see cref="PulseMarkup"/> emitted. All recipes are shared-cycle windows
+    /// off the same <c>brip{j}</c> class: paired near-coincident keyframes for hard cuts, eased
+    /// stops for the organic effects, and every track returning to <c>opacity:0</c> at 100%.
+    /// </summary>
+    private void PulseCss(StringBuilder sb, int j, double start)
+    {
+        switch (_motion.Pulse)
+        {
+            case PulseEffect.MarkerPop: break; // no overlay element, no track.
+            case PulseEffect.SurveyRing: SurveyRingCss(sb, j, start); break;
+            case PulseEffect.Flash: FlashCss(sb, j, start); break;
+            case PulseEffect.Slam: SlamCss(sb, j, start); break;
+            case PulseEffect.Flicker: FlickerCss(sb, j, start); break;
+            case PulseEffect.GlowRing: ScaleRingCss(sb, j, start, 0.6, 1.3); break;
+            case PulseEffect.Led: LedCss(sb, j, start); break;
+            case PulseEffect.StationRipple: ScaleRingCss(sb, j, start, 0.55, 2.6); break;
+            case PulseEffect.InkFrame: InkFrameCss(sb, j, start); break;
+            default: RippleCss(sb, j, start); break;
+        }
+    }
+
+    // Blueprint's surveyor ping: a linear (technical, un-eased) outward scale + fade.
+    private void SurveyRingCss(StringBuilder sb, int j, double start)
+    {
+        double s = Pct(start), end = Pct(start + 0.5), e = 0.01;
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{");
+        sb.Append("0%{opacity:0;transform:scale(1);}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        sb.Append($"{P(s)}%{{opacity:{Nm(0.9 * _motion.EffectAmplitude)};transform:scale(1);animation-timing-function:linear;}}");
+        sb.Append($"{P(end)}%{{opacity:0;transform:scale(1.22);}}");
+        sb.Append("100%{opacity:0;transform:scale(1);}}");
+    }
+
+    // Minimal/extrude's tint wash: the card face flashes in the pulse colour and eases away.
+    private void FlashCss(StringBuilder sb, int j, double start)
+    {
+        double s = Pct(start), end = Pct(start + 0.5), e = 0.01;
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        sb.Append($"{P(s)}%{{opacity:{Nm(0.45 * _motion.EffectAmplitude)};animation-timing-function:{Power2OutCss};}}");
+        sb.Append($"{P(end)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
+    }
+
+    // Brutalist's border slam: thick outline on for two frames, hard cuts both ways, no easing.
+    private void SlamCss(StringBuilder sb, int j, double start)
+    {
+        double s = Pct(start), end = Pct(start + 0.14), e = 0.01;
+        string on = Nm(_motion.EffectAmplitude);
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        sb.Append($"{P(s)}%{{opacity:{on};}}");
+        sb.Append($"{P(end)}%{{opacity:{on};}}");
+        if (end + e < 100) sb.Append($"{P(end + e)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
+    }
+
+    // Terminal's CRT blink: the face invert-flickers twice — two instant-on/off windows.
+    private void FlickerCss(StringBuilder sb, int j, double start)
+    {
+        string on = Nm(0.5 * _motion.EffectAmplitude);
+        double e = 0.01;
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
+        double s0 = Pct(start);
+        if (s0 > e) sb.Append($"{P(s0 - e)}%{{opacity:0;}}");
+        sb.Append($"{P(s0)}%{{opacity:{on};}}{P(Pct(start + 0.09))}%{{opacity:{on};}}{P(Pct(start + 0.09) + e)}%{{opacity:0;}}");
+        sb.Append($"{P(Pct(start + 0.18))}%{{opacity:0;}}{P(Pct(start + 0.18) + e)}%{{opacity:{on};}}{P(Pct(start + 0.27))}%{{opacity:{on};}}");
+        if (Pct(start + 0.27) + e < 100) sb.Append($"{P(Pct(start + 0.27) + e)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
+    }
+
+    // Glow's bloom ripple / metro's station ripple: the eased expanding ring, parameterised by
+    // duration and how far it swells (glow 1.3 off the card border, metro 2.6 off its centre dot).
+    private void ScaleRingCss(StringBuilder sb, int j, double start, double dur, double scale)
+    {
+        double s = Pct(start), end = Pct(start + dur), e = 0.01;
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{");
+        sb.Append("0%{opacity:0;transform:scale(1);}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        sb.Append($"{P(s)}%{{opacity:{Nm(0.9 * _motion.EffectAmplitude)};transform:scale(1);animation-timing-function:{Power2OutCss};}}");
+        sb.Append($"{P(end)}%{{opacity:0;transform:scale({Nm(scale)});}}");
+        sb.Append("100%{opacity:0;transform:scale(1);}}");
+    }
+
+    // Circuit's status LED: a single eased blink of the corner dot.
+    private void LedCss(StringBuilder sb, int j, double start)
+    {
+        double s = Pct(start), end = Pct(start + 0.35), e = 0.01;
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        sb.Append($"{P(s)}%{{opacity:{Nm(_motion.EffectAmplitude)};animation-timing-function:{Power2OutCss};}}");
+        sb.Append($"{P(end)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
+    }
+
+    // Editorial's ink annotation, paced by PulseDur: ink in over the first quarter, hold, lift.
+    private void InkFrameCss(StringBuilder sb, int j, double start)
+    {
+        double d = _motion.PulseDur;
+        double s = Pct(start), inEnd = Pct(start + 0.25 * d), hold = Pct(start + 0.7 * d), end = Pct(start + d), e = 0.01;
+        string amp = Nm(_motion.EffectAmplitude);
+        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
+        sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
+        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        sb.Append($"{P(s)}%{{opacity:0;animation-timing-function:linear;}}");
+        sb.Append($"{P(inEnd)}%{{opacity:{amp};}}");
+        sb.Append($"{P(hold)}%{{opacity:{amp};}}");
+        sb.Append($"{P(end)}%{{opacity:0;}}");
+        sb.Append("100%{opacity:0;}}");
     }
 
     private void RippleCss(StringBuilder sb, int j, double start)

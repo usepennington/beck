@@ -160,6 +160,13 @@ public static class EditorialStyle
             EffectAmplitude = 0.7,
             // The slow, soft draw-on: the existing sequence-reveal ramp, stretched.
             SequenceRevealScale = 2.6,
+            // The editor's annotation (mock 1j's `inkx`): an arrival slowly inks a thin red frame
+            // around the figure, holds it, then lifts it — the editor circling the node in red.
+            // PulseDur paces the ink and extends the schedule window so the annotation never
+            // outruns the cycle; the transform lift stays classic-subtle.
+            Pulse = PulseEffect.InkFrame,
+            PulseColor = "var(--beck-danger)",
+            PulseDur = 1.4,
         };
 
         // The headline editorial motion (mock 1j): every connector — architecture, class, AND

@@ -22,6 +22,48 @@ public enum PacketGlyph
 }
 
 /// <summary>
+/// The visual character of the node <em>pulse</em> — the arrival cue every packet hop fires on its
+/// destination card (and the flow <c>pulse</c> step) — selected per style via
+/// <see cref="StyleMotion.Pulse"/>. Like <see cref="StyleArtwork"/> this is a small closed
+/// vocabulary, not open geometry: each member maps to one compiled overlay/keyframe recipe in the
+/// CSS compiler, so every effect stays deterministic, shared-cycle (no <c>animation-delay</c>
+/// chains), and fully inside the reduced-motion guard. <see cref="Ripple"/> is classic and every
+/// style that doesn't choose — byte-identical.
+/// </summary>
+public enum PulseEffect
+{
+    /// <summary>Classic: a soft border ripple that expands off the card and fades.</summary>
+    Ripple,
+    /// <summary>Blueprint's surveyor ping: an offset rectangular ring scales linearly off the card —
+    /// a construction-drawing measurement mark, not an organic ripple.</summary>
+    SurveyRing,
+    /// <summary>Sketch's marker pop: no overlay at all — the card itself jolts up a beat larger
+    /// (the whiteboard box flexing as the arrow lands).</summary>
+    MarkerPop,
+    /// <summary>A filled tint wash over the card face that flashes in and eases away — minimal's
+    /// quiet arrival beat and extrude's struck slab face.</summary>
+    Flash,
+    /// <summary>Brutalist's border slam: the card's outline snaps to a thick stroke for a couple of
+    /// frames and snaps back — hard cuts, no easing, no scaling.</summary>
+    Slam,
+    /// <summary>Terminal's CRT blink: the card face invert-flickers twice (two instant-on/off fill
+    /// flashes), phosphor-style.</summary>
+    Flicker,
+    /// <summary>Glow's bloom ripple: the classic expanding ring, but glowing — carried on a
+    /// drop-shadow halo and swelling further before it fades.</summary>
+    GlowRing,
+    /// <summary>Circuit's status LED: a small dot in the card's top-right corner blinks once as the
+    /// signal lands. Position is baked geometry; only opacity animates.</summary>
+    Led,
+    /// <summary>Metro's station ripple: a circular ring radiates from the card's centre in the
+    /// arriving line's colour — the transit-map "you are here" ping.</summary>
+    StationRipple,
+    /// <summary>Editorial's ink annotation: a thin frame is slowly inked around the card, held, then
+    /// lifted — the editor circling a figure. Paced by <see cref="StyleMotion.PulseDur"/>.</summary>
+    InkFrame,
+}
+
+/// <summary>
 /// The node-chrome shape family a style draws — the engine-internal-but-data selector
 /// (<see cref="BeckStyle.Artwork"/>) new-designs.md reserves for shape variations that can't be
 /// expressed through CSS/tokens alone. It is a small closed vocabulary, <em>not</em> a public
@@ -955,6 +997,27 @@ public sealed record StyleMotion
     /// byte-identical.
     /// </summary>
     public bool PressDown { get; init; }
+
+    /// <summary>
+    /// The node-pulse arrival character (<see cref="PulseEffect"/>): which compiled overlay/keyframe
+    /// recipe renders the pulse every packet hop fires on its destination card (and the flow
+    /// <c>pulse</c> step). Each style picks the member that carries its identity — blueprint's
+    /// <see cref="PulseEffect.SurveyRing"/>, terminal's <see cref="PulseEffect.Flicker"/>, circuit's
+    /// <see cref="PulseEffect.Led"/>, … — so arrivals stop reading as the same classic ripple in
+    /// every skin. All recipes compile onto the shared cycle (no <c>animation-delay</c>), sit inside
+    /// the reduced-motion guard, and rest at <c>opacity:0</c>. <see cref="PulseEffect.Ripple"/>
+    /// (classic, and every style that doesn't set it) reproduces the exact historical ripple —
+    /// byte-identical.
+    /// </summary>
+    public PulseEffect Pulse { get; init; } = PulseEffect.Ripple;
+
+    /// <summary>
+    /// Optional colour override for the pulse overlay — a CSS value, kept as a <c>var(--beck-*)</c>
+    /// token so it theme-adapts (circuit's amber LED <c>var(--beck-gold)</c>, editorial's red editor
+    /// pen <c>var(--beck-danger)</c>). <c>null</c> (classic, and every style that doesn't set it)
+    /// keeps the arriving packet's own colour, unchanged.
+    /// </summary>
+    public string? PulseColor { get; init; }
 }
 
 /// <summary>Corner radii, stroke widths, border insets, and the card box-model constants.</summary>

@@ -137,6 +137,10 @@ public static class MinimalStyle
             // faint hollow ring, not "off"); this hard-gates them so no impact or working ring renders
             // at all — the packets, trails, pulses, and status pills still animate, understated.
             RingsEnabled = false,
+            // The quiet arrival beat (mock 1c): the receiving card tints in the packet's colour for a
+            // moment instead of ringing — the flash is the style's ONE arrival accent, scaled by the
+            // 0.4 amplitude above so it stays a whisper.
+            Pulse = PulseEffect.Flash,
             // Raise the sequence-storytelling dim floor. On the dark token set the dimmed message
             // edges (var(--beck-edge) = base-700) and the activation bar's gradient tail (0.35 stop)
             // drop to near-invisible at classic's 0.15/0.25 floors — a static viewer can't read the

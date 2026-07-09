@@ -145,6 +145,8 @@ Fixed `color-mix(in srgb, …)` percentages, all whole numbers. Members: `GroupB
 | `PacketSteps` | `int?` | `null` | `steps(n)` timing on the packet's own advance (brutalist's stepped flow). |
 | `SequenceRevealScale` | `double` | `1.0` | Multiplier on the sequence-reveal ramp windows (editorial's slow draw-on). |
 | `PressDown` | `bool` | `false` | Active-effect transform presses down toward the depth faces (extrude). |
+| `Pulse` | `PulseEffect` | `Ripple` | The node-pulse arrival character — see [PulseEffect](#pulseeffect). |
+| `PulseColor` | `string?` | `null` | Colour override for the pulse overlay, as a `var(--beck-*)` token (circuit's `--beck-gold` LED, editorial's `--beck-danger` pen). `null` keeps the arriving packet's colour. |
 
 ### StyleGeometry
 
@@ -195,6 +197,26 @@ style composes existing artwork rather than injecting markup. Every non-`Plain` 
 
 `enum PacketGlyph` — the style-default packet glyph (`StyleMotion.PacketGlyph`), distinct from the
 per-packet author-facing `PacketShape`: `Dot`, `Ring`, `Square`, `Train`.
+
+### PulseEffect
+
+`enum PulseEffect` — the visual character of the node *pulse*, the arrival cue every packet hop
+fires on its destination card (and the flow `pulse` step). Like `StyleArtwork` it is a closed
+vocabulary: each member maps to one compiled overlay/keyframe recipe, so every effect stays
+deterministic, shared-cycle, and inside the reduced-motion guard.
+
+| value | style | arrival reads as |
+|---|---|---|
+| `Ripple` | classic | A soft border ripple expands off the card and fades. |
+| `SurveyRing` | blueprint | An offset rectangular ring scales linearly outward — a surveyor's ping. |
+| `MarkerPop` | sketch | No overlay: the card itself jolts a beat larger (`scale(1.08)`). |
+| `Flash` | minimal, extrude | The card face tints in the pulse colour and eases away. |
+| `Slam` | brutalist | The outline snaps thick for two frames and snaps back — hard cuts. |
+| `Flicker` | terminal | The face invert-flickers twice, CRT-style. |
+| `GlowRing` | glow | The expanding ring, carried on a drop-shadow bloom halo. |
+| `Led` | circuit | A small dot in the card's top-right corner blinks once. |
+| `StationRipple` | metro | A circular ring radiates from the card's centre in the line colour. |
+| `InkFrame` | editorial | A thin frame is inked around the card, held, then lifted (paced by `PulseDur`). |
 
 ## MetricsFont
 

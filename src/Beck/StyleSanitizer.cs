@@ -49,6 +49,10 @@ internal static class StyleSanitizer
             EdgeDash = Clean(s.Strokes.EdgeDash),
             StreamDash = Clean(s.Strokes.StreamDash),
         },
+        Motion = s.Motion with
+        {
+            PulseColor = CleanNullable(s.Motion.PulseColor),
+        },
         Geometry = s.Geometry with
         {
             EdgeLabelHalo = Clean(s.Geometry.EdgeLabelHalo),

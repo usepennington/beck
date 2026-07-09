@@ -165,6 +165,9 @@ public static class MetroStyle
         StyleMotion motion = c.Motion with
         {
             PacketGlyph = PacketGlyph.Train,
+            // The station ripple (mock 1i's `ringc`): an arrival radiates a circular ring from the
+            // card's centre in the arriving line's colour — the transit-map "you are here" ping.
+            Pulse = PulseEffect.StationRipple,
         };
 
         // The metro edge treatment (the star of the style) — every knob maps to the shared edge-presentation
