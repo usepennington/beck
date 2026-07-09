@@ -1,11 +1,14 @@
 namespace Beck;
 
 /// <summary>
-/// The <c>terminal</c> built-in style (Phase 3, mock 1f): mono everything — every text role renders
-/// through the mono family stack, block/square travelling packets, a hard-step (<c>steps(n)</c>)
-/// trail reveal, and a green-ramp default accent (with neutrals biased toward the same success ramp)
-/// instead of classic's blue. Squared-off corners (radius 0 throughout) reinforce the "console
-/// window" read. Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every
+/// The <c>terminal</c> built-in style (mock 1f): mono everything — every text role renders through the
+/// mono family stack, block/square travelling packets that HOP in hard steps, a hard-step
+/// (<c>steps(n)</c>) trail reveal, and a green-ramp default accent (with neutrals biased toward the same
+/// success ramp) instead of classic's blue. Squared-off corners (radius 0 throughout) reinforce the
+/// "console window" read, and — the headline edge trait, rebuilt around the edge-presentation seam
+/// (<see cref="StyleEdges"/>) — a bright phosphor block <em>ticks down every wire</em> in hard discrete
+/// jumps (<see cref="EdgeOverlay.Comet"/> + <see cref="StyleEdges.OverlaySteps"/>) over a dim green trace,
+/// with mono <c>&gt;</c> chevron arrowheads sitting bright over it. Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every
 /// feature (shapes, groups, icons, packets, trails, sequence choreography, state/class diagrams,
 /// scrub, reduced motion, light/dark) stays fully available — only the rendering changes.
 /// </summary>
@@ -16,13 +19,19 @@ namespace Beck;
 /// <em>and</em> before the renderer draws/word-wraps it, so the brackets add width to the card without
 /// desyncing the <c>textLength</c> guard — the "measured widths guard the typography" invariant is
 /// upheld, not risked. Applied to every primary node title (card/pill/class/ghost); subtitles, status
-/// pills, and labels stay bare. The headline <em>edge</em> trait is the mono <c>&gt;</c> chevron
-/// arrowhead (<see cref="EdgeArrow.Chevron"/> on <see cref="StyleEdges.Arrow"/>): two hard
-/// butt-capped strokes forming a crisp <c>&gt;</c> emitted through the <c>Markers</c> pipeline,
-/// oriented along the edge so a reply reads as <c>&lt;</c> for free. Deliberately <em>not</em>
-/// shipped: scanlines and a blinking cursor, both explicitly excluded by the design brief — the
-/// identity is carried by mono type, square packets, hard-step trails, the brackets, and the
-/// chevron heads instead.
+/// pills, and labels stay bare. The <em>edge</em> presentation is the star: the mono <c>&gt;</c> chevron
+/// arrowhead (<see cref="EdgeArrow.Chevron"/> on <see cref="StyleEdges.Arrow"/>) — two hard butt-capped
+/// strokes forming a crisp <c>&gt;</c> emitted through the <c>Markers</c> pipeline, oriented along the edge
+/// so a reply reads as <c>&lt;</c> for free and drawn bright over the wire via
+/// <see cref="StyleEdges.MarkerColor"/> — plus a bright phosphor block (<see cref="EdgeOverlay.Comet"/>,
+/// <see cref="StyleEdges.OverlayWidth"/> 5 / <see cref="StyleEdges.CometDash"/> 5) that ticks the dim green
+/// trace in twelve hard discrete jumps (<see cref="StyleEdges.OverlaySteps"/> = 12) each
+/// <see cref="StyleEdges.OverlayPeriod"/>, compiled onto the shared cycle by
+/// <c>CssCompiler.EdgeOverlayCss</c> (no delay chain) and killed under reduced motion; the travelling flow
+/// packet hops in the same cadence (<see cref="StyleMotion.PacketSteps"/> = 12). Deliberately <em>not</em>
+/// shipped: scanlines and a blinking cursor, both explicitly excluded by the design brief — the identity is
+/// carried by mono type, square packets, hard-step trails/packet, the brackets, the chevron heads, and the
+/// stepped phosphor pulse instead (no <c>scan</c>/<c>blink</c> keyframes).
 /// </remarks>
 public static class TerminalStyle
 {
@@ -72,7 +81,16 @@ public static class TerminalStyle
             ("--beck-neutral", $"color-mix(in srgb, {green} 30%, var(--color-base-400, #94a3b8))"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {c.Mix.GroupBorder.ToString(System.Globalization.CultureInfo.InvariantCulture)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
-            ("--beck-edge", "var(--color-base-300, #cbd5e1)"),
+            // The wire itself reads as a dim green trace (the mock's dark-green `#166534` connectors),
+            // NOT classic's neutral slate — so the whole diagram is a coherent monochrome-green console.
+            // The bright phosphor block (--beck-edge-overlay) then tick-travels this dim rail, and the
+            // chevron heads (MarkerColor = accent) sit bright over it, exactly as the mock layers them.
+            ("--beck-edge", "var(--color-success-800, #166534)"),
+            // The travelling phosphor block's hue: a step BRIGHTER than the accent (mock's `#86efac`
+            // green-300 block over its `#4ade80` nodes/heads), so the packet glows down the wire. This
+            // is the palette-less overlay's fallback token (var(--beck-edge-overlay, var(--beck-accent))),
+            // shared by both themes — phosphor stays vivid on light and dark alike.
+            ("--beck-edge-overlay", "var(--color-success-300, #86efac)"),
             ("--beck-packet", "var(--beck-accent)"),
             ("--beck-icon-bg", $"color-mix(in srgb, {green} 12%, var(--color-base-100, #f1f5f9))"),
             ("--beck-accent", green),
@@ -87,7 +105,10 @@ public static class TerminalStyle
             ("--beck-text", "var(--color-base-50, #f0f6fc)"),
             ("--beck-text-muted", "var(--color-base-400, #8b949e)"),
             ("--beck-text-faint", "var(--color-base-500, #6e7681)"),
-            ("--beck-edge", "var(--color-base-700, #30363d)"),
+            // --beck-edge is intentionally NOT overridden here: the dim green trace (success-800) tracks
+            // through from the light block so the wire reads as the mock's dark-green connector on the
+            // near-black console surface too (the mock is itself a dark page). --beck-edge-overlay
+            // (phosphor green-300) likewise inherits — it stays bright on both themes.
             ("--beck-icon-bg", $"color-mix(in srgb, {green} 10%, var(--color-base-800, #21262d))"),
         });
 
@@ -108,14 +129,38 @@ public static class TerminalStyle
             NarrationBulletGap = 14,
         };
 
-        // The headline terminal edge trait: mono `>` chevron arrowheads instead of filled triangles.
-        // Every knob else stays classic (the green edge token, blunt line ends, and stepped packet are
-        // separate §1f items). The chevron is TWO hard butt-capped strokes emitted through the Markers
-        // pipeline (Markers.Body), oriented along the edge; a reply's reversed path draws it as `<` for
-        // free through the marker's orient="auto-start-reverse". Closed UML ends stay closed.
+        // The terminal edge presentation — the identity the mock carries on every wire (§1f):
+        //  - Arrow=Chevron: mono `>` arrowheads (TWO hard butt-capped strokes via Markers.Body), oriented
+        //    along the edge so a reply's reversed path draws `<` for free (orient="auto-start-reverse").
+        //    Closed UML ends stay closed (the class inheritance triangle keeps its body).
+        //  - MarkerColor=accent: the mock draws the `>` in bright green (`#4ade80`) OVER the dim green wire
+        //    (`#166534`), not in the wire's own dim hue. MarkerColor only recolours edges still on the
+        //    default var(--beck-edge) (an author-coloured edge keeps its colour + matching head), so the
+        //    dim rail carries a bright phosphor chevron exactly as the mock layers them.
+        //  - Overlay=Comet + OverlaySteps=12: the headline "packets ticking down the wires" — a bright
+        //    phosphor block (OverlayWidth 5, CometDash 5 → the mock's `stroke-width:5;stroke-dasharray:5 298`)
+        //    that TICKS the wire in 12 hard discrete jumps (`animation:ptd 1.6s steps(12) infinite`) rather
+        //    than gliding. OverlaySteps is the one seam field this needs (shared with brutalist); it swaps
+        //    the overlay's linear timing for steps(n), extending the existing stepped-flow discipline
+        //    (PacketSteps/TrailSteps) to the ambient edge overlay. Compiled onto the shared cycle by
+        //    CssCompiler.EdgeOverlayCss (no delay chain), killed under reduced motion. The block hue is the
+        //    palette-less fallback token var(--beck-edge-overlay) = phosphor green-300 (set above).
+        //  - OverlayLinecap=butt + BaseLinecap=butt: the phosphor is a hard BLOCK, and the base wire is
+        //    squared (the mock lines carry no linecap) — matching the style's squared-corner console chassis.
+        // The mock's scanlines + blinking cursor stay LOCKED OUT (design brief): the identity is carried by
+        // mono type, square packets, hard-step trails/packet, brackets, chevrons, and this stepped phosphor
+        // pulse — no scan/blink keyframes.
         StyleEdges edges = c.Edges with
         {
             Arrow = EdgeArrow.Chevron,
+            MarkerColor = "var(--beck-accent)",
+            BaseLinecap = "butt",
+            Overlay = EdgeOverlay.Comet,
+            OverlayWidth = 5,
+            OverlayLinecap = "butt",
+            CometDash = 5,
+            OverlaySteps = 12,
+            OverlayPeriod = 1.6,
         };
 
         StyleMotion motion = c.Motion with
@@ -126,6 +171,11 @@ public static class TerminalStyle
             // Hard-step trail reveal — a blocky steps(n) timing function on the trail's
             // stroke-dashoffset track instead of the packet's own (still-smooth) ease.
             TrailSteps = 8,
+            // The travelling flow packet HOPS its edge in discrete jumps too (the mock steps the flow —
+            // its `ptd` block ticks, it never glides): a steps(12) timing on the packet's own
+            // offset-distance track, matching the stepped phosphor overlay's cadence. Only the flow
+            // effect steps — nothing animates at rest.
+            PacketSteps = 12,
             // No bloom — crisp edges are part of the "no scanlines, no cursor" restraint.
             GlowEnabled = false,
         };

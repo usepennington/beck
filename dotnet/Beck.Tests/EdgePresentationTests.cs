@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Beck;
 using Beck.Rendering;
 using Beck.Rendering.Svg;
 using Xunit;
@@ -24,6 +25,8 @@ public sealed class EdgePresentationTests
         BeckStyle.Classic with { Edges = f(StyleEdges.Classic) };
 
     private static readonly Regex BaseEdgeD = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex BaseEdgeStroke = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"[^\"]*\" style=\"stroke:([^;\"]+)", RegexOptions.Compiled);
+    private static readonly Regex StationStroke = new("<circle class=\"beck-station\"[^>]*;stroke:([^;\"]+)", RegexOptions.Compiled);
     private static readonly Regex OverlayD = new("<path class=\"beck-edge-overlay [^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
     private static readonly Regex BedD = new("<path class=\"beck-edge-bed\" d=\"([^\"]*)\"", RegexOptions.Compiled);
     private static readonly Regex MarkerW = new("markerWidth=\"([^\"]*)\"", RegexOptions.Compiled);
@@ -83,6 +86,137 @@ public sealed class EdgePresentationTests
         var overlayD = Matches(OverlayD, svg);
         Assert.NotEmpty(overlayD);
         foreach (string od in overlayD) Assert.Contains(od, baseD);
+    }
+
+    // OverlaySteps swaps the overlay animation's linear timing for steps(n) — brutalist/terminal's
+    // mechanical tick — in the emitted overlay class rule, while the loop stays compiled + infinite with
+    // no delay chain. Unset (classic) stays linear.
+    [Fact]
+    public void OverlaySteps_EmitsSteppedTiming()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+
+        string linear = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet }) });
+        Assert.Matches(@"\.beo0-[0-9a-f]+\{animation:kbeo0-[0-9a-f]+ [0-9.]+s linear infinite;\}", linear);
+        Assert.DoesNotContain("steps(", linear);
+
+        string stepped = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet, OverlaySteps = 8 }) });
+        Assert.Matches(@"\.beo0-[0-9a-f]+\{animation:kbeo0-[0-9a-f]+ [0-9.]+s steps\(8\) infinite;\}", stepped);
+        // Still a compiled shared-cycle loop, still guarded, still no delay chain.
+        Assert.Contains("@keyframes kbeo0-", stepped);
+        Assert.DoesNotContain("animation-delay", stepped);
+    }
+
+    // OverlaySteps also steps a Marching overlay (blueprint-style dashed flow), but is ignored for a
+    // DrawOn wipe — that eased ink stays linear even when steps are set.
+    [Fact]
+    public void OverlaySteps_AppliesToMarching_NotDrawOn()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+
+        string marching = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Marching, OverlaySteps = 12 }) });
+        Assert.Contains("steps(12)", marching);
+
+        string drawOn = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn, OverlaySteps = 12 }) });
+        Assert.DoesNotContain("steps(", drawOn);
+    }
+
+    // ---- base-colour palette (metro's per-line transit hues) ----
+
+    // A 4-node LR chain: three plain Data edges (a->b, b->c, c->d), all on the DEFAULT edge colour
+    // (var(--beck-edge)). Routed-edge index == model.Edges order == SVG document order, so a positional
+    // read of the base strokes is exactly the palette cycle.
+    private const string PaletteChainYaml = """
+        type: architecture
+        meta: { title: t, direction: LR }
+        nodes:
+          - { id: a, title: A }
+          - { id: b, title: B }
+          - { id: c, title: C }
+          - { id: d, title: D }
+        edges:
+          - { from: a, to: b }
+          - { from: b, to: c }
+          - { from: c, to: d }
+        """;
+
+    // BaseColorPalette recolours each default-coloured base edge stroke by its stable draw-order index,
+    // cycling palette[i % Count] — so a 2-hue palette over 3 edges reads hue0, hue1, hue0.
+    [Fact]
+    public void BaseColorPalette_CyclesBaseStrokeByEdgeIndex()
+    {
+        string svg = BeckSvg.Render(PaletteChainYaml,
+            new SvgRenderOptions
+            {
+                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)" } }),
+            });
+
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.Equal(new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-a)" }, strokes);
+    }
+
+    // An edge with an explicit author colour keeps it — the palette only paints edges still on the default
+    // var(--beck-edge). The palette index still ADVANCES across the authored edge (the third edge takes
+    // palette[2], not palette[1]), so a mixed line stays coherently indexed.
+    [Fact]
+    public void BaseColorPalette_AuthoredEdgeColorWins()
+    {
+        const string yaml = """
+            type: architecture
+            meta: { title: t, direction: LR }
+            nodes:
+              - { id: a, title: A }
+              - { id: b, title: B }
+              - { id: c, title: C }
+              - { id: d, title: D }
+            edges:
+              - { from: a, to: b }
+              - { from: b, to: c, color: danger }
+              - { from: c, to: d }
+            """;
+        string svg = BeckSvg.Render(yaml,
+            new SvgRenderOptions
+            {
+                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-c)" } }),
+            });
+
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.Equal(new[] { "var(--pl-a)", "var(--beck-danger)", "var(--pl-c)" }, strokes);
+    }
+
+    // Empty palette (classic, every non-metro style) leaves every base edge on the single var(--beck-edge)
+    // token — the seam is byte-inert off (the wholesale proof is the 128-file byte diff + byte-identity tests).
+    [Fact]
+    public void BaseColorPalette_Empty_LeavesDefaultEdgeColour()
+    {
+        string svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.Equal(new[] { "var(--beck-edge)", "var(--beck-edge)", "var(--beck-edge)" }, strokes);
+    }
+
+    // Coherence: metro's station-dot RINGS follow the same per-line palette as the base stroke, so a
+    // transit line and its two stations read one hue. On the default-coloured chain each edge i takes
+    // metro's line-(i%3) colour; its two stations take the SAME colour (stations are emitted per edge, in
+    // edge order, two apiece).
+    [Fact]
+    public void BaseColorPalette_MetroStationRingsFollowLineHue()
+    {
+        string svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = MetroStyle.Instance });
+
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.Equal(new[] { "var(--beck-line-1)", "var(--beck-line-2)", "var(--beck-line-3)" }, strokes);
+
+        var stations = Matches(StationStroke, svg);
+        Assert.Equal(new[]
+        {
+            "var(--beck-line-1)", "var(--beck-line-1)",
+            "var(--beck-line-2)", "var(--beck-line-2)",
+            "var(--beck-line-3)", "var(--beck-line-3)",
+        }, stations);
     }
 
     // ---- underlay layer (static trace bed) ----
@@ -295,6 +429,37 @@ public sealed class EdgePresentationTests
         Assert.True(w > 6, $"expected a grown marker width, got {w}");
     }
 
+    // MarkerOutline (brutalist's lime-fill/white-outline arrowhead): the plain filled arrow polygon gains
+    // a contrast stroke + stroke-width 1.5, and its marker is drawn overflow="visible" so the outline isn't
+    // clipped. Classic (unset) keeps the flat single-colour fill and never emits the outline/overflow.
+    [Fact]
+    public void MarkerOutline_StrokesFilledArrow_OverflowVisible()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+        string outlined = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { MarkerOutline = "var(--beck-edge)" }) });
+        // The filled polygon now carries the outline stroke; the marker element is overflow-visible.
+        Assert.Contains("<polygon points=\"0,1 10,5 0,9\" fill=\"var(--beck-edge)\" stroke=\"var(--beck-edge)\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>", outlined);
+        Assert.Contains("overflow=\"visible\"", outlined);
+
+        // Classic: flat fill, no outline stroke on the arrow polygon, no overflow attribute.
+        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        Assert.Contains("<polygon points=\"0,1 10,5 0,9\" fill=\"var(--beck-edge)\"/>", classic);
+        Assert.DoesNotContain("overflow=\"visible\"", classic);
+    }
+
+    // MarkerOutline only decorates the plain filled arrowhead: it is inert for the open-V / chevron
+    // treatments (which are stroke-pairs, not a filled polygon), so those never gain overflow="visible".
+    [Fact]
+    public void MarkerOutline_InertForOpenVAndChevron()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+        string openV = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.OpenV, MarkerOutline = "var(--beck-edge)" }) });
+        Assert.DoesNotContain("overflow=\"visible\"", openV);
+        Assert.DoesNotContain("<polygon points=\"0,1 10,5 0,9\"", openV);
+    }
+
     // ---- base-layer treatment ----
 
     [Fact]
@@ -346,5 +511,204 @@ public sealed class EdgePresentationTests
             new SvgRenderOptions { Style = WithEdges(e => e with { WobblySeparators = true }) });
         Assert.Contains("<path class=\"beck-class-head-border\"", wobbly);
         Assert.DoesNotContain("<line class=\"beck-class-head-border\"", wobbly);
+    }
+
+    // ---- blueprint (mock 1a): every connector is dashed + perpetually flowing ----
+
+    // Blueprint's headline motion is a Marching overlay on EVERY architecture edge and sequence
+    // message: a 6 6 dash (mirroring the mock's `stroke-dasharray:6 6`) that marches on a 1.6s
+    // compiled shared-cycle loop (the mock's `animation:df 1.6s linear infinite` verbatim), sharing
+    // each base edge's exact d, no delay chain.
+    [Fact]
+    public void Blueprint_MarchesOnEveryArchitectureEdge()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = BlueprintStyle.Instance });
+
+        var baseD = Matches(BaseEdgeD, svg);
+        var overlayD = Matches(OverlayD, svg);
+        Assert.NotEmpty(baseD);
+        Assert.Equal(baseD.Count, overlayD.Count);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
+
+        Assert.Contains("stroke-dasharray:6 6", svg);
+        Assert.Matches(@"\.beo0-[0-9a-z]+\{animation:kbeo0-[0-9a-z]+ 1\.6s linear infinite;\}", svg);
+        Assert.Contains("@keyframes kbeo0-", svg);
+        Assert.DoesNotContain("animation-delay", svg);
+    }
+
+    // The same marching overlay also rides sequence messages, not just architecture edges.
+    [Fact]
+    public void Blueprint_MarchesOnSequenceMessagesToo()
+    {
+        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+            new SvgRenderOptions { Style = BlueprintStyle.Instance });
+        var baseD = Matches(BaseEdgeD, svg);
+        var overlayD = Matches(OverlayD, svg);
+        Assert.NotEmpty(overlayD);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
+    }
+
+    // ---- editorial (mock 1j): every connector inks itself in slowly, on architecture AND sequence ----
+
+    // Editorial's headline motion is the DrawOn overlay on EVERY edge (not just sequence-storytelling
+    // scenery, which SequenceRevealScale already stretches) — architecture, class, and sequence messages
+    // all get an overlay path sharing the base edge's exact d, on a long (~7s) compiled shared-cycle wipe.
+    [Fact]
+    public void Editorial_DrawsOnEveryArchitectureEdge()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = EditorialStyle.Instance });
+
+        var baseD = Matches(BaseEdgeD, svg);
+        var overlayD = Matches(OverlayD, svg);
+        Assert.NotEmpty(baseD);
+        Assert.Equal(baseD.Count, overlayD.Count);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        Assert.Contains("@keyframes kbeo0-", svg);
+        Assert.DoesNotContain("animation-delay", svg);
+    }
+
+    // The same draw-on also inks class-diagram relations and sequence messages, not only the
+    // architecture graph. class.yaml in the corpus has no authored flow, so the model builder turns
+    // animation off entirely (Model/ClassBuilder.cs — unrelated to the style seam); a minimal
+    // `meta.animate: true` class diagram isolates the style's own behaviour from that model-level
+    // default.
+    [Fact]
+    public void Editorial_DrawsOnClassAndSequenceEdgesToo()
+    {
+        const string classYaml = """
+            type: class
+            meta:
+              title: Demo
+              animate: true
+            classes:
+              - id: a
+                name: A
+              - id: b
+                name: B
+            relations:
+              - from: a
+                to: b
+                kind: association
+            flow:
+              steps: []
+            """;
+        string classSvg = BeckSvg.Render(classYaml, new SvgRenderOptions { Style = EditorialStyle.Instance });
+        Assert.NotEmpty(Matches(OverlayD, classSvg));
+
+        string seqSvg = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = EditorialStyle.Instance });
+        Assert.NotEmpty(Matches(OverlayD, seqSvg));
+    }
+
+    // ---- terminal (mock 1f): a stepped phosphor block ticks down every wire ----
+
+    // Terminal's headline edge motion is a Comet overlay on EVERY architecture edge, ticking in 12 hard
+    // discrete steps (the mock's `stroke-width:5;stroke-dasharray:5 298;animation:ptd 1.6s steps(12)
+    // infinite`): each overlay path shares its base edge's exact d, is a squared (butt) 5px phosphor block
+    // on the palette-less --beck-edge-overlay fallback hue, and the loop is compiled onto the shared cycle
+    // with no delay chain.
+    [Fact]
+    public void Terminal_SteppedPhosphorBlockOnEveryWire_SharesD_NoDelayChain()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = TerminalStyle.Instance });
+
+        var baseD = Matches(BaseEdgeD, svg);
+        var overlayD = Matches(OverlayD, svg);
+        Assert.NotEmpty(overlayD);
+        Assert.Equal(baseD.Count, overlayD.Count);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
+
+        // Stepped tick (steps(12)) on a compiled 1.6s shared-cycle loop, guarded, no delay chain.
+        Assert.Matches(@"\.beo0-[0-9a-z]+\{animation:kbeo0-[0-9a-z]+ 1\.6s steps\(12\) infinite;\}", svg);
+        Assert.Contains("@keyframes kbeo0-", svg);
+        Assert.Contains("@media (prefers-reduced-motion:no-preference)", svg);
+        Assert.DoesNotContain("animation-delay", svg);
+
+        // The block is a squared (butt) 5px phosphor dash on the single overlay fallback hue (no palette).
+        Assert.Contains("stroke:var(--beck-edge-overlay, var(--beck-accent));stroke-width:5;stroke-linecap:butt;", svg);
+    }
+
+    // The mock draws the `>` chevron BRIGHT (`#4ade80`) over a DIM green wire (`#166534`): terminal keeps
+    // every default edge on its var(--beck-edge) token (the dim-green trace) while MarkerColor lifts the
+    // chevron marker to the bright var(--beck-accent). The two never collapse to one hue.
+    [Fact]
+    public void Terminal_ChevronRidesBrightAccentOverDefaultWire()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = TerminalStyle.Instance });
+
+        // Base edges stay on their token hue — the default wires on the dim-green var(--beck-edge), a
+        // kind-default (dependency) edge on var(--beck-neutral) — and NONE on the bright accent: the wire
+        // is always the dim trace, never the phosphor.
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.NotEmpty(strokes);
+        Assert.Contains("var(--beck-edge)", strokes);
+        Assert.DoesNotContain("var(--beck-accent)", strokes);
+
+        // The chevron marker (two butt-capped strokes) is drawn in the bright accent, not the wire's hue.
+        Assert.Contains("<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"var(--beck-accent)\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>", svg);
+        // No chevron stroke falls back to the dim edge colour.
+        Assert.DoesNotContain("stroke=\"var(--beck-edge)\" stroke-width=\"1.6\" stroke-linecap=\"butt\"", svg);
+    }
+
+    // The travelling flow packet HOPS in hard steps too (the mock steps its flow): PacketSteps=12 puts a
+    // steps(12) timing on the packet's own offset-distance track, while the trail keeps its own TrailSteps
+    // hard-cut reveal. Classic keeps the smooth per-edge-kind ease.
+    [Fact]
+    public void Terminal_PacketFlowStepsInHardCuts_ClassicDoesNot()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+        string terminal = BeckSvg.Render(yaml, new SvgRenderOptions { Style = TerminalStyle.Instance });
+        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+
+        int n = TerminalStyle.Instance.Motion.PacketSteps!.Value;
+        Assert.Equal(12, n);
+        Assert.Contains($"animation-timing-function:steps({n})", terminal);
+        Assert.DoesNotContain("animation-timing-function:steps(", classic);
+    }
+
+    // ---- circuit (mock 1h): an amber signal pulses along every right-angle trace ----
+
+    // Circuit's headline edge motion is a Comet overlay on EVERY architecture edge and sequence message:
+    // an 8px gold dot (the mock's `stroke:#fcd34d;stroke-width:3;stroke-linecap:round;
+    // stroke-dasharray:8 304;animation:pt 2.2s linear infinite`) gliding each trace on a 2.2s compiled
+    // shared-cycle loop. Each overlay path shares its base edge's exact d, rides the palette-less
+    // --beck-edge-overlay fallback hue, and the loop has no delay chain and is reduced-motion guarded.
+    [Fact]
+    public void Circuit_AmberSignalCometOnEveryTrace_SharesD_NoDelayChain()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = CircuitStyle.Instance });
+
+        var baseD = Matches(BaseEdgeD, svg);
+        var overlayD = Matches(OverlayD, svg);
+        Assert.NotEmpty(overlayD);
+        Assert.Equal(baseD.Count, overlayD.Count);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
+
+        // A width-3 round-capped comet on the single overlay fallback hue (no palette), an 8px lit dash.
+        Assert.Contains("stroke:var(--beck-edge-overlay, var(--beck-accent));stroke-width:3;stroke-linecap:round;", svg);
+        Assert.Contains("stroke-dasharray:8 ", svg);
+
+        // Compiled 2.2s shared-cycle loop, guarded, glides linear (not stepped), no delay chain.
+        Assert.Matches(@"\.beo0-[0-9a-z]+\{animation:kbeo0-[0-9a-z]+ 2\.2s linear infinite;\}", svg);
+        Assert.Contains("@keyframes kbeo0-", svg);
+        Assert.Contains("@media (prefers-reduced-motion:no-preference)", svg);
+        Assert.DoesNotContain("animation-delay", svg);
+    }
+
+    // The same amber comet rides sequence messages too, sharing each message path's d (the two-layer trace
+    // beds them as well) — the pulse is the ambient identity on every trace, not just architecture edges.
+    [Fact]
+    public void Circuit_AmberSignalCometOnSequenceMessages()
+    {
+        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+            new SvgRenderOptions { Style = CircuitStyle.Instance });
+        var baseD = Matches(BaseEdgeD, svg);
+        var overlayD = Matches(OverlayD, svg);
+        Assert.NotEmpty(overlayD);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
     }
 }

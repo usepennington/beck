@@ -62,6 +62,13 @@ public static class BrutalistStyle
             ("--beck-packet", "var(--beck-primary)"),
             ("--beck-icon-bg", "var(--color-base-100, #f1f5f9)"),
             ("--beck-accent", "var(--beck-primary)"),
+            // The loud neo-brutalist signal hues (mock 1d swatches): a lime and a yellow that the edge
+            // pulse alternates between (--beck-pulse-1 also fills the arrowhead). Kept vivid on both themes
+            // — like glow's comet hues they are the accent that must read as a bright signal over the stark
+            // white/black connectors, so they are not re-toned in the dark block. Still token-driven: a host
+            // --color-lime-400 / --color-yellow-300 (or --beck-pulse-*) override wins; the hex is last resort.
+            ("--beck-pulse-1", "var(--color-lime-400, #a3e635)"),
+            ("--beck-pulse-2", "var(--color-yellow-300, #fde047)"),
             // The hard-offset shadow ink for the StyleArtwork.Brutalist shadow rect (behind each node).
             // A solid, *neutral* near-black — one rung darker than the border's base-900 slate and free
             // of its blue tint — so the thin offset sliver reads as crisp black sticker ink rather than a
@@ -151,6 +158,38 @@ public static class BrutalistStyle
             TrailSteps = 6,
         };
 
+        // The brutalist edge presentation (the identity the mock carries on every connector):
+        //  - Overlay=Comet, width 6, CometDash 6 (the mock's `stroke-width:6;stroke-dasharray:6 297` block),
+        //    butt-capped (squared — no rounding anywhere in brutalist), on a 1.8s cycle.
+        //  - OverlaySteps=8: the ONE new field this style needs — the pulse ticks in 8 hard discrete jumps
+        //    (`animation:ptd 1.8s steps(8) infinite`) instead of gliding, the mechanical no-easing read that
+        //    IS the identity. Extends the existing stepped-flow discipline (PacketSteps/TrailSteps) to the
+        //    ambient edge overlay; compiled onto the shared cycle by CssCompiler.EdgeOverlayCss, no delay chain.
+        //  - OverlayPalette lime→yellow: the mock alternates the two swatch hues across its pulses.
+        //  - BaseLinecap=butt: the base connectors are squared (mock lines carry no linecap), matching the
+        //    style's squared-corner chassis.
+        //  - MarkerScaleToWidth=true: the field built for exactly this jury gripe — the thick 2.2px edge blew
+        //    the strokeWidth-unit arrowhead into a blob; scale-to-width keeps it sane on the heavy line.
+        //  - MarkerColor lime + MarkerOutline (the connector colour): the mock's lime-fill / white-outline
+        //    arrowhead. MarkerColor only paints edges on the default colour; MarkerOutline tracks --beck-edge
+        //    so the outline matches the connector (white on dark, near-black on light) in both themes.
+        // The mock's `pop steps(1)` shadow jump stays LOCKED OUT — the offset shadow is baked-static via
+        // StyleArtwork.Brutalist, so nothing animates at rest but the compiled edge pulse.
+        StyleEdges edges = StyleEdges.Classic with
+        {
+            BaseLinecap = "butt",
+            Overlay = EdgeOverlay.Comet,
+            OverlayWidth = 6,
+            OverlayLinecap = "butt",
+            CometDash = 6,
+            OverlaySteps = 8,
+            OverlayPeriod = 1.8,
+            OverlayPalette = new[] { "var(--beck-pulse-1)", "var(--beck-pulse-2)" },
+            MarkerScaleToWidth = true,
+            MarkerColor = "var(--beck-pulse-1)",
+            MarkerOutline = "var(--beck-edge)",
+        };
+
         return c with
         {
             Name = "brutalist",
@@ -159,6 +198,7 @@ public static class BrutalistStyle
             Geometry = geo,
             Typography = typography,
             Motion = motion,
+            Edges = edges,
             // The offset-shadow artwork seam: card/pill/class nodes gain a solid blur-free shadow rect
             // (ShadowOffset px, --beck-shadow) behind them. Data-only selector — no injected markup.
             Artwork = StyleArtwork.Brutalist,

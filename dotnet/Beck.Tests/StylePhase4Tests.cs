@@ -178,6 +178,48 @@ public sealed class StylePhase4Tests
         Assert.DoesNotContain($"steps({n})", classic);
     }
 
+    // ---- Brutalist edge presentation (mock 1d): a stepped lime/yellow pulse ticks every connector ----
+
+    // Brutalist's headline edge motion is a Comet overlay on EVERY architecture edge, ticking in 8 hard
+    // discrete steps (the mock's `stroke-dasharray:6 297;animation:ptd 1.8s steps(8) infinite`): each
+    // overlay path shares its base edge's exact d, the palette alternates the two lime/yellow signal hues,
+    // and the loop is compiled onto the shared cycle with no delay chain.
+    [Fact]
+    public void Brutalist_SteppedPulseOnEveryEdge_SharesD_NoDelayChain()
+    {
+        string svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BrutalistStyle.Instance });
+
+        var baseD = new Regex("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"([^\"]*)\"")
+            .Matches(svg).Select(m => m.Groups[1].Value).ToList();
+        var overlayD = new Regex("<path class=\"beck-edge-overlay [^\"]*\" d=\"([^\"]*)\"")
+            .Matches(svg).Select(m => m.Groups[1].Value).ToList();
+        Assert.NotEmpty(overlayD);
+        Assert.Equal(baseD.Count, overlayD.Count);
+        foreach (string od in overlayD) Assert.Contains(od, baseD);
+
+        // Stepped tick (steps(8)) on a compiled 1.8s shared-cycle loop, guarded, no delay chain.
+        Assert.Matches(@"\.beo0-[0-9a-z]+\{animation:kbeo0-[0-9a-z]+ 1\.8s steps\(8\) infinite;\}", svg);
+        Assert.Contains("@keyframes kbeo0-", svg);
+        Assert.DoesNotContain("animation-delay", svg);
+
+        // The pulse alternates the two brutalist signal hues; the block is a squared (butt) 6px dash.
+        Assert.Contains("stroke:var(--beck-pulse-1);stroke-width:6;stroke-linecap:butt;", svg);
+        Assert.Contains("stroke:var(--beck-pulse-2);stroke-width:6;stroke-linecap:butt;", svg);
+    }
+
+    // Brutalist's thick edge needs the sane marker sizing (userSpaceOnUse, sub-linear growth) AND the
+    // mock's lime-fill / connector-outlined arrowhead — a filled polygon coloured through --beck-pulse-1
+    // with a --beck-edge outline stroke, drawn overflow-visible so the outline isn't clipped.
+    [Fact]
+    public void Brutalist_Arrowhead_IsScaledLimeFilled_WithContrastOutline()
+    {
+        string svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BrutalistStyle.Instance });
+
+        Assert.Contains("markerUnits=\"userSpaceOnUse\"", svg);
+        Assert.Contains("overflow=\"visible\"", svg);
+        Assert.Contains("<polygon points=\"0,1 10,5 0,9\" fill=\"var(--beck-pulse-1)\" stroke=\"var(--beck-edge)\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>", svg);
+    }
+
     // ---- Sketch artwork seam (StyleArtwork.Sketch) ----
 
     private static string ArchKitchen() =>

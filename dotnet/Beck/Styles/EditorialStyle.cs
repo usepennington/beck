@@ -14,7 +14,7 @@ namespace Beck;
 /// highlight/pulse/fail, status pills, narration, impact/working rings, sequence choreography incl.
 /// dimming, state + class diagrams, scrub, reduced motion, light/dark) stays available by
 /// construction — only the typography, tokens, hairline geometry, flattened fills, narration
-/// caption, and reveal timing change.
+/// caption, reveal timing, and edge presentation change.
 /// </summary>
 /// <remarks>
 /// <para>The serif identity is a single token/measurement move: <see cref="StyleTypography.SansFamily"/>
@@ -29,6 +29,18 @@ namespace Beck;
 /// choreography with its ramp lengthened via <see cref="StyleMotion.SequenceRevealScale"/> — no new
 /// animation mechanism. Both fields default to classic's exact behaviour, so classic stays
 /// byte-identical.</para>
+/// <para><b>The headline edge motion (mock 1j): every connector inks itself in slowly.</b> Rides the
+/// per-style edge-presentation seam (<see cref="StyleEdges"/>), the same <see cref="EdgeOverlay.DrawOn"/>
+/// mechanism sketch pioneered: a second path shares each edge's exact <c>d</c>, wiped from hidden to
+/// fully drawn and held before resetting, compiled onto the shared cycle (per-edge phase baked into the
+/// dash offset, no <c>animation-delay</c> chain) and killed under reduced motion. Unlike
+/// <see cref="StyleMotion.SequenceRevealScale"/> (which only stretches the sequence-storytelling reveal
+/// of message rows), the DrawOn overlay draws on <em>every</em> edge on <em>every</em> diagram type —
+/// architecture, class, and sequence — which is the mock's actual identity ("connectors ink themselves
+/// in slowly"). A 7-second <see cref="StyleEdges.OverlayPeriod"/> matches the mock's <c>drw 7s</c>
+/// verbatim; <see cref="StyleEdges.OverlayWidth"/> is pinned to the hairline <c>EdgeStroke</c> (1) so the
+/// ink stroke doesn't outweigh the base rule it draws over; <see cref="StyleEdges.MarkerScale"/> 0.85
+/// keeps the filled arrowhead in the mock's small, fine-print register.</para>
 /// </remarks>
 public static class EditorialStyle
 {
@@ -150,6 +162,34 @@ public static class EditorialStyle
             SequenceRevealScale = 2.6,
         };
 
+        // The headline editorial motion (mock 1j): every connector — architecture, class, AND
+        // sequence — inks itself in slowly and continuously, not just sequence-storytelling scenery
+        // (SequenceRevealScale above only stretches the flow reveal of sequence rows). This is the
+        // DrawOn overlay (sketch's proven consumer of the seam): a second path sharing the edge's
+        // exact `d`, wiped from hidden to fully drawn and held before resetting, compiled onto the
+        // shared cycle by CssCompiler.EdgeOverlayCss (per-edge phase baked into the dash offset, no
+        // animation-delay chain) and killed under reduced motion (a static viewer sees the fully-inked
+        // base edge — sketch's same accepted fidelity trade: DrawOn draws an overlay OVER a base edge
+        // that stays visible, rather than the mock's from-nothing draw). OverlayWidth matches the
+        // hairline EdgeStroke (1) so the ink stroke doesn't outweigh the base rule it draws over —
+        // classic's OverlayWidth default (2.5) is comet-generation, not doubled hairline. OverlayPeriod
+        // 7s is the mock's `drw 7s` verbatim. The overlay's un-set OverlayPalette falls back to the
+        // single `var(--beck-edge-overlay, var(--beck-accent))` token, so the ink draws in the style's
+        // accent over the muted edge base — the same "accent wipe over the ink base" read sketch uses.
+        // MarkerScale 0.85 keeps the filled arrowhead in the "small, fine-print" register the mock's
+        // tiny triangular heads read as, without a new marker-shape branch.
+        StyleEdges edges = c.Edges with
+        {
+            Overlay = EdgeOverlay.DrawOn,
+            OverlayWidth = 1,
+            OverlayPeriod = 7.0,
+            MarkerScale = 0.85,
+            // Butt caps on both the base rule and the draw-on ink (mock 1j draws every connector with the
+            // SVG-default square cap — a crisp fine textbook rule, not classic's soft round-capped line).
+            BaseLinecap = "butt",
+            OverlayLinecap = "butt",
+        };
+
         return c with
         {
             Name = "editorial",
@@ -159,6 +199,7 @@ public static class EditorialStyle
             Typography = typography,
             Mix = mix,
             Motion = motion,
+            Edges = edges,
         };
     }
 

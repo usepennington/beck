@@ -182,7 +182,13 @@ internal sealed class CssCompiler
         foreach (EdgeOverlaySpec o in overlays)
         {
             string cls = $"beo{o.Index}-{hash}", kf = $"kbeo{o.Index}-{hash}";
-            sb.Append($".b-{hash} .{cls}{{animation:{kf} {dur}s linear infinite;}}");
+            // Timing: linear (classic — glow's smooth comet, a gliding march) unless OverlaySteps is set,
+            // which ratchets the overlay in n hard jumps per cycle (brutalist / terminal's mechanical tick).
+            // Draw-on's eased wipe reads as a smooth ink, so it always stays linear.
+            string timing = edges.OverlaySteps is int n && o.Mode != EdgeOverlay.DrawOn
+                ? $"steps({n.ToString(CultureInfo.InvariantCulture)})"
+                : "linear";
+            sb.Append($".b-{hash} .{cls}{{animation:{kf} {dur}s {timing} infinite;}}");
             sb.Append($"@keyframes {kf}{{");
             switch (o.Mode)
             {

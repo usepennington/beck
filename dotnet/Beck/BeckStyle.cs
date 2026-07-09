@@ -640,6 +640,59 @@ public sealed record StyleEdges
     /// overlay/comet reads as the bright layer over a dim rail.</summary>
     public double? BaseOpacity { get; init; }
 
+    /// <summary>
+    /// A per-index colour <em>palette</em> that cycles the <em>base</em> edge stroke — metro's headline
+    /// "each relationship is its own transit-line colour" (the cousin of <see cref="OverlayPalette"/>,
+    /// which cycles the travelling <em>overlay</em> hue; this one recolours the static base line itself).
+    /// Each entry is a CSS colour, normally a token expression (<c>var(--beck-line-1)</c>) so it
+    /// theme-adapts and never emits a resolved literal. Empty (classic, and every style that doesn't set
+    /// it) leaves the base edge on its single <c>var(--beck-edge)</c> token — byte-identical.
+    /// <para><b>Cycle (deterministic, stable index — never the content hash).</b> The palette is indexed
+    /// by each element's own stable draw order (architecture edge index = <c>model.Edges</c> order;
+    /// sequence participant index = participant-column order), so <c>palette[i % Count]</c> — a fixed,
+    /// reproducible assignment, not an RNG/hash phase.</para>
+    /// <para><b>What it recolours, and coherence.</b> On the architecture side it recolours an edge's base
+    /// stroke, its arrowhead marker, and its metro station-dot rings together, so the whole transit line
+    /// (line + heads + stations) reads one hue. On the sequence side it recolours each participant's
+    /// <em>lifeline</em> by participant-column index, and each <em>message</em> (line + its two endpoint
+    /// station dots) by its <b>source participant</b> (<c>edge.From</c>) — the coherent rule chosen after
+    /// studying the mock's metro sequence panel (per-participant coloured vertical lifelines, with each
+    /// horizontal hop reading in the colour of the line it departs). The flow <em>packet</em> keeps its own
+    /// colour (the mock's train dash is a single neutral hue riding every line), so packet colouring is
+    /// unchanged — the requirement that station rings / packet colours which already derive from the
+    /// per-edge accent keep working is met because this field never touches an author-coloured element.</para>
+    /// <para><b>Precedence — an explicit accent WINS.</b> The palette only paints elements that use their
+    /// <em>default</em> colour: an architecture edge whose colour is the default <c>var(--beck-edge)</c>
+    /// (an author's explicit per-edge accent, or a kind default like a dependency's <c>--beck-neutral</c>,
+    /// keeps its colour and its matching marker/stations); a sequence participant whose accent is its
+    /// kind default (an explicit participant accent keeps its colour on its own lifeline); and a message
+    /// whose colour is the model-derived default (an explicit <c>color:</c> on the message keeps it).</para>
+    /// </summary>
+    public IReadOnlyList<string> BaseColorPalette { get; init; } = System.Array.Empty<string>();
+
+    /// <summary>
+    /// The palette hue at a stable <paramref name="index"/> (negative-safe modulo, matching
+    /// <see cref="OverlayPalette"/>'s indexing), or <c>null</c> when <see cref="BaseColorPalette"/> is
+    /// empty. Eligibility ("does this element use its default colour?") is decided by each call site, so
+    /// this is purely the cycle.
+    /// </summary>
+    public string? PaletteHue(int index) =>
+        BaseColorPalette.Count == 0
+            ? null
+            : BaseColorPalette[((index % BaseColorPalette.Count) + BaseColorPalette.Count) % BaseColorPalette.Count];
+
+    /// <summary>
+    /// The effective base colour for an architecture/class edge: its palette hue when
+    /// <see cref="BaseColorPalette"/> is set <em>and</em> the edge uses the default colour
+    /// (<c>var(--beck-edge)</c>) — otherwise the edge's own <paramref name="edgeColor"/> unchanged, so an
+    /// author's explicit accent wins. Byte-inert (returns <paramref name="edgeColor"/>) when the palette
+    /// is empty.
+    /// </summary>
+    public string BaseColorFor(int index, string edgeColor) =>
+        BaseColorPalette.Count > 0 && edgeColor == "var(--beck-edge)"
+            ? PaletteHue(index)!
+            : edgeColor;
+
     // ---- underlay layer (static trace bed) ----
     /// <summary>
     /// The stroke width (px) of a static <em>trace-bed underlay</em> drawn <em>behind</em> the base edge
@@ -696,6 +749,19 @@ public sealed record StyleEdges
     /// </summary>
     public bool MarkerScaleToWidth { get; init; }
 
+    /// <summary>
+    /// An optional <em>contrast outline</em> stroke drawn around the plain filled arrowhead
+    /// (<see cref="Rendering.MarkerShape.Arrow"/> under <see cref="EdgeArrow.Filled"/>) — brutalist's lime
+    /// arrowhead with a white <c>1.5</c> outline. When set, the filled arrow polygon gains
+    /// <c>stroke:{MarkerOutline};stroke-width:1.5</c> and the marker element is drawn
+    /// <c>overflow="visible"</c> so the outline is not clipped by the marker viewport. A CSS colour, normally
+    /// a token expression (<c>var(--beck-edge)</c>) so it theme-adapts and never emits a resolved literal.
+    /// Only the plain filled arrowhead is outlined — the open-V / chevron treatments and the closed UML ends
+    /// (which already carry their own stroke) are untouched. <c>null</c> (classic, and every style that
+    /// doesn't set it) leaves the arrowhead a flat single-colour fill — byte-identical.
+    /// </summary>
+    public string? MarkerOutline { get; init; }
+
     // ---- overlay layer ----
     /// <summary>The overlay treatment sharing each edge's <c>d</c>. <see cref="EdgeOverlay.None"/>
     /// (classic) emits no overlay — byte-identical.</summary>
@@ -734,6 +800,19 @@ public sealed record StyleEdges
     /// once, marching ants advance one dash pattern. A continuous <c>linear infinite</c> loop (like the
     /// existing flow <c>stream</c> march), compiled — never a per-element delay chain.</summary>
     public double OverlayPeriod { get; init; } = 2.2;
+
+    /// <summary>
+    /// The overlay animation's <em>timing function</em>. <c>null</c> (classic, and every style that leaves
+    /// it unset) emits <c>linear</c> — the smooth glide of glow's comet / a marching dash — byte-identical.
+    /// A non-null <c>n</c> emits <c>steps(n)</c> instead, so the Comet / Marching overlay advances in
+    /// <c>n</c> hard discrete jumps per cycle rather than gliding: the mechanical tick that <em>is</em> the
+    /// identity for brutalist (a lime block ratcheting each edge) and terminal (a phosphor block stepping
+    /// down each wire). Extends the existing stepped-flow discipline (<see cref="StyleMotion.PacketSteps"/> /
+    /// <see cref="StyleMotion.TrailSteps"/>) to the ambient edge overlay. Applies to the whole overlay set (all edges
+    /// share one compiled cycle); ignored when <see cref="Overlay"/> is <see cref="EdgeOverlay.None"/> or
+    /// <see cref="EdgeOverlay.DrawOn"/> (draw-on's eased wipe reads as a smooth ink, not a tick).
+    /// </summary>
+    public int? OverlaySteps { get; init; }
 
     // ---- path shaping ----
     /// <summary>
