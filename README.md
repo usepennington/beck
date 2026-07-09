@@ -238,12 +238,12 @@ eases are sampled analytically into CSS `linear()` timing functions. `prefers-re
 
 ## Repository layout
 
-- `dotnet/Beck` — the engine + authoring API (`BeckSvg.Render`, `DiagramBuilder` family). Only
+- `Beck` — the engine + authoring API (`BeckSvg.Render`, `DiagramBuilder` family). Only
   dependency: YamlDotNet.
-- `dotnet/Beck.Skia` — optional exact text measurement (SkiaSharp + HarfBuzzSharp shaping).
-- `dotnet/Beck.Tests` — xunit suite: model/layout/route golden parity tests, card-sizing gates,
+- `Beck.Skia` — optional exact text measurement (SkiaSharp + HarfBuzzSharp shaping).
+- `Beck.Tests` — xunit suite: model/layout/route golden parity tests, card-sizing gates,
   render smoke tests.
-- `dotnet/Beck.Sample` — console sample emitting authored YAML.
+- `Beck.Sample` — console sample emitting authored YAML.
 - `docs/Beck.Docs` — the Pennington docs site; every content diagram renders at build time, and
   the interactive playground runs the same engine compiled to WebAssembly (`docs/Beck.Docs.Client`).
 

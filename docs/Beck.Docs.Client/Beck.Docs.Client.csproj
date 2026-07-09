@@ -17,6 +17,6 @@
   <ItemGroup>
     <!-- The pure-C# renderer runs in the browser (WASM): the playground measures with the
          managed InterMetricsMeasurer (no native Skia), so no native assets ship. -->
-    <ProjectReference Include="..\..\dotnet\Beck\Beck.csproj" />
+    <ProjectReference Include="..\..\Beck\Beck.csproj" />
   </ItemGroup>
 </Project>

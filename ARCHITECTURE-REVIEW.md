@@ -1,6 +1,6 @@
 # Beck — Pre-1.0 Architecture & Simplification Review
 
-_A structured review of the engine (`src/`), the .NET package (`dotnet/Beck`), the docs
+_A structured review of the engine (`src/`), the .NET package (`Beck`), the docs
 site, and the build/maintenance surface. Produced by a multi-agent pass (14 review
 dimensions → adversarial verification of every finding against the code **and** the
 load-bearing invariants in `CLAUDE.md` → completeness critics). 86 findings survived
@@ -65,7 +65,7 @@ declared in **up to five** disconnected places:
 - a parallel **runtime array** for validation (`KIND_LIST`/`EDGE_KIND_LIST`/`SIDES`/`ARROW_ENDS`
   in `validate.ts`, inline `as const` arrays at the `oneOf` call sites, `ACCENT_TOKENS` in
   `util/color.ts`, `PACKET_EASES`/`PACKET_SHAPES` in `defaults.ts`);
-- the **C# enums** + `Tokens.Of` casing rules in `dotnet/Beck/Authoring/Enums.cs`;
+- the **C# enums** + `Tokens.Of` casing rules in `Beck/Authoring/Enums.cs`;
 - the **docs Monaco** `SCHEMA` autocomplete in `docs/Beck.Docs/wwwroot/js/site.js` (a verbatim
   hand-copy of ~70 icon names + every key list);
 - the **GSAP ease map** `PACKET_EASE` in `animate/timeline.ts` (whose comment literally says
@@ -111,7 +111,7 @@ to diff against the C# step set.
 There are **zero** automated tests, yet the pipeline is almost ideal for cheap, high-signal
 testing: `loadDiagram(yaml) → DiagramModel`, `layeredLayout(model, sizes)`, and
 `routeEdge(req)` are all pure, DOM-free, deterministic functions. Add **Vitest** (Vite is
-already the build tool) + one `dotnet/Beck.Tests` (xUnit) and cover, in ROI order:
+already the build tool) + one `Beck.Tests` (xUnit) and cover, in ROI order:
 
 1. **`validate.ts` + `defaults.ts` snapshots** — the single most load-bearing file. Snapshot
    `loadDiagram()` over the three `playground/samples` files plus inline fixtures: bare
@@ -194,7 +194,7 @@ They're not subset/superset: `hydrate` ships but isn't in `index.ts`; `mountMode
   `Microsoft.NET.Sdk.Razor`, which pulls in `Microsoft.AspNetCore.App`. But `Beck.Authoring`'s
   whole pitch is "walk an Aspire graph / EF model / service registry into a `DiagramBuilder`" —
   exactly the console/tooling/source-generator scenarios that should **not** drag the web runtime.
-  Create `dotnet/Beck.Authoring` (`Microsoft.NET.Sdk`, multi-target `netstandard2.0;net8.0` — the
+  Create `Beck.Authoring` (`Microsoft.NET.Sdk`, multi-target `netstandard2.0;net8.0` — the
   `YamlWriter` already has the `NET7_0_OR_GREATER` guard), keep the namespace `Beck` (source
   non-breaking), have the RCL `ProjectReference` it. Ship two packages. `CLAUDE.md` already flags
   this as deferred — pre-1.0 with zero users is when it's free. Move `BeckMarkdown.cs` (pure
@@ -204,7 +204,7 @@ They're not subset/superset: `hydrate` ships but isn't in `index.ts`; `mountMode
   workflows run `npm run build:lib` (overwriting the committed bundle) before building .NET, but
   none diffs it, so a PR that changes `src/` and forgets to rebuild+commit passes green and ships
   stale JS to anyone who `dotnet pack`s locally. Add, after `build:lib`:
-  `git diff --exit-code -- dotnet/Beck/wwwroot/beck.global.js`. Use `git diff` (not byte-compare)
+  `git diff --exit-code -- Beck/wwwroot/beck.global.js`. Use `git diff` (not byte-compare)
   for LF/CRLF normalization, and add a `.gitattributes` pinning the file `text eol=lf`. The build
   is byte-reproducible, so the gate is zero-flake.
 - **Package metadata polish:** no `PackageIcon` (blank avatar on nuget.org for a *visual* tool —
@@ -313,7 +313,7 @@ make them, and the maintenance dividend is multiplied by the duplication count.
   `knip` if dead-export pruning matters.)
 - **No C# analyzer/warning gate.** The TS side is strict; the C# side runs a bare `dotnet build`
   that passes with warnings. Add `<TreatWarningsAsErrors>true</…>` + `<AnalysisLevel>latest-
-  recommended</…>` to `dotnet/Directory.Build.props` (keep the `NoWarn CS1591` exception).
+  recommended</…>` to `Directory.Build.props` (keep the `NoWarn CS1591` exception).
 - **CI duplication & gaps:** the three workflows repeat the Node + `build:lib` + dual-SDK setup
   verbatim — extract a composite action. CI never runs `npm run build` (the playground/Tailwind
   pipeline) — add it. Delete the never-consumed ESM branch in `vite.config.lib.ts` (and remove
@@ -349,7 +349,7 @@ make them, and the maintenance dividend is multiplied by the duplication count.
   leaks, and `/*.png` would silently ignore a future tracked logo. Replace with a `/scratch/`
   convention; keep `.playwright-mcp/` and `/local-feed/` as their own entries; delete the
   redundant nested `docs/Beck.Docs/.gitignore` (folding `_site/` into the root). Document that
-  `dotnet/Beck/wwwroot/beck.global.js` is the *one* intentionally-committed generated file so no
+  `Beck/wwwroot/beck.global.js` is the *one* intentionally-committed generated file so no
   cleanup deletes it.
 
 ---
@@ -402,7 +402,7 @@ Narrow `colorLine` to a single path (the array form has one caller). Fix the sta
 doc comment claiming it drives the reduced-motion frame (it doesn't — that path never builds a
 timeline).
 
-**`dotnet/Beck/Authoring/`** — Clean and well-documented; the hand-rolled `YamlWriter` is
+**`Beck/Authoring/`** — Clean and well-documented; the hand-rolled `YamlWriter` is
 **justified** (don't adopt YamlDotNet — it'd add a transitive dep to a dependency-free lib) but
 should be pinned with the scalar round-trip test. Real drift already exists: **C# `Burst` can't
 author `via`** though the engine supports it — add it and factor the shared from/to/via/color/

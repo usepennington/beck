@@ -118,7 +118,7 @@ git diff --exit-code wwwroot/diagrams/generated.beck.yaml
 If you'd rather assert inside the test suite, write the file in a test and run `dotnet test`, then keep the same `git diff --exit-code` guard as the final CI step. The contributor's fix is the same in both cases: rerun the generator and commit the regenerated YAML.
 
 > [!TIP]
-> `Beck.Sample` is a runnable end-to-end example of generating diagrams from code. Run `dotnet run --project dotnet/Beck.Sample -c Release` to print one to stdout — pass `sequence`, `state`, `class`, or `reflection` to see the other builders in use.
+> `Beck.Sample` is a runnable end-to-end example of generating diagrams from code. Run `dotnet run --project Beck.Sample -c Release` to print one to stdout — pass `sequence`, `state`, `class`, or `reflection` to see the other builders in use.
 
 ## Next steps
 

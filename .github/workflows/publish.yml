@@ -34,19 +34,19 @@ jobs:
 
       - name: Build
         run: |
-          dotnet build dotnet/Beck/Beck.csproj -c Release
-          dotnet build dotnet/Beck.Skia/Beck.Skia.csproj -c Release
+          dotnet build Beck/Beck.csproj -c Release
+          dotnet build Beck.Skia/Beck.Skia.csproj -c Release
 
       - name: Test
-        run: dotnet test dotnet/Beck.Tests/Beck.Tests.csproj -c Release
+        run: dotnet test Beck.Tests/Beck.Tests.csproj -c Release
 
       # No --no-build: MinVer sets the package version through a build-time target, and
       # `dotnet pack --no-build` would skip it (falling back to the default). Pack runs an
       # incremental build so the tag-derived version is applied.
       - name: Pack
         run: |
-          dotnet pack dotnet/Beck/Beck.csproj -c Release -o ${{ github.workspace }}/nupkg
-          dotnet pack dotnet/Beck.Skia/Beck.Skia.csproj -c Release -o ${{ github.workspace }}/nupkg
+          dotnet pack Beck/Beck.csproj -c Release -o ${{ github.workspace }}/nupkg
+          dotnet pack Beck.Skia/Beck.Skia.csproj -c Release -o ${{ github.workspace }}/nupkg
 
       - name: NuGet login (trusted publishing -> short-lived API key)
         uses: NuGet/login@v1
