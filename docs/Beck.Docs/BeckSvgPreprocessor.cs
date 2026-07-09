@@ -107,7 +107,7 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     /// dimmed, blurred backdrop; BrandStyling.cs carries the CSS for both. The icon is an inline
     /// expand glyph so the button needs no asset.
     /// </summary>
-    private const string ZoomButton =
+    internal const string ZoomButton =
         "<button class=\"beck-zoom\" type=\"button\" aria-label=\"View diagram full screen\" title=\"View full screen\">"
         + "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">"
         + "<path d=\"M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7\"/></svg></button>";
@@ -121,7 +121,7 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     /// (rather than a text splice) keeps this correct whether <c>meta</c> is block- or flow-styled,
     /// present or absent, in a single- or multi-document body.
     /// </summary>
-    private static string ApplyStyle(string yaml, string styleName, string languageId)
+    internal static string ApplyStyle(string yaml, string styleName, string languageId)
     {
         if (!BeckStyles.ByName.ContainsKey(styleName))
         {

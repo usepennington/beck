@@ -94,6 +94,25 @@ internal static class BrandStyling
           border: 0; background: none; padding: 0; margin: 0; min-height: 0;
         }
 
+        /* ---- lazy style-gallery slots ---- */
+        /* The styles guide holds one .beck-lazy placeholder per style; site.js fetches the
+           build-baked fragment (three .beck-embed diagrams) as it scrolls near and injects
+           it. Until then the slot reserves roughly one gallery's height (three ~200px
+           embeds + gaps) so late loads don't yank the scroll position, showing the no-JS
+           fallback link centred on the embed dot-grid frame. Once loaded, the slot
+           collapses to its injected content. */
+        .beck-lazy {
+          display: grid; place-items: center;
+          min-height: 680px;
+          border: 1px dashed var(--color-base-200); border-radius: 12px;
+          margin: 0 0 24px;
+        }
+        .dark .beck-lazy { border-color: var(--color-base-800); }
+        .beck-lazy > a { font-size: 0.85rem; color: var(--color-base-500); }
+        .beck-lazy.is-loaded {
+          display: block; min-height: 0; border: 0; margin: 0;
+        }
+
         /* ---- diagram fullscreen zoom ---- */
         /* BeckSvgPreprocessor emits the .beck-zoom button into each embed; site.js opens the
            .beck-lightbox <dialog>. Both exist only in C#/JS strings, so they stay declarative.
