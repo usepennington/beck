@@ -170,6 +170,36 @@
     });
   }
 
+  // ---- lazy style-gallery fragments ----------------------------------------
+  // The styles guide replaces its 33 inline diagrams with one `.beck-lazy` placeholder
+  // per style, each wrapping a fallback <a> to a fragment page baked at build time by
+  // StyleGalleryFragments.cs. Fetch a fragment as its placeholder approaches the
+  // viewport and inject the finished markup — no client rendering, the fragment is
+  // already self-animating SVG. The fetch URL is the anchor's own resolved href, so
+  // whatever link rewriting the static build applies (sub-path deploys) carries over;
+  // on fetch failure (or without JS) the placeholder keeps that link.
+  function initLazyFragments() {
+    var slots = [].slice.call(document.querySelectorAll('.beck-lazy'));
+    if (!slots.length || !('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var el = entry.target;
+        io.unobserve(el);
+        var link = el.querySelector('a');
+        if (!link) return;
+        fetch(link.href)
+          .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+          .then(function (html) { el.innerHTML = html; el.classList.add('is-loaded'); })
+          .catch(function () { el.classList.add('is-error'); });
+      });
+    }, { rootMargin: '600px 0px' }); // start fetching well before the section scrolls in
+    slots.forEach(function (el) {
+      if (el.__wired) return; el.__wired = true;
+      io.observe(el);
+    });
+  }
+
   // ---- diagram fullscreen zoom ---------------------------------------------
   // BeckSvgPreprocessor emits a `.beck-zoom` button into each rendered ```beck embed.
   // Clicking it opens a native <dialog> lightbox with a CLONE of the diagram SVG —
@@ -214,6 +244,7 @@
     wireCopy();
     initSyntaxFilter();
     initApiNav();
+    initLazyFragments();
   }
 
   // Theme toggle is delegated on `document` (which survives Blazor navigation) rather

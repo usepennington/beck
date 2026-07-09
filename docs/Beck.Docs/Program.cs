@@ -48,6 +48,12 @@ builder.Services.AddSingleton<BeckDiagramRenderer>();
 // /og/*.png in dev and baked by the static build; SocialMeta points each page at its card.
 builder.Services.AddTransient<Pennington.Artifacts.IArtifactContentService, RazorPageSocialCardService>();
 
+// Per-style gallery fragments for the styles guide (fragments/styles/<name>.html): the three
+// shared example diagrams rendered in each built-in style at build time, fetched lazily by
+// site.js as the reader scrolls the gallery — keeps the guide page light without moving any
+// rendering to the client.
+builder.Services.AddTransient<Pennington.Artifacts.IArtifactContentService, StyleGalleryFragments>();
+
 // Render ```beck fences to static, self-animating inline SVG at build time via the
 // pure-C# engine — content diagrams need no client JS. Priority
 // 500 beats the tree-sitter source-embed preprocessor; every other fence is deferred.
