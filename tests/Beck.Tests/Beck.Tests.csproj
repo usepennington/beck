@@ -22,6 +22,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Skia/HarfBuzz natives for the ubuntu CI runner (the base packages ship win/mac natives
+         only; the Skia parity + render-smoke tests load real font files through Beck.Skia).
+         VersionOverride: the central pins track the 4.x line Ashcroft forces on the docs app,
+         but THIS graph resolves Beck.Skia's 2.88.9/7.3.0.3 managed bindings, and the native
+         libSkiaSharp/libHarfBuzzSharp must match the managed line exactly. NoDependencies:
+         no fontconfig needed — the tests load their pinned font files explicitly. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" VersionOverride="2.88.9" />
+    <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" VersionOverride="7.3.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Frozen corpus + oracle goldens travel to the test output for the parity gates. -->
     <None Update="Corpus\**\*.yaml"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
     <None Update="Goldens\**\*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
