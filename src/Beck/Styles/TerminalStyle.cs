@@ -178,6 +178,9 @@ public static class TerminalStyle
             PacketSteps = 12,
             // No bloom — crisp edges are part of the "no scanlines, no cursor" restraint.
             GlowEnabled = false,
+            // The CRT blink (mock 1f's `crt`): a card receiving a packet invert-flickers twice —
+            // two instant-on/off fill flashes, phosphor-style, matching the stepped packets above.
+            Pulse = PulseEffect.Flicker,
         };
 
         return c with

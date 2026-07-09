@@ -172,9 +172,17 @@ public static class SketchStyle
             WobblySeparators = true,
         };
 
+        // The marker pop (mock 1b): an arrival jolts the card itself a beat larger — no overlay ring
+        // at all, the whiteboard box flexing as the arrow lands.
+        StyleMotion motion = c.Motion with
+        {
+            Pulse = PulseEffect.MarkerPop,
+        };
+
         return c with
         {
             Name = "sketch",
+            Motion = motion,
             LightTokens = light,
             DarkTokens = dark,
             Geometry = geo,

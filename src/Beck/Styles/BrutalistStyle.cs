@@ -156,6 +156,9 @@ public static class BrutalistStyle
         {
             PacketSteps = 6,
             TrailSteps = 6,
+            // The border slam (mock 1d's `slam`): a hit card snaps a thick outline on for two frames
+            // and snaps back — hard cuts, no easing, no scaling, matching the stepped flow above.
+            Pulse = PulseEffect.Slam,
         };
 
         // The brutalist edge presentation (the identity the mock carries on every connector):

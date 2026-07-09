@@ -188,9 +188,17 @@ public static class BlueprintStyle
             }),
         };
 
+        // The surveyor ping (mock 1a's `ringx`): an arrival pulses an offset rectangular ring off the
+        // card, scaling linearly outward — a measurement mark, not classic's organic ripple.
+        StyleMotion motion = c.Motion with
+        {
+            Pulse = PulseEffect.SurveyRing,
+        };
+
         return c with
         {
             Name = "blueprint",
+            Motion = motion,
             LightTokens = light,
             DarkTokens = dark,
             Geometry = geo,

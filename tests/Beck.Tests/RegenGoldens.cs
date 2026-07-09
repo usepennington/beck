@@ -32,7 +32,43 @@ public sealed class RegenGoldens
         int cardEdits = RegenCards(measurer);
         int layoutEdits = RegenLayouts();
         int routeEdits = RegenRoutes();
-        Assert.True(true, $"regen: {cardEdits} cards, {layoutEdits} layouts, {routeEdits} route files updated");
+        int svgEdits = RegenSvg();
+        Assert.True(true, $"regen: {cardEdits} cards, {layoutEdits} layouts, {routeEdits} route files, {svgEdits} svg goldens updated");
+    }
+
+    // Re-render the frozen full-SVG goldens (ClassicSvgGoldenTests) from the current engine; rewrite
+    // only the files whose bytes changed. Regenerated files land in the test OUTPUT copy of Goldens/
+    // — copy them back to tests/Beck.Tests/Goldens/svg to commit an intentional visual change.
+    private static int RegenSvg()
+    {
+        var specs = new (string File, string Yaml, string Suffix, BeckStyle Style)[]
+        {
+            ("arch-kitchen", "arch-kitchen", "cla551c0", BeckStyle.Classic),
+            ("seq-kitchen", "seq-kitchen", "cla551c0", BeckStyle.Classic),
+            ("class", "class", "cla551c0", BeckStyle.Classic),
+            ("minimal", "arch-kitchen", "min1ma1c", MinimalStyle.Instance),
+            ("terminal", "arch-kitchen", "term1na1", TerminalStyle.Instance),
+            ("blueprint", "arch-kitchen", "b1uepr1n", BlueprintStyle.Instance),
+            ("glow", "arch-kitchen", "g10wg10w", GlowStyle.Instance),
+            ("editorial", "arch-kitchen", "ed1t0r1a", EditorialStyle.Instance),
+            ("brutalist", "arch-kitchen", "brut4115", BrutalistStyle.Instance),
+            ("sketch", "arch-kitchen", "sk3tchg0", SketchStyle.Instance),
+            ("extrude", "arch-kitchen", "extrud30", ExtrudeStyle.Instance),
+            ("circuit", "arch-kitchen", "c1rcu1t0", CircuitStyle.Instance),
+            ("metro", "arch-kitchen", "m3tr0000", MetroStyle.Instance),
+        };
+        string svgDir = Path.Combine(GoldenDir, "svg");
+        int edits = 0;
+        foreach (var (file, yamlName, suffix, style) in specs)
+        {
+            string yaml = File.ReadAllText(Path.Combine(CorpusDir, yamlName + ".yaml"));
+            string svg = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = suffix, Style = style });
+            string path = Path.Combine(svgDir, file + ".svg");
+            if (File.Exists(path) && File.ReadAllText(path) == svg) continue;
+            File.WriteAllText(path, svg);
+            edits++;
+        }
+        return edits;
     }
 
     // Update cards.json entries whose C# size now differs from the stored value by >1px.

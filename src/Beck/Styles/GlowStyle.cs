@@ -167,6 +167,9 @@ public static class GlowStyle
             // Packet bloom stays on (core to glow) with a wider blur so the travelling dot carries a soft halo.
             GlowEnabled = true,
             PacketGlowBlur = 5,
+            // The bloom ripple (mock 1g's glowing `ringx`): arrivals expand the classic ring but
+            // carried on a drop-shadow halo, swelling further before it fades.
+            Pulse = PulseEffect.GlowRing,
         };
 
         StyleEdges edges = c.Edges with

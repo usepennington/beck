@@ -156,6 +156,10 @@ public static class ExtrudeStyle
             PressDown = true,
             PacketRingMin = 3.0,
             PacketRingFactor = 0.32,
+            // The struck slab face (mock 1e's `flashx`): an arrival flashes the card face magenta —
+            // the comet hue — while PressDown above dips the slab toward its depth faces.
+            Pulse = PulseEffect.Flash,
+            PulseColor = "var(--beck-comet)",
         };
 
         // The magenta comet (mock 1e): a second path sharing every edge/message's exact d, a 2px lit dash
