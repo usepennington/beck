@@ -5,7 +5,7 @@ namespace Beck.Rendering.Svg;
 /// <summary>
 /// Edge end-marker defs — a port of the marker bodies in <c>src/route/svg.ts</c>, now
 /// <em>style-aware</em> (<see cref="StyleEdges"/>): the arrowhead presentation (filled vs. hand-drawn
-/// open-V) and the marker sizing model (default strokeWidth units vs. sanely-scaled
+/// open-V vs. mono chevron) and the marker sizing model (default strokeWidth units vs. sanely-scaled
 /// <c>userSpaceOnUse</c>) come from the style. Every shape points +x with its tip at <c>refX</c>, so
 /// one def serves either end via <c>orient="auto-start-reverse"</c>. Deduped per (shape, color,
 /// presentation, size); ids carry the content hash so multiple diagrams don't collide. At classic
@@ -33,7 +33,12 @@ internal sealed class Markers
         // The dedupe key carries the presentation + size discriminants so distinct styles never share a
         // marker — but at classic values (filled, scale 1, strokeWidth units) they collapse to the exact
         // historical "{shape}|{color}" behaviour, so dedupe order → _seq → ids stay byte-identical.
-        string disc = edges.Arrow == EdgeArrow.OpenV ? "|v" : "";
+        string disc = edges.Arrow switch
+        {
+            EdgeArrow.OpenV => "|v",
+            EdgeArrow.Chevron => "|c",
+            _ => "",
+        };
         string sizeDisc = edges.MarkerScaleToWidth
             ? "|w" + SvgWriter.Num(edgeWidth) + "x" + SvgWriter.Num(edges.MarkerScale)
             : edges.MarkerScale != 1.0 ? "|x" + SvgWriter.Num(edges.MarkerScale) : "";
@@ -78,6 +83,16 @@ internal sealed class Markers
             return (
                 $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"{c}\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>"
                 + $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"{c}\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
+                "0 0 12 10", 10, 8, 8);
+        // Chevron (terminal): the plain arrowheads (the filled Arrow and the open ArrowOpen) become a mono
+        // `>` — TWO hard butt-capped strokes running back from the tip. Butt caps (vs. OpenV's round) give
+        // the crisp console read; the closed UML ends (Triangle/Diamond) fall through and keep their bodies,
+        // so a class inheritance triangle stays closed exactly as in the mock. orient="auto-start-reverse"
+        // (on every marker) makes a reply's reversed path draw the same glyph as `<` — no separate def.
+        if (edges.Arrow == EdgeArrow.Chevron && shape is MarkerShape.Arrow or MarkerShape.ArrowOpen)
+            return (
+                $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"{c}\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>"
+                + $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"{c}\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>",
                 "0 0 12 10", 10, 8, 8);
         return shape switch
         {

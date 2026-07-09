@@ -16,9 +16,13 @@ namespace Beck;
 /// <em>and</em> before the renderer draws/word-wraps it, so the brackets add width to the card without
 /// desyncing the <c>textLength</c> guard — the "measured widths guard the typography" invariant is
 /// upheld, not risked. Applied to every primary node title (card/pill/class/ghost); subtitles, status
-/// pills, and labels stay bare. Deliberately <em>not</em> shipped: scanlines and a blinking cursor,
-/// both explicitly excluded by the design brief — the identity is carried by mono type, square
-/// packets, hard-step trails, and the brackets instead.
+/// pills, and labels stay bare. The headline <em>edge</em> trait is the mono <c>&gt;</c> chevron
+/// arrowhead (<see cref="EdgeArrow.Chevron"/> on <see cref="StyleEdges.Arrow"/>): two hard
+/// butt-capped strokes forming a crisp <c>&gt;</c> emitted through the <c>Markers</c> pipeline,
+/// oriented along the edge so a reply reads as <c>&lt;</c> for free. Deliberately <em>not</em>
+/// shipped: scanlines and a blinking cursor, both explicitly excluded by the design brief — the
+/// identity is carried by mono type, square packets, hard-step trails, the brackets, and the
+/// chevron heads instead.
 /// </remarks>
 public static class TerminalStyle
 {
@@ -104,6 +108,16 @@ public static class TerminalStyle
             NarrationBulletGap = 14,
         };
 
+        // The headline terminal edge trait: mono `>` chevron arrowheads instead of filled triangles.
+        // Every knob else stays classic (the green edge token, blunt line ends, and stepped packet are
+        // separate §1f items). The chevron is TWO hard butt-capped strokes emitted through the Markers
+        // pipeline (Markers.Body), oriented along the edge; a reply's reversed path draws it as `<` for
+        // free through the marker's orient="auto-start-reverse". Closed UML ends stay closed.
+        StyleEdges edges = c.Edges with
+        {
+            Arrow = EdgeArrow.Chevron,
+        };
+
         StyleMotion motion = c.Motion with
         {
             // Block/square travelling packets (the "packet emitter" seam: CssCompiler.Markup swaps
@@ -124,6 +138,7 @@ public static class TerminalStyle
             Geometry = geo,
             Typography = typography,
             Motion = motion,
+            Edges = edges,
         };
     }
 }

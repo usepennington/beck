@@ -337,6 +337,10 @@ internal static class SvgRenderer
         {
             stroke = SvgWriter.Attr(m.Color);
         }
+        // Optional static trace-bed underlay (circuit's two-layer trace) — a wider, darker path sharing
+        // this edge's exact d, emitted FIRST so it sits behind the base .beck-edge line. Static (no
+        // animation); the base edge below stays the single continuous flow path. Off (width 0) → nothing.
+        sb.Append(UnderlayPath(style, d));
         // Optional faint base-layer opacity (glow's dim rail under a bright comet). null → no attr (classic).
         string baseOp = es.BaseOpacity is { } bo ? $";stroke-opacity:{SvgWriter.Num(bo)}" : "";
         sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(m.Kind)}\" d=\"{d}\" ")
@@ -385,6 +389,26 @@ internal static class SvgRenderer
     /// window is the resting frame a reduced-motion viewer sees; <see cref="CssCompiler.EdgeOverlayCss"/>
     /// animates it. Shared by the architecture edge painter and the sequence message painter.
     /// </summary>
+    /// <summary>
+    /// The static <em>trace-bed underlay</em> for one edge/message (<see cref="StyleEdges.UnderlayWidth"/>):
+    /// a second, wider, darker <c>&lt;path&gt;</c> sharing the edge's exact <paramref name="d"/>, meant to
+    /// be emitted <em>before</em> the base <c>.beck-edge</c> path so the thin bright line reads as a trace
+    /// riding a dark bed (circuit's two-layer trace). Static — no animation, emitted regardless of motion;
+    /// the base edge stays the one continuous flow path that packets/trails ride. Token-coloured through
+    /// <c>var(--beck-edge-underlay, var(--beck-edge))</c> when the style leaves
+    /// <see cref="StyleEdges.UnderlayColor"/> unset, so it theme-adapts and emits no resolved literal.
+    /// <c>UnderlayWidth</c> ≤ 0 (classic, and every style that doesn't set it) returns <c>""</c> —
+    /// byte-identical. Shared by the architecture edge painter and the sequence message painter.
+    /// </summary>
+    internal static string UnderlayPath(BeckStyle style, string d)
+    {
+        StyleEdges e = style.Edges;
+        if (e.UnderlayWidth <= 0) return "";
+        string color = e.UnderlayColor.Length > 0 ? e.UnderlayColor : "var(--beck-edge-underlay, var(--beck-edge))";
+        return $"<path class=\"beck-edge-bed\" d=\"{d}\" "
+             + $"style=\"fill:none;stroke:{color};stroke-width:{N(e.UnderlayWidth)};stroke-linecap:{e.BaseLinecap};stroke-linejoin:round\"/>";
+    }
+
     internal static (string Markup, EdgeOverlaySpec Spec) OverlayPath(BeckStyle style, string d, int idx, string hash)
     {
         StyleEdges e = style.Edges;

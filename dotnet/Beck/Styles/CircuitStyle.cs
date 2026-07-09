@@ -74,10 +74,12 @@ public static class CircuitStyle
             ("--beck-packet", $"var(--beck-gold, {gold})"),
             ("--beck-icon-bg", $"color-mix(in srgb, {copper} 12%, var(--color-base-100, #e3ede5))"),
             ("--beck-accent", copper),
-            // Circuit chrome tokens: copper chip pins, gold trace vias.
+            // Circuit chrome tokens: copper chip pins, gold trace vias, and the dark trace bed under the
+            // copper trace (the two-layer trace's wide darker layer — a darker mix of the copper edge).
             ("--beck-gold", $"var(--color-amber-400, {gold})"),
             ("--beck-pin", $"color-mix(in srgb, {copper} 80%, var(--beck-gold))"),
             ("--beck-via", "var(--beck-gold)"),
+            ("--beck-edge-underlay", $"color-mix(in srgb, {copper} 60%, var(--color-base-800, #163a29))"),
         });
 
         // Dark board (the circuit hero): a deep green substrate, near-black chip bodies with copper
@@ -93,6 +95,8 @@ public static class CircuitStyle
             ("--beck-text-faint", "var(--color-base-500, #5f8570)"),
             ("--beck-edge", $"color-mix(in srgb, {copper} 60%, var(--beck-gold))"),
             ("--beck-icon-bg", "var(--color-base-800, #0a2d21)"),
+            // Deep-emerald trace bed on the dark board, under the bright gold-copper trace.
+            ("--beck-edge-underlay", $"color-mix(in srgb, {copper} 45%, var(--color-base-900, #052015))"),
         });
 
         // Chip-like geometry: small rounding (a socketed IC), plus the circuit artwork knobs — pin
@@ -124,6 +128,16 @@ public static class CircuitStyle
             PacketGlowBlur = 4.0,
         };
 
+        // Circuit's signature two-layer trace: a static, wider, darker trace-bed underlay behind the
+        // copper base edge (sharing its exact d), so the thin copper line reads as a trace riding a dark
+        // bed. Beds architecture/class edges + sequence messages + lifelines; the base edge stays the one
+        // continuous flow path packets/trails ride. ~2.2× the 1.8 EdgeStroke.
+        StyleEdges edges = c.Edges with
+        {
+            UnderlayWidth = 4,
+            UnderlayColor = "var(--beck-edge-underlay)",
+        };
+
         return c with
         {
             Name = "circuit",
@@ -132,6 +146,7 @@ public static class CircuitStyle
             Geometry = geo,
             Typography = typography,
             Motion = motion,
+            Edges = edges,
             Artwork = StyleArtwork.Circuit,
         };
     }

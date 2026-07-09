@@ -566,6 +566,19 @@ public enum EdgeArrow
     /// diamond) intentionally keep their bodies — only the plain arrowhead opens up.
     /// </summary>
     OpenV,
+
+    /// <summary>
+    /// A mono <c>&gt;</c> <em>chevron</em> arrowhead (terminal): the plain arrowheads
+    /// (<see cref="Rendering.MarkerShape.Arrow"/> and the open <see cref="Rendering.MarkerShape.ArrowOpen"/>)
+    /// become <em>two hard butt-capped strokes</em> forming a crisp <c>&gt;</c> chevron — the deterministic,
+    /// measurable equivalent of the mock's mono <c>&gt;</c> text glyph, which stays crisp at classic marker
+    /// sizes and scales with <see cref="StyleEdges.MarkerScale"/> / <see cref="StyleEdges.MarkerScaleToWidth"/>.
+    /// The chevron is oriented along the edge direction, so a reply message's reversed path yields the
+    /// <c>&lt;</c> read for free through the marker's <c>orient="auto-start-reverse"</c>. Closed UML ends
+    /// (inheritance triangle, composition diamond) intentionally keep their bodies — only the plain
+    /// arrowhead becomes a chevron.
+    /// </summary>
+    Chevron,
 }
 
 /// <summary>The optional <em>overlay layer</em> a style rides on top of every edge
@@ -627,8 +640,34 @@ public sealed record StyleEdges
     /// overlay/comet reads as the bright layer over a dim rail.</summary>
     public double? BaseOpacity { get; init; }
 
+    // ---- underlay layer (static trace bed) ----
+    /// <summary>
+    /// The stroke width (px) of a static <em>trace-bed underlay</em> drawn <em>behind</em> the base edge
+    /// (circuit's signature two-layer trace): a second, wider, darker <c>&lt;path&gt;</c> sharing the
+    /// edge's exact <c>d</c>, emitted first in document order so the thin bright <c>.beck-edge</c> line
+    /// reads as a trace riding a dark bed. Unlike <see cref="Overlay"/> (always the travelling element)
+    /// the bed is <em>static</em> — no animation, no reduced-motion gate — and the base edge stays the one
+    /// continuous flow path packets/trails ride via <c>offset-path</c>; the bed is an additional sibling
+    /// element, never a split. Applies to architecture/class edges <em>and</em> sequence messages +
+    /// lifelines (the mock beds those too). <c>0</c> (classic, and every style that doesn't set it) emits
+    /// no bed — byte-identical. Typical circuit value is ~2× the base <see cref="StyleGeometry.EdgeStroke"/>.
+    /// </summary>
+    public double UnderlayWidth { get; init; }
+
+    /// <summary>
+    /// The trace-bed underlay's stroke colour, in play only when <see cref="UnderlayWidth"/> &gt; 0. A CSS
+    /// colour, normally a token expression / <c>color-mix</c> so it theme-adapts and never emits a resolved
+    /// literal (e.g. a darker mix of <c>--beck-edge</c>). <c>""</c> (the default) falls back to
+    /// <c>var(--beck-edge-underlay, var(--beck-edge))</c>, so a style can either supply a dedicated bed
+    /// token or let the bed track the edge colour. Coherent with the palette-less
+    /// <c>var(--beck-edge-overlay, …)</c> fallback used by the overlay layer.
+    /// </summary>
+    public string UnderlayColor { get; init; } = "";
+
     // ---- arrowhead ----
-    /// <summary>The arrowhead presentation. <see cref="EdgeArrow.Filled"/> (classic) is byte-identical.</summary>
+    /// <summary>The arrowhead presentation (<see cref="EdgeArrow.Filled"/> classic, <see cref="EdgeArrow.OpenV"/>
+    /// hand-drawn strokes, <see cref="EdgeArrow.Chevron"/> mono <c>&gt;</c>). <see cref="EdgeArrow.Filled"/>
+    /// (classic) is byte-identical.</summary>
     public EdgeArrow Arrow { get; init; } = EdgeArrow.Filled;
 
     /// <summary>A multiplier on the emitted marker geometry. <c>1.0</c> (classic) is byte-identical.

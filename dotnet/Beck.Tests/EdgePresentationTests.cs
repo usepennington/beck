@@ -25,6 +25,7 @@ public sealed class EdgePresentationTests
 
     private static readonly Regex BaseEdgeD = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
     private static readonly Regex OverlayD = new("<path class=\"beck-edge-overlay [^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex BedD = new("<path class=\"beck-edge-bed\" d=\"([^\"]*)\"", RegexOptions.Compiled);
     private static readonly Regex MarkerW = new("markerWidth=\"([^\"]*)\"", RegexOptions.Compiled);
 
     private static List<string> Matches(Regex r, string s) => r.Matches(s).Select(m => m.Groups[1].Value).ToList();
@@ -82,6 +83,74 @@ public sealed class EdgePresentationTests
         var overlayD = Matches(OverlayD, svg);
         Assert.NotEmpty(overlayD);
         foreach (string od in overlayD) Assert.Contains(od, baseD);
+    }
+
+    // ---- underlay layer (static trace bed) ----
+
+    // A trace-bed underlay drops one additional path PER edge whose d is byte-identical to the edge's own
+    // d (a wider/darker layer sharing the geometry, never a split of the single continuous edge path),
+    // and each bed sits immediately BEFORE its base edge in document order (behind it when painted).
+    [Fact]
+    public void Underlay_SharesEdgeD_BeforeBase_OnePerEdge()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = WithEdges(e => e with { UnderlayWidth = 4 }) });
+
+        var baseD = Matches(BaseEdgeD, svg);
+        var bedD = Matches(BedD, svg);
+        Assert.NotEmpty(bedD);
+        Assert.Equal(baseD.Count, bedD.Count);
+        foreach (string bd in bedD) Assert.Contains(bd, baseD);
+
+        // Document order: every bed path precedes the matching base edge path (bed is painted behind).
+        foreach (Match bed in BedD.Matches(svg))
+        {
+            int basePos = svg.IndexOf($"<path class=\"beck-edge beck-edge--", bed.Index, StringComparison.Ordinal);
+            Assert.True(basePos > bed.Index, "each trace bed must sit before (behind) its base edge");
+            // No other base edge path is interleaved between this bed and its base edge.
+            Assert.DoesNotContain("<path class=\"beck-edge beck-edge--",
+                svg.Substring(bed.Index + bed.Length, basePos - (bed.Index + bed.Length)));
+        }
+    }
+
+    // The bed uses the wider underlay stroke width and the fallback bed token colour when UnderlayColor is
+    // unset; classic (UnderlayWidth 0) emits no bed at all — the seam is byte-inert off.
+    [Fact]
+    public void Underlay_WidthAndColor_OffByDefault()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+        string bedded = BeckSvg.Render(yaml,
+            new SvgRenderOptions { Style = WithEdges(e => e with { UnderlayWidth = 4 }) });
+        Assert.Contains("<path class=\"beck-edge-bed\"", bedded);
+        Assert.Contains("stroke:var(--beck-edge-underlay, var(--beck-edge));stroke-width:4;", bedded);
+
+        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        Assert.DoesNotContain("beck-edge-bed", classic);
+    }
+
+    // The bed applies to sequence messages AND lifelines (the mock beds those too), each sharing the base
+    // element's geometry and sitting before it.
+    [Fact]
+    public void Underlay_OnSequenceMessagesAndLifelines()
+    {
+        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+            new SvgRenderOptions { Style = WithEdges(e => e with { UnderlayWidth = 4 }) });
+
+        // Messages: bed paths share the message d.
+        var baseD = Matches(BaseEdgeD, svg);
+        var bedD = Matches(BedD, svg);
+        Assert.NotEmpty(bedD);
+        foreach (string bd in bedD) Assert.Contains(bd, baseD);
+
+        // Lifelines: a bed line per lifeline, before its base line.
+        Assert.Contains("<line class=\"beck-lifeline-bed\"", svg);
+        int bedPos = svg.IndexOf("<line class=\"beck-lifeline-bed\"", StringComparison.Ordinal);
+        int basePos = svg.IndexOf("<line class=\"beck-lifeline\"", StringComparison.Ordinal);
+        Assert.True(bedPos < basePos, "the lifeline bed must sit before (behind) the base lifeline");
+
+        string classic = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
+        Assert.DoesNotContain("beck-edge-bed", classic);
+        Assert.DoesNotContain("beck-lifeline-bed", classic);
     }
 
     // ---- path bow ----
@@ -147,6 +216,51 @@ public sealed class EdgePresentationTests
     {
         string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.Contains("points=\"0,1 10,5 0,9\"", svg);
+    }
+
+    // Chevron (terminal): the filled arrowhead becomes a mono `>` — TWO hard butt-capped strokes running
+    // back from the tip. Stroke-based (no filled triangle polygon), and distinct from OpenV's round caps.
+    [Fact]
+    public void Chevron_EmitsTwoButtStrokes_NoFilledTriangle()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.Chevron }) });
+
+        Assert.Contains("<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"var(--beck-edge)\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>", svg);
+        Assert.Contains("<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"var(--beck-edge)\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>", svg);
+        Assert.DoesNotContain("points=\"0,1 10,5 0,9\"", svg);     // no classic filled polygon arrowhead
+        // Butt caps, not OpenV's round — the two treatments never collapse to the same marker body.
+        Assert.DoesNotContain("stroke-width=\"1.8\" stroke-linecap=\"round\"/>", svg);
+    }
+
+    // The chevron marker carries orient="auto-start-reverse", so the ONE def serves both ends: a reply's
+    // reversed path draws the same glyph as `<`. (The flip is the marker orient, not a second def.)
+    [Fact]
+    public void Chevron_OrientsAutoStartReverse_OneDefPerColor()
+    {
+        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+            new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.Chevron }) });
+
+        var markerDefs = Regex.Matches(svg, "<marker id=\"beck-arrow-[^\"]*\"[^>]*>");
+        Assert.NotEmpty(markerDefs);
+        foreach (Match m in markerDefs)
+            Assert.Contains("orient=\"auto-start-reverse\"", m.Value);
+    }
+
+    // The chevron's dedupe key is stable: same shape+color collapses to a single marker def (one `<marker>`
+    // per distinct color), the arch corpus uses one edge color so exactly one chevron def is emitted.
+    [Fact]
+    public void Chevron_DedupeKey_Stable_OneDef()
+    {
+        string yaml = Yaml("arch-kitchen.yaml");
+        var options = new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.Chevron }) };
+        string a = BeckSvg.Render(yaml, options);
+        string b = BeckSvg.Render(yaml, options);
+        Assert.Equal(a, b);                                        // deterministic
+
+        // Exactly one chevron marker def (butt-capped stroke pair) despite many edges reusing it.
+        int defs = Regex.Matches(a, "stroke-linecap=\"butt\"/></marker>").Count;
+        Assert.Equal(1, defs);
     }
 
     // ---- marker scaling ----
