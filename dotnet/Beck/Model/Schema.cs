@@ -85,6 +85,11 @@ internal sealed record EdgeModel
     public string? ToLabel { get; init; }
     /// <summary>Sequence only: a dashed return message.</summary>
     public required bool Reply { get; init; }
+    /// <summary>Sequence only: true when the author wrote an explicit <c>color:</c> on the message.
+    /// <see cref="Color"/> collapses the worker-accent / kind-default fallback chain into one value,
+    /// which is unrecoverable by comparison (an explicit colour can coincide with a default) — this
+    /// flag preserves the provenance for palette eligibility (<see cref="StyleEdges.BaseColorPalette"/>).</summary>
+    public bool ColorAuthored { get; init; }
     /// <summary>Sequence only: force/suppress an activation bar; null lets the heuristic decide.</summary>
     public bool? Activate { get; init; }
 }

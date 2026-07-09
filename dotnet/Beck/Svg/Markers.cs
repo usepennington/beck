@@ -42,15 +42,19 @@ internal sealed class Markers
         string sizeDisc = edges.MarkerScaleToWidth
             ? "|w" + SvgWriter.Num(edgeWidth) + "x" + SvgWriter.Num(edges.MarkerScale)
             : edges.MarkerScale != 1.0 ? "|x" + SvgWriter.Num(edges.MarkerScale) : "";
-        // The contrast-outline colour discriminates the key (brutalist's outlined arrowhead), so a distinct
-        // outline never shares a def with a flat-filled one; unset (classic) contributes nothing.
-        string outlineDisc = edges.MarkerOutline is { } oc && edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow
-            ? "|o" + oc : "";
+        // The contrast outline (brutalist's outlined arrowhead) applies to the plain FILLED arrow only —
+        // closed UML ends keep their bodies. Resolved ONCE here: this single value drives the dedupe key,
+        // the overflow attribute, and the outlined polygon in Body, so the three can't drift apart (a
+        // stale key would collide defs; a stale overflow would clip the outline stroke).
+        string? outline = edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow ? edges.MarkerOutline : null;
+        // The outline colour discriminates the key, so a distinct outline never shares a def with a
+        // flat-filled one; unset (classic) contributes nothing.
+        string outlineDisc = outline is { } oc ? "|o" + oc : "";
         string key = $"{shape}|{color}{disc}{sizeDisc}{outlineDisc}";
         if (_byKey.TryGetValue(key, out string? hit)) return hit;
 
         string id = $"beck-arrow-{_seq++}-{_hash}";
-        var (body, viewBox, refX, w, h) = Body(shape, color, edges);
+        var (body, viewBox, refX, w, h) = Body(shape, color, edges, outline);
         string refY = viewBox.Split(' ')[3] == "12" ? "6" : "5";
         // Marker size + units. Classic (no width-scaling, scale 1) emits the historical markerWidth/
         // markerHeight and NO markerUnits attribute (SVG default = strokeWidth) — byte-identical. A
@@ -72,8 +76,7 @@ internal sealed class Markers
         }
         // An outlined arrowhead (brutalist) draws overflow="visible" so the contrast stroke isn't clipped
         // by the marker viewport; every other marker (classic included) omits the attribute — byte-identical.
-        string overflow = edges.MarkerOutline is not null && edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow
-            ? " overflow=\"visible\"" : "";
+        string overflow = outline != null ? " overflow=\"visible\"" : "";
         _defs.Append($"<marker id=\"{id}\" viewBox=\"{viewBox}\" refX=\"{SvgWriter.Num(refX)}\" refY=\"{refY}\"{units}{overflow} ")
              .Append($"markerWidth=\"{SvgWriter.Num(mw)}\" markerHeight=\"{SvgWriter.Num(mh)}\" orient=\"auto-start-reverse\">")
              .Append(body).Append("</marker>");
@@ -81,7 +84,7 @@ internal sealed class Markers
         return id;
     }
 
-    private static (string Body, string ViewBox, double RefX, double W, double H) Body(MarkerShape shape, string color, StyleEdges edges)
+    private static (string Body, string ViewBox, double RefX, double W, double H) Body(MarkerShape shape, string color, StyleEdges edges, string? outline)
     {
         string c = SvgWriter.Attr(color);
         // OpenV (sketch): the plain filled arrowhead becomes TWO round-capped strokes running back from
@@ -105,8 +108,9 @@ internal sealed class Markers
         // Outlined filled arrowhead (brutalist): the classic filled polygon gains a contrasting outline
         // stroke (the mock's lime fill + white 1.5 stroke). Same points/viewBox/refX/size as the classic
         // filled arrow, so placement is unchanged; the marker is drawn overflow="visible" (see Ensure) so
-        // the 1.5 stroke isn't clipped. Only the plain filled arrowhead — closed UML ends keep their bodies.
-        if (edges.MarkerOutline is { } outline && edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow)
+        // the 1.5 stroke isn't clipped. `outline` was resolved by Ensure (filled plain arrow only) so this
+        // branch, the dedupe key, and the overflow attribute share one predicate.
+        if (outline is { })
             return (
                 $"<polygon points=\"0,1 10,5 0,9\" fill=\"{c}\" stroke=\"{SvgWriter.Attr(outline)}\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>",
                 "0 0 10 10", 8, 6, 6);

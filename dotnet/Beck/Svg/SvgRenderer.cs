@@ -41,13 +41,16 @@ internal static class SvgRenderer
             TextLengthGuard.FallbackOnly => measurer.IsApproximate,
             _ => true,
         };
-        var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix));
         var markers = new Markers(hash);
         // Pill states a node's flow will swap through (null unless animating with >1 state).
         var statusMap = StatusStates.Build(model);
         bool animating = options.Animation is AnimationMode.Full or AnimationMode.Scrub && model.Meta.Animate;
         IReadOnlyList<(string Text, string Color)>? StatesFor(string id) =>
             animating && statusMap.TryGetValue(id, out var s) && s.Count > 1 ? s : null;
+        // The non-empty pill texts a node's flow swaps through — sized into the card up front
+        // (row height + widest pill), since compiled CSS can't grow the box the way the live-DOM
+        // engine could when a status landed on a status-less node.
+        var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix, NonEmptyStatusTexts(StatesFor(n.Id))));
         string extraDefs = "";
         // Per-edge gradient <defs> collected by Edge() when the style paints luminous gradient edges
         // (glow). One userSpaceOnUse gradient per gradient-stroked edge, run along that edge's own
@@ -330,7 +333,7 @@ internal static class SvgRenderer
         // the edge→bright-midpoint→edge bloom travel each connector (the intended look, with the faint
         // endpoints matching the edge-coloured arrow markers). One gradient per gradient-stroked edge.
         string stroke;
-        if (style.Strokes.GradientEdges && m.Color == "var(--beck-edge)" && e.Points.Count > 0)
+        if (style.Strokes.GradientEdges && m.Color == Defaults.EdgeColor && e.Points.Count > 0)
         {
             Point a = e.Points[0], b = e.Points[^1];
             string gid = $"beck-edge-grad-{hash}-{P(idx)}";
@@ -358,7 +361,7 @@ internal static class SvgRenderer
         MarkerShape? start = m.MarkerStart ?? (m.Arrow is ArrowEnds.Start or ArrowEnds.Both ? MarkerShape.Arrow : null);
         // Marker colour: the edge's own colour (classic), or the style's comet-hue override (glow) when
         // this edge uses the default colour — a bright arrowhead over a faint slate base rail.
-        string markerColor = es.MarkerColor is { } mkc && m.Color == "var(--beck-edge)" ? mkc : edgeColor;
+        string markerColor = es.MarkerColor is { } mkc && m.Color == Defaults.EdgeColor ? mkc : edgeColor;
         if (end is { } ee) sb.Append($" marker-end=\"url(#{markers.Ensure(markerColor, ee, es, style.Geometry.EdgeStroke)})\"");
         if (start is { } ss) sb.Append($" marker-start=\"url(#{markers.Ensure(markerColor, ss, es, style.Geometry.EdgeStroke)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(m.Id)}\"/>");
@@ -431,12 +434,21 @@ internal static class SvgRenderer
         // Per-edge comet colour (glow alternates cyan/light-cyan/violet by draw order); the single
         // --beck-edge-overlay token is the fallback for a palette-less overlay style (sketch's DrawOn).
         string color = e.OverlayPalette.Count > 0
-            ? e.OverlayPalette[((idx % e.OverlayPalette.Count) + e.OverlayPalette.Count) % e.OverlayPalette.Count]
+            ? StyleEdges.Cycle(e.OverlayPalette, idx)
             : "var(--beck-edge-overlay, var(--beck-accent))";
         string bloom = e.OverlayBloom.Length > 0 ? $"filter:{e.OverlayBloom};" : "";
         string markup = $"<path class=\"beck-edge-overlay beo{idx}-{hash}\" d=\"{d}\" "
             + $"style=\"fill:none;stroke:{color};stroke-width:{N(e.OverlayWidth)};stroke-linecap:{e.OverlayLinecap};{bloom}{dash}\"/>";
         return (markup, new EdgeOverlaySpec(idx, e.Overlay, len, phase));
+    }
+
+    /// <summary>The non-empty pill texts of a node's flow-status states — the ONE filter both the
+    /// sizing pass (CardSizer's <c>flowStatuses</c>) and the card painter derive from, so the reserved
+    /// status row and the drawn pills can never disagree. <c>null</c> when nothing needs reserving.</summary>
+    private static IReadOnlyList<string>? NonEmptyStatusTexts(IReadOnlyList<(string Text, string Color)>? states)
+    {
+        var texts = states?.Select(s => s.Text).Where(t => t.Length > 0).ToList();
+        return texts is { Count: > 0 } ? texts : null;
     }
 
     /// <summary>The genuine bends (interior direction-changes) of a route polyline — the elbows where a
@@ -631,14 +643,18 @@ internal static class SvgRenderer
 
         double statusChipH = geo.StatusChipH;
         double titleLine = geo.CardTitleLine, subLine = geo.CardSubLine, textGap = geo.TextGap;
+        // The same flow-status texts CardSizer sized the box for (row height + widest pill), so
+        // wrapping and vertical centering here match the reserved space exactly.
+        var stateTexts = NonEmptyStatusTexts(states);
+        bool hasStates = stateTexts != null;
         // Wrap the title/subtitle into the SAME lines CardSizer measured the box for, so the drawn
         // text stays inside it (a single overflowing <text> was the "text escapes its box" bug).
-        double avail = CardSizer.CardTextAvail(node, m, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix);
+        double avail = CardSizer.CardTextAvail(node, m, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix, stateTexts);
         var titleLines = CardSizer.WrapText(m, style.Typography.DecorateTitle(node.Title), FontRole.CardTitle, avail, style.Typography.Roles);
         var subLines = node.Subtitle != null ? CardSizer.WrapText(m, node.Subtitle, FontRole.CardSubtitle, avail, style.Typography.Roles) : null;
         double textColH = titleLines.Count * titleLine
             + (subLines != null ? textGap + subLines.Count * subLine : 0)
-            + (node.Status != null ? textGap + geo.StatusMt + statusChipH : 0);
+            + (node.Status != null || hasStates ? textGap + geo.StatusMt + statusChipH : 0);
         double top = h / 2 - textColH / 2;
         double stackY = top;
         foreach (string line in titleLines)
@@ -655,16 +671,16 @@ internal static class SvgRenderer
                 stackY += subLine;
             }
         }
-        bool hasStates = states is { Count: > 1 };
-        if (node.Status is { } || hasStates)
+        if (node.Status is { } || states != null)
         {
             double sy = stackY + textGap + geo.StatusMt;
-            if (hasStates)
+            if (states != null)
             {
                 // The flow swaps this pill: pre-build one group per (text,color) state,
                 // state 0 (resting, possibly empty) visible, the rest hidden — the
-                // compiler cross-fades. A status-less target overhangs (accepted, §15).
-                for (int si = 0; si < states!.Count; si++)
+                // compiler cross-fades. A status-less target's box was pre-sized for
+                // the row (CardSizer's flowStatuses), so no pill overhangs the card.
+                for (int si = 0; si < states.Count; si++)
                 {
                     sb.Append($"<g class=\"beck-status-state bss{idx}-{si}-{hash}\"{(si == 0 ? "" : " opacity=\"0\"")}>");
                     if (states[si].Text.Length > 0) StatusPill(sb, states[si].Text, states[si].Color, textX, sy, statusChipH, m, style, guard);

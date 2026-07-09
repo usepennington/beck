@@ -25,7 +25,7 @@ internal static class CardSizer
     /// is what makes a remapped role (heavier/uppercased/other-family) size a matching box instead of a
     /// classic one the <c>textLength</c> guard would squeeze the real run into.</summary>
     public static Size Measure(NodeModel node, ITextMeasurer m, StyleGeometry? geometry = null, FontRoleTable? roles = null,
-        string titlePrefix = "", string titleSuffix = "")
+        string titlePrefix = "", string titleSuffix = "", IReadOnlyList<string>? flowStatuses = null)
     {
         StyleGeometry g = geometry ?? BeckStyle.Classic.Geometry;
         FontRoleTable r = roles ?? BeckStyle.Classic.Typography.Roles;
@@ -37,7 +37,7 @@ internal static class CardSizer
             NodeShape.Pill => Pill(node, m, g, r, title),
             NodeShape.Start or NodeShape.End => new Size(g.StartEndSize, g.StartEndSize),
             NodeShape.Class => Class(node, m, g, r, title),
-            _ => IsGhost(node) ? Ghost(node, m, g, r, title) : Card(node, m, g, r, title),
+            _ => IsGhost(node) ? Ghost(node, m, g, r, title) : Card(node, m, g, r, title, flowStatuses),
         };
     }
 
@@ -54,17 +54,18 @@ internal static class CardSizer
     private static double W(ITextMeasurer m, FontRoleTable roles, string text, FontRole role) =>
         m.Measure(text, role, roles.Of(role)).Width;
 
-    private static Size Card(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title)
+    private static Size Card(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title,
+        IReadOnlyList<string>? flowStatuses = null)
     {
         bool hasIcon = Icons.ResolveIcon(node.Icon) != null;
         double iconBlock = hasIcon ? g.IconW + g.IconGap : 0;
-        double width = CardWidth(node, m, iconBlock, g, r, title);
+        double width = CardWidth(node, m, iconBlock, g, r, title, flowStatuses);
         double avail = width - g.CardPadX - g.MeasureBorder - iconBlock;
 
         double textH = WrapLines(m, title, FontRole.CardTitle, avail, r) * g.CardTitleLine;
         if (node.Subtitle != null)
             textH += g.TextGap + WrapLines(m, node.Subtitle, FontRole.CardSubtitle, avail, r) * g.CardSubLine;
-        if (node.Status != null)
+        if (node.Status != null || flowStatuses is { Count: > 0 })
             textH += g.TextGap + g.StatusMt + g.StatusChipH;
 
         double content = Math.Max(hasIcon ? g.IconW : 0, textH);
@@ -160,26 +161,35 @@ internal static class CardSizer
     /// row on one line, clamped to [<see cref="StyleGeometry.CardMinW"/>,
     /// <see cref="StyleGeometry.CardMaxW"/>]. Past the cap, text wraps.
     /// </summary>
-    private static double CardWidth(NodeModel node, ITextMeasurer m, double iconBlock, StyleGeometry g, FontRoleTable r, string title)
+    private static double CardWidth(NodeModel node, ITextMeasurer m, double iconBlock, StyleGeometry g, FontRoleTable r, string title,
+        IReadOnlyList<string>? flowStatuses = null)
     {
         if (node.Width is double authored) return Math.Max(g.CardMinW, authored);
         double chrome = g.CardPadX + g.MeasureBorder + iconBlock;
         double titleW = W(m, r, title, FontRole.CardTitle);
         double subW = node.Subtitle != null ? W(m, r, node.Subtitle, FontRole.CardSubtitle) : 0;
+        // A flow status/fail step swaps a pill into this card; the box pre-grows to the widest
+        // pill (text + 16px chip padding) since compiled CSS can't reflow the way the live-DOM
+        // engine did. Statuses never wrap, so past CardMaxW a pill still overflows (like the JS
+        // engine's un-wrappable chip).
+        double statusW = 0;
+        if (flowStatuses != null)
+            foreach (string s in flowStatuses)
+                statusW = Math.Max(statusW, W(m, r, s, FontRole.Status) + 16);
         // Ceiling (not Round): the width must never shave the text column below the measured
         // single-line width, or the title would wrap inside a box sized to hold it on one line.
-        double natural = Math.Ceiling(Math.Max(titleW, subW)) + chrome;
+        double natural = Math.Ceiling(Math.Max(Math.Max(titleW, subW), statusW)) + chrome;
         return Math.Clamp(natural, g.CardMinW, g.CardMaxW);
     }
 
     /// <summary>The horizontal space a card's text column wraps within — matches <see cref="Card"/>.</summary>
     internal static double CardTextAvail(NodeModel node, ITextMeasurer m, StyleGeometry? geometry = null, FontRoleTable? roles = null,
-        string titlePrefix = "", string titleSuffix = "")
+        string titlePrefix = "", string titleSuffix = "", IReadOnlyList<string>? flowStatuses = null)
     {
         StyleGeometry g = geometry ?? BeckStyle.Classic.Geometry;
         FontRoleTable r = roles ?? BeckStyle.Classic.Typography.Roles;
         double iconBlock = Icons.ResolveIcon(node.Icon) != null ? g.IconW + g.IconGap : 0;
-        return CardWidth(node, m, iconBlock, g, r, Decorate(node.Title, titlePrefix, titleSuffix)) - g.CardPadX - g.MeasureBorder - iconBlock;
+        return CardWidth(node, m, iconBlock, g, r, Decorate(node.Title, titlePrefix, titleSuffix), flowStatuses) - g.CardPadX - g.MeasureBorder - iconBlock;
     }
 
     private static double Round(double n) => Js.Round(n);

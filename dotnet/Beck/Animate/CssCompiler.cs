@@ -179,15 +179,15 @@ internal sealed class CssCompiler
         if (overlays.Count == 0) return "";
         var sb = new StringBuilder();
         string dur = Nm(edges.OverlayPeriod);
+        // Timing: linear (classic — glow's smooth comet, a gliding march) unless OverlaySteps is set,
+        // which ratchets the overlay in n hard jumps per cycle (brutalist / terminal's mechanical tick)
+        // via the same stepped-ease emitter PacketSteps/TrailSteps use. Draw-on's eased wipe reads as a
+        // smooth ink, so it always stays linear.
+        string? stepsTiming = edges.OverlaySteps is int n ? Easing.ToCss(Easing.StepsN(n)) : null;
         foreach (EdgeOverlaySpec o in overlays)
         {
             string cls = $"beo{o.Index}-{hash}", kf = $"kbeo{o.Index}-{hash}";
-            // Timing: linear (classic — glow's smooth comet, a gliding march) unless OverlaySteps is set,
-            // which ratchets the overlay in n hard jumps per cycle (brutalist / terminal's mechanical tick).
-            // Draw-on's eased wipe reads as a smooth ink, so it always stays linear.
-            string timing = edges.OverlaySteps is int n && o.Mode != EdgeOverlay.DrawOn
-                ? $"steps({n.ToString(CultureInfo.InvariantCulture)})"
-                : "linear";
+            string timing = stepsTiming != null && o.Mode != EdgeOverlay.DrawOn ? stepsTiming : "linear";
             sb.Append($".b-{hash} .{cls}{{animation:{kf} {dur}s {timing} infinite;}}");
             sb.Append($"@keyframes {kf}{{");
             switch (o.Mode)

@@ -77,7 +77,7 @@ internal sealed class SequencePainter
         var partIndex = new Dictionary<string, int>();
         for (int i = 0; i < model.Nodes.Count; i++) partIndex[model.Nodes[i].Id] = i;
         var partById = model.Nodes.ToDictionary(n => n.Id);
-        string sharedStroke = palette ? "" : Lifeline("var(--beck-edge)", cardBottom, layout.LifelineBottom);
+        string sharedStroke = palette ? "" : Lifeline(Defaults.EdgeColor, cardBottom, layout.LifelineBottom);
         for (int pi = 0; pi < model.Nodes.Count; pi++)
         {
             NodeModel p = model.Nodes[pi];
@@ -215,7 +215,7 @@ internal sealed class SequencePainter
         if (edge.Style == EdgeStyle.Dashed) sb.Append($" stroke-dasharray=\"{_style.Strokes.EdgeDash}\"");
         // Marker colour: the message's own colour, or the style's comet-hue override (glow) when the
         // message uses the default colour — a bright arrowhead over a faint slate base rail.
-        string markerColor = es.MarkerColor is { } mkc && edge.Color == "var(--beck-edge)" ? mkc : strokeColor;
+        string markerColor = es.MarkerColor is { } mkc && edge.Color == Defaults.EdgeColor ? mkc : strokeColor;
         if ((edge.MarkerEnd ?? (edge.Arrow is ArrowEnds.End or ArrowEnds.Both ? MarkerShape.Arrow : (MarkerShape?)null)) is { } m)
             sb.Append($" marker-end=\"url(#{_markers.Ensure(markerColor, m, _style.Edges, _style.Geometry.MessageStroke)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(edge.Id)}\"/>");
@@ -267,21 +267,16 @@ internal sealed class SequencePainter
     private static bool IsDefaultAccent(NodeModel n) =>
         n.Accent == Colors.AccentToCss(null, Defaults.KindDefaults[n.Kind].Accent);
 
-    /// <summary>The effective line colour for a sequence message under a base-colour palette: its SOURCE
-    /// participant's palette hue (<c>edge.From</c>), unless the message carries an explicit author colour
-    /// (reconstructed against <see cref="SequenceBuilder"/>'s worker-accent / kind default) or the source
-    /// participant has an explicit accent — either of which wins and keeps the model colour.</summary>
+    /// <summary>The effective line colour for a sequence message under a base-colour palette: an explicit
+    /// author <c>color:</c> wins (<see cref="EdgeModel.ColorAuthored"/>), otherwise the message reads in
+    /// the colour of the line it departs — its SOURCE participant's (<c>edge.From</c>) palette hue, or the
+    /// source's own explicit accent, matching that participant's lifeline either way.</summary>
     private static string SourceHue(EdgeModel edge, StyleEdges es,
         IReadOnlyDictionary<string, int> partIndex, IReadOnlyDictionary<string, NodeModel> partById)
     {
-        // The message is tinted by the "worker" participant in the model (reply → from, else to); an
-        // explicit `color:` makes edge.Color differ from that default, in which case the author wins.
-        string worker = edge.Reply ? edge.From : edge.To;
-        bool authored = edge.Color != partById[worker].Accent
-            && edge.Color != Defaults.EdgeKindDefaults[edge.Kind].Color;
-        if (authored) return edge.Color;
+        if (edge.ColorAuthored) return edge.Color;
         NodeModel src = partById[edge.From];
-        return IsDefaultAccent(src) ? es.PaletteHue(partIndex[edge.From])! : edge.Color;
+        return IsDefaultAccent(src) ? es.PaletteHue(partIndex[edge.From])! : src.Accent;
     }
 
     private string ActivationFill(string accent)

@@ -95,7 +95,7 @@ internal static class StateBuilder
                 Style = OneOf(t.GetValueOrDefault("style"), Tokens.EdgeStyle, "transition.style", EdgeStyle.Solid),
                 Curve = EdgeCurve.StepRound,
                 Kind = EdgeKind.Control,
-                Color = OptColor(t.GetValueOrDefault("color")) ?? "var(--beck-edge)",
+                Color = OptColor(t.GetValueOrDefault("color")) ?? Defaults.EdgeColor,
                 Arrow = ArrowEnds.End,
                 Note = OptString(t.GetValueOrDefault("note")),
                 Reply = false,
