@@ -20,6 +20,7 @@ internal sealed class SequencePainter
     private readonly BeckStyle _style;
     private readonly StringBuilder _defs = new();
     private readonly Dictionary<string, string> _actFills = new();
+    private readonly Dictionary<string, string> _fades = new();
     private int _gradSeq;
     private bool _motion;
     private int _overlaySeq;
@@ -66,12 +67,26 @@ internal sealed class SequencePainter
 
         // ---- lifelines ----
         double cardBottom = model.Nodes.Min(p => layout.Nodes[p.Id].Y + layout.Nodes[p.Id].H);
-        string stroke = Lifeline(cardBottom, layout.LifelineBottom);
-        foreach (var p in model.Nodes)
+        StyleEdges seqEdges = _style.Edges;
+        // Metro's per-line palette (BaseColorPalette): each participant's lifeline takes the palette hue
+        // for its stable participant-column index, so every lifeline reads as its own transit-line colour.
+        // A participant that still carries its kind's default accent is palette-eligible; an explicit
+        // participant accent wins and keeps its own colour on its lifeline. Empty palette (classic, every
+        // non-metro style) → the single shared var(--beck-edge) fade gradient, byte-identical to today.
+        bool palette = seqEdges.BaseColorPalette.Count > 0;
+        var partIndex = new Dictionary<string, int>();
+        for (int i = 0; i < model.Nodes.Count; i++) partIndex[model.Nodes[i].Id] = i;
+        var partById = model.Nodes.ToDictionary(n => n.Id);
+        string sharedStroke = palette ? "" : Lifeline("var(--beck-edge)", cardBottom, layout.LifelineBottom);
+        for (int pi = 0; pi < model.Nodes.Count; pi++)
         {
+            NodeModel p = model.Nodes[pi];
             double cx = layout.Centers[p.Id];
             Rect card = layout.Nodes[p.Id];
             double y1 = card.Y + card.H + 2, y2 = layout.LifelineBottom;
+            string stroke = palette
+                ? Lifeline(IsDefaultAccent(p) ? seqEdges.PaletteHue(pi)! : p.Accent, cardBottom, layout.LifelineBottom)
+                : sharedStroke;
             // Optional static trace-bed underlay behind the lifeline (circuit beds lifelines too): a
             // wider, darker stroke sharing the lifeline's exact geometry, emitted FIRST so it sits behind
             // the base line. Off (width 0) → nothing (classic, byte-identical).
@@ -128,6 +143,12 @@ internal sealed class SequencePainter
         {
             EdgeModel edge = model.Edges[row.Index];
             double cxFrom = layout.Centers[edge.From], cxTo = layout.Centers[edge.To];
+            // Metro's per-line palette: a message (its line + its two endpoint station dots) follows its
+            // SOURCE participant's transit-line hue (the coherent metro rule — each hop reads in the colour
+            // of the line it departs), unless the message carries an explicit author colour (which wins).
+            // The group's --beck-accent (label chip) is left on the model colour so labels stay neutral,
+            // matching the mock's grey message labels. Empty palette → edge.Color unchanged, byte-identical.
+            string msgColor = palette ? SourceHue(edge, seqEdges, partIndex, partById) : edge.Color;
             sb.Append($"<g class=\"beck-msg{(edge.Reply ? " beck-msg--reply" : "")}\" data-msg=\"{SvgWriter.Attr(edge.Id)}\" style=\"--beck-accent:{SvgWriter.Attr(edge.Color)}\">");
 
             if (row.Self)
@@ -140,12 +161,12 @@ internal sealed class SequencePainter
                     new(cxFrom + SequenceLayout.SelfLoop, row.Y + 22), new(sx, row.Y + 22),
                 };
                 string selfD = StepRound.RoundedPath(poly, 9);
-                sb.Append(MsgPath(edge, selfD));
+                sb.Append(MsgPath(edge, selfD, msgColor));
                 sb.Append(MsgOverlay(selfD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, selfD));
                 // Metro station dots at the self-loop's two lifeline anchors (over the line).
-                sb.Append(Artwork.Station(_style, sx, row.Y, edge.Color));
-                sb.Append(Artwork.Station(_style, sx, row.Y + 22, edge.Color));
+                sb.Append(Artwork.Station(_style, sx, row.Y, msgColor));
+                sb.Append(Artwork.Station(_style, sx, row.Y + 22, msgColor));
                 if (!string.IsNullOrEmpty(edge.Label))
                     sb.Append($"<text class=\"beck-msg-text beck-msg-text--bare\" x=\"{N(cxFrom + SequenceLayout.SelfLoop + 12)}\" y=\"{N(row.Y + 11)}\" text-anchor=\"start\" dominant-baseline=\"central\" font-size=\"{N(msgSpec.SizePx)}\" font-weight=\"{P(msgSpec.Weight)}\" style=\"font-family:var(--beck-font-mono)\">{SvgWriter.Text(edge.Label!)}</text>");
             }
@@ -158,12 +179,12 @@ internal sealed class SequencePainter
                 // Bow the straight message when the style opts in (endpoints preserved); classic → verbatim.
                 string msgD = Shaping.EdgePath(_style, msgD0,
                     new[] { new Point(x1, row.Y), new Point(x2, row.Y) }, _hash + ":" + edge.Id);
-                sb.Append(MsgPath(edge, msgD));
+                sb.Append(MsgPath(edge, msgD, msgColor));
                 sb.Append(MsgOverlay(msgD));
                 MessageEdges.Add(new FlowEdge(edge.Id, edge.From, edge.To, edge.Kind, msgD));
                 // Metro station dots at each message's two endpoints (over the line).
-                sb.Append(Artwork.Station(_style, x1, row.Y, edge.Color));
-                sb.Append(Artwork.Station(_style, x2, row.Y, edge.Color));
+                sb.Append(Artwork.Station(_style, x1, row.Y, msgColor));
+                sb.Append(Artwork.Station(_style, x2, row.Y, msgColor));
                 if (!string.IsNullOrEmpty(edge.Label))
                 {
                     double mw = _m.Measure(edge.Label!, FontRole.MsgText, msgSpec).Width;
@@ -177,7 +198,7 @@ internal sealed class SequencePainter
         return sb.ToString();
     }
 
-    private string MsgPath(EdgeModel edge, string d)
+    private string MsgPath(EdgeModel edge, string d, string strokeColor)
     {
         StyleEdges es = _style.Edges;
         var sb = new StringBuilder();
@@ -188,11 +209,13 @@ internal sealed class SequencePainter
         // Optional faint base-layer opacity (glow's dim rail under the bright comet) — matches the
         // architecture edge painter's BaseOpacity treatment. null → no attribute (classic, byte-identical).
         string baseOp = es.BaseOpacity is { } bo ? $";stroke-opacity:{SvgWriter.Num(bo)}" : "";
-        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(edge.Kind)}\" d=\"{d}\" style=\"stroke:{SvgWriter.Attr(edge.Color)}{baseOp}\" stroke-width=\"{SvgWriter.Num(_style.Geometry.MessageStroke)}\"");
+        // strokeColor is the message's effective line colour — its own colour (classic, byte-identical),
+        // or metro's source-participant palette hue (BaseColorPalette) so the line + its stations cohere.
+        sb.Append($"<path class=\"beck-edge beck-edge--{Tokens.EdgeKind.Wire(edge.Kind)}\" d=\"{d}\" style=\"stroke:{SvgWriter.Attr(strokeColor)}{baseOp}\" stroke-width=\"{SvgWriter.Num(_style.Geometry.MessageStroke)}\"");
         if (edge.Style == EdgeStyle.Dashed) sb.Append($" stroke-dasharray=\"{_style.Strokes.EdgeDash}\"");
         // Marker colour: the message's own colour, or the style's comet-hue override (glow) when the
         // message uses the default colour — a bright arrowhead over a faint slate base rail.
-        string markerColor = es.MarkerColor is { } mkc && edge.Color == "var(--beck-edge)" ? mkc : edge.Color;
+        string markerColor = es.MarkerColor is { } mkc && edge.Color == "var(--beck-edge)" ? mkc : strokeColor;
         if ((edge.MarkerEnd ?? (edge.Arrow is ArrowEnds.End or ArrowEnds.Both ? MarkerShape.Arrow : (MarkerShape?)null)) is { } m)
             sb.Append($" marker-end=\"url(#{_markers.Ensure(markerColor, m, _style.Edges, _style.Geometry.MessageStroke)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(edge.Id)}\"/>");
@@ -220,15 +243,45 @@ internal sealed class SequencePainter
              + $"<text class=\"{textCls}\" x=\"{I(cx)}\" y=\"{I(cy)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"{SvgWriter.Num(size)}\" font-weight=\"{P(weight)}\" style=\"{fontStyle}{ls}\">{SvgWriter.Text(text)}</text>";
     }
 
-    private string Lifeline(double y1, double y2)
+    // A vertical fade gradient (opaque → transparent at the bottom) in the given colour, cached per colour
+    // so each distinct lifeline hue emits its def once. Classic passes var(--beck-edge) → the single
+    // historical gradient (byte-identical); metro's per-line palette passes each participant's hue.
+    private string Lifeline(string color, double y1, double y2)
     {
+        if (_fades.TryGetValue(color, out string? hit)) return hit;
         string id = $"beck-fade-{_gradSeq++}-{_hash}";
+        string c = SvgWriter.Attr(color);
         _defs.Append($"<linearGradient id=\"{id}\" gradientUnits=\"userSpaceOnUse\" x1=\"0\" y1=\"{N(y1)}\" x2=\"0\" y2=\"{N(y2)}\">")
-             .Append("<stop offset=\"0\" stop-opacity=\"1\" style=\"stop-color:var(--beck-edge)\"/>")
-             .Append("<stop offset=\"0.8\" stop-opacity=\"1\" style=\"stop-color:var(--beck-edge)\"/>")
-             .Append("<stop offset=\"1\" stop-opacity=\"0\" style=\"stop-color:var(--beck-edge)\"/>")
+             .Append($"<stop offset=\"0\" stop-opacity=\"1\" style=\"stop-color:{c}\"/>")
+             .Append($"<stop offset=\"0.8\" stop-opacity=\"1\" style=\"stop-color:{c}\"/>")
+             .Append($"<stop offset=\"1\" stop-opacity=\"0\" style=\"stop-color:{c}\"/>")
              .Append("</linearGradient>");
-        return $"url(#{id})";
+        string url = $"url(#{id})";
+        _fades[color] = url;
+        return url;
+    }
+
+    /// <summary>True when a participant still carries its node kind's <em>default</em> accent (no explicit
+    /// per-participant accent) — the eligibility test for metro's per-line palette, so an explicit accent
+    /// wins and keeps the participant's own colour.</summary>
+    private static bool IsDefaultAccent(NodeModel n) =>
+        n.Accent == Colors.AccentToCss(null, Defaults.KindDefaults[n.Kind].Accent);
+
+    /// <summary>The effective line colour for a sequence message under a base-colour palette: its SOURCE
+    /// participant's palette hue (<c>edge.From</c>), unless the message carries an explicit author colour
+    /// (reconstructed against <see cref="SequenceBuilder"/>'s worker-accent / kind default) or the source
+    /// participant has an explicit accent — either of which wins and keeps the model colour.</summary>
+    private static string SourceHue(EdgeModel edge, StyleEdges es,
+        IReadOnlyDictionary<string, int> partIndex, IReadOnlyDictionary<string, NodeModel> partById)
+    {
+        // The message is tinted by the "worker" participant in the model (reply → from, else to); an
+        // explicit `color:` makes edge.Color differ from that default, in which case the author wins.
+        string worker = edge.Reply ? edge.From : edge.To;
+        bool authored = edge.Color != partById[worker].Accent
+            && edge.Color != Defaults.EdgeKindDefaults[edge.Kind].Color;
+        if (authored) return edge.Color;
+        NodeModel src = partById[edge.From];
+        return IsDefaultAccent(src) ? es.PaletteHue(partIndex[edge.From])! : edge.Color;
     }
 
     private string ActivationFill(string accent)

@@ -7,6 +7,15 @@ namespace Beck;
 /// off entirely, quieter ripple peaks). Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every
 /// feature (shapes, groups, icons, packets, trails, sequence choreography, state/class diagrams,
 /// scrub, reduced motion, light/dark) stays fully available — only the rendering is toned down.
+/// <para><b>Edge presentation (Phase 4, edge-presentation seam).</b> The style's one piece of ambient
+/// motion is a single small dot commuting every architecture edge, class connector, and sequence
+/// message continuously — <see cref="StyleEdges.Overlay"/> = <see cref="EdgeOverlay.Comet"/> with a
+/// 1px <see cref="StyleEdges.CometDash"/> (degenerating the comet into a dot) at
+/// <see cref="StyleEdges.OverlayWidth"/> 3.5, round-capped, on a slow
+/// <see cref="StyleEdges.OverlayPeriod"/>. No overlay palette — the single hue rides the seam's default
+/// <c>var(--beck-edge-overlay, var(--beck-accent))</c> fallback, keeping minimal's one-accent
+/// restraint. Compiled shared-cycle, phase baked per edge, killed under reduced motion — nothing else
+/// about the style animates ambiently.</para>
 /// </summary>
 public static class MinimalStyle
 {
@@ -96,6 +105,26 @@ public static class MinimalStyle
             ActivationGlow = 0,
         };
 
+        // The whole identity's motion (mock 1c): a single 1px indigo dot commuting each edge, class
+        // connector, and sequence message — nothing else animates ambiently. `Comet` with a 1px
+        // `CometDash` degenerates the travelling comet into a single dot (the mock's `stroke-dasharray:
+        // 1 302`); the wide `OverlayWidth` (3.5, over the 1px base edge) is what makes that dot legible.
+        // No palette — a single hue via the seam's default `var(--beck-edge-overlay, var(--beck-accent))`
+        // fallback keeps minimal's one-accent restraint (no dedicated indigo token, no bloom — GlowEnabled
+        // stays false below). The long period (mock spans ~3-4s per view) keeps the commute unhurried,
+        // consistent with "quietest option; motion is one small traveling dot per edge".
+        StyleEdges edges = StyleEdges.Classic with
+        {
+            Overlay = EdgeOverlay.Comet,
+            CometDash = 1,
+            OverlayWidth = 3.5,
+            OverlayLinecap = "round",
+            OverlayPeriod = 3.2,
+            // Solid lifelines (mock 1c draws them as plain `#1e293b` width-1.2 verticals, no dash) —
+            // the sober "no design" read keeps the sequence scaffold as clean solid rules.
+            Lifeline = LifelineShape.FaintSolid,
+        };
+
         StyleMotion motion = c.Motion with
         {
             OverlayStroke = 1,
@@ -126,6 +155,7 @@ public static class MinimalStyle
             Geometry = geo,
             Mix = mix,
             Motion = motion,
+            Edges = edges,
         };
     }
 }

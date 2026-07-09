@@ -3,20 +3,33 @@ using Beck.Rendering.Text;
 namespace Beck;
 
 /// <summary>
-/// The <c>blueprint</c> built-in style (Phase 3, mock 1a): a technical-drawing look — a faint
+/// The <c>blueprint</c> built-in style (Phase 3/5, mock 1a): a technical-drawing look — a faint
 /// token-driven graph-paper grid painted on the diagram surface, blue-leaning token defaults over the
-/// host ramp, dashed "flowing" edges (every edge carries the style's edge dash, and the flow's
-/// marching stream overlay rides on top), and mono, uppercase annotation labels. Derived from
-/// <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every feature (shapes, groups,
-/// icons, packets, trails, sequence choreography, state/class diagrams, scrub, reduced motion,
-/// light/dark) stays fully available by construction — only the surface, edges, tokens, and label
-/// typography change.
+/// host ramp, dashed edges that are <em>perpetually flowing</em> (every edge/message carries the
+/// style's static edge dash under a continuous <see cref="EdgeOverlay.Marching"/> overlay — the
+/// per-style edge-presentation seam, <see cref="StyleEdges"/>), and mono, uppercase annotation
+/// labels. Derived from <see cref="BeckStyle.Classic"/> with a <c>with</c> expression so every
+/// feature (shapes, groups, icons, packets, trails, sequence choreography, state/class diagrams,
+/// scrub, reduced motion, light/dark) stays fully available by construction — only the surface,
+/// edges, tokens, and label typography change.
 /// </summary>
 /// <remarks>
 /// <para>The grid is a CSS <c>background-image</c> (two token-coloured gradients) on the root
 /// <c>&lt;svg&gt;</c> box, driven by a new <c>--beck-grid</c> token defined in both the light and dark
-/// tables, so it theme-adapts and a host <c>--color-*</c>/<c>--beck-*</c> override still wins. Edge
-/// dashing rides the existing single continuous <c>&lt;path&gt;</c> per edge (a stroke treatment
+/// tables, so it theme-adapts and a host <c>--color-*</c>/<c>--beck-*</c> override still wins.</para>
+/// <para><em>Perpetual flow</em> (mock 1a's headline trait, "connectors are dashed + perpetually
+/// flowing") is <see cref="StyleEdges.Overlay"/> = <see cref="EdgeOverlay.Marching"/>: a second path
+/// sharing every edge/message's exact <c>d</c>, a <c>6 6</c> dash (<see cref="StyleEdges.CometDash"/>
+/// = 6) whose <c>stroke-dashoffset</c> marches every <see cref="StyleEdges.OverlayPeriod"/> (1.6s,
+/// matching the mock's <c>df 1.6s linear infinite</c> verbatim) — compiled onto the shared cycle by
+/// <c>CssCompiler.EdgeOverlayCss</c> (no <c>animation-delay</c> chain), killed under reduced motion.
+/// The overlay width (1.6) matches the base <see cref="StyleGeometry.EdgeStroke"/> and its linecap is
+/// <c>"butt"</c> (not the seam's round default) so it reads as the SAME dashed line marching, not a
+/// fatter comet riding over it. Colour rides the seam's default single-hue fallback
+/// (<c>var(--beck-edge-overlay, var(--beck-accent))</c>), resolved to a dedicated lighter
+/// <c>--beck-edge-overlay</c> token (mock's light-cyan <c>#7dd3fc</c>) distinct from the deeper
+/// node/border accent — no palette needed, every connector shares the one flowing hue. Edge dashing
+/// itself still rides the existing single continuous <c>&lt;path&gt;</c> per edge (a stroke treatment
 /// only), so routing/packets/trails are untouched.</para>
 /// <para><em>Dimension ticks on group boxes</em> ship via the <see cref="StyleArtwork.Blueprint"/>
 /// branch in the group-box painter (a subtle top-edge dimension line + perpendicular witness ticks,
@@ -67,6 +80,11 @@ public static class BlueprintStyle
             // drafting annotation, not an incidental hairline (visual-jury tuning: the old 32% mix was
             // too subtle). Still a token-driven mix, no resolved literal in shape CSS.
             ("--beck-dimension", "color-mix(in srgb, var(--beck-primary) 55%, transparent)"),
+            // The "perpetually flowing" marching overlay's hue (mock 1a: a light-cyan `#7dd3fc` line
+            // distinct from the deeper node/border blue) — a lighter step than --beck-accent so the
+            // flowing dash reads as its own drafting-pen colour over the static dashed rail. Consumed
+            // via the seam's default overlay fallback (`var(--beck-edge-overlay, var(--beck-accent))`).
+            ("--beck-edge-overlay", "var(--color-sky-300, #7dd3fc)"),
         });
 
         // Dark overrides only (layered over the light block, which is always emitted first): lighter
@@ -130,6 +148,25 @@ public static class BlueprintStyle
             EdgeDash = "6 4",
         };
 
+        StyleEdges edges = c.Edges with
+        {
+            // The headline mock 1a trait ("connectors are dashed + perpetually flowing"): a Marching
+            // overlay sharing every edge/message's exact `d`, a `6 6` dash pattern (CometDash=6 emits
+            // `stroke-dasharray:6 6` per EdgeOverlay.Marching) whose dashoffset marches continuously —
+            // the compiled, shared-cycle equivalent of the mock's `animation:df 1.6s linear infinite`
+            // on every connector. Width matches the base EdgeStroke (1.6) and the linecap stays "butt"
+            // (the mock's plain <line>/<path> dashes, not rounded comet pills) so the overlay reads as
+            // the SAME line marching, not a fatter comet riding over it. Colour comes from the seam's
+            // default single-hue fallback (`var(--beck-edge-overlay, var(--beck-accent))`), resolved
+            // above to the lighter --beck-edge-overlay token — no palette needed, every connector
+            // (architecture edges, class edges, sequence messages) shares the one flowing hue.
+            Overlay = EdgeOverlay.Marching,
+            OverlayWidth = 1.6,
+            OverlayLinecap = "butt",
+            CometDash = 6,
+            OverlayPeriod = 1.6,
+        };
+
         // Mono + uppercase annotation labels. Only the family/case flags change; sizes/weights/spacing
         // stay classic so measured widths (which the embedded measurer computes from the static role
         // table) stay put. Edge labels are textLength-guarded, and group labels are already uppercased
@@ -160,6 +197,7 @@ public static class BlueprintStyle
             Mix = mix,
             Strokes = strokes,
             Typography = typography,
+            Edges = edges,
             // Group-box dimension lines (the technical-drawing measured-length annotation). The
             // group-box painter branches on this; nodes/edges/ghosts are untouched, so every shape,
             // variant, packet, marker, and diagram type stays exactly as the CSS/token layer renders it.

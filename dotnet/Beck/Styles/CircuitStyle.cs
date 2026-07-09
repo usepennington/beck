@@ -5,8 +5,10 @@ namespace Beck;
 /// card/pill/class node keeps its straight rounded rect (so all token-driven fill/stroke/filter still
 /// applies) but reads as a socketed <em>chip</em> — short copper <em>pin stubs</em> march down its left
 /// and right edges (<see cref="StyleArtwork.Circuit"/>), and every right-angle edge trace drops a small
-/// gold <em>via dot</em> at each bend of its already-computed route. Packets glow as they ride the
-/// traces, reading as electrical pulses. Set over a green-substrate-leaning dark board with copper/gold
+/// gold <em>via dot</em> at each bend of its already-computed route. An <em>amber signal comet</em> (the
+/// edge-presentation seam's <see cref="EdgeOverlay.Comet"/>) pulses along every trace continuously,
+/// independent of any flow script, while flow-driven packets glow as they ride the traces — both read as
+/// electrical pulses. Set over a green-substrate-leaning dark board with copper/gold
 /// accents (all token-indirected) and mono labels for the technical aesthetic. Derived from
 /// <see cref="BeckStyle.Classic"/> with a <c>with</c> expression, so every feature (all shapes/variants,
 /// groups, icons, edges + labels + UML markers, packets + labels, trails, highlight/pulse/fail, status
@@ -30,6 +32,14 @@ namespace Beck;
 /// the existing hash-scoped glow filter doing the work. Card sizing is unchanged: <c>NodeStroke</c> stays
 /// 1.5 so <c>MeasureBorder</c> is classic's 2 and every box measures identically; only the drawn chrome
 /// and colours change.</para>
+/// <para><b>Amber signal comet (edge seam).</b> Beyond the flow-driven glow packets, every trace carries an
+/// always-on <see cref="EdgeOverlay.Comet"/> — an 8px gold dot (<see cref="StyleEdges.CometDash"/>) riding
+/// the full trace on a 2.2s compiled shared-cycle loop (<see cref="StyleEdges.OverlayPeriod"/>), width 3,
+/// round cap, hue via the palette-less <c>--beck-edge-overlay</c> fallback (= <c>--beck-gold</c>). It is an
+/// additional path sharing each trace's exact <c>d</c> (routing + the single continuous flow path
+/// untouched), its per-edge phase baked into the start dash-offset (no delay chain), killed under reduced
+/// motion. This is the mock's headline "signals pulse along right-angle traces" identity — flow-independent
+/// and continuous, where the glow packets only fire when a flow script drives them.</para>
 /// </remarks>
 public static class CircuitStyle
 {
@@ -80,6 +90,10 @@ public static class CircuitStyle
             ("--beck-pin", $"color-mix(in srgb, {copper} 80%, var(--beck-gold))"),
             ("--beck-via", "var(--beck-gold)"),
             ("--beck-edge-underlay", $"color-mix(in srgb, {copper} 60%, var(--color-base-800, #163a29))"),
+            // The amber signal comet's hue (mock 1h's #fcd34d pulse) — the palette-less overlay fallback
+            // token. Reuses --beck-gold so the travelling signal, the vias and the chip pins read as one
+            // gold electrical family; theme-adapts through --beck-gold (dark inherits it unchanged).
+            ("--beck-edge-overlay", "var(--beck-gold)"),
         });
 
         // Dark board (the circuit hero): a deep green substrate, near-black chip bodies with copper
@@ -128,14 +142,27 @@ public static class CircuitStyle
             PacketGlowBlur = 4.0,
         };
 
-        // Circuit's signature two-layer trace: a static, wider, darker trace-bed underlay behind the
-        // copper base edge (sharing its exact d), so the thin copper line reads as a trace riding a dark
-        // bed. Beds architecture/class edges + sequence messages + lifelines; the base edge stays the one
-        // continuous flow path packets/trails ride. ~2.2× the 1.8 EdgeStroke.
+        // Circuit's signature two-layer trace + the amber signal comet (mock 1h's headline motion):
+        //  - UnderlayWidth/Color: a static, wider, darker trace-bed underlay behind the copper base edge
+        //    (sharing its exact d), so the thin copper line reads as a trace riding a dark bed. Beds
+        //    architecture/class edges + sequence messages + lifelines; the base edge stays the one
+        //    continuous flow path packets/trails ride. ~2.2× the 1.8 EdgeStroke.
+        //  - Overlay=Comet: an amber signal pulse riding EVERY trace continuously, independent of any flow
+        //    script — the ambient "signals pulse along right-angle traces" identity. Maps verbatim to the
+        //    mock's `stroke:#fcd34d;stroke-width:3;stroke-linecap:round;stroke-dasharray:8 304;
+        //    animation:pt 2.2s linear infinite`: an 8px gold dot (CometDash=8) over the full-length gap,
+        //    width 3, round cap, on a 2.2s compiled shared-cycle loop. Its hue is the palette-less
+        //    --beck-edge-overlay fallback (= --beck-gold); its per-edge phase is baked into the start
+        //    dash-offset (no delay chain) and it is killed under reduced motion. An additional path
+        //    sharing the edge's exact d — routing and the single continuous flow path are unchanged.
         StyleEdges edges = c.Edges with
         {
             UnderlayWidth = 4,
             UnderlayColor = "var(--beck-edge-underlay)",
+            Overlay = EdgeOverlay.Comet,
+            OverlayWidth = 3,
+            CometDash = 8,
+            OverlayPeriod = 2.2,
         };
 
         return c with

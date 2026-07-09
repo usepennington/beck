@@ -31,6 +31,13 @@ namespace Beck;
 /// — no <c>animation-delay</c>, and reduced-motion users get the fully-revealed static slab. Card
 /// sizing is unchanged: <c>NodeStroke = 2</c> keeps <c>MeasureBorder</c> at 2 (classic's budget), so
 /// the boxes measure identically and only the drawn chrome thickens.</para>
+/// <para><b>Magenta comet (StyleEdges).</b> The mock's headline edge trait — a violet base rail
+/// (<c>--beck-edge</c> saturated toward <c>#6d28d9</c>/<c>#8b5cf6</c>) under a magenta comet
+/// (<see cref="EdgeOverlay.Comet"/>, <c>--beck-comet</c>, width 4, a 2px lit dash gliding every
+/// edge/message continuously on a ~2.6s compiled shared-cycle loop, phased per edge from the content
+/// hash) — rides on top, every card/pill/class node still static except for the press. The mock's
+/// <c>floaty</c> node bob (nodes bobbing on offset phases) is explicitly locked out; press-down above
+/// is extrude's only node motion.</para>
 /// </remarks>
 public static class ExtrudeStyle
 {
@@ -66,7 +73,9 @@ public static class ExtrudeStyle
             ("--beck-neutral", "var(--color-base-400, #9a93c0)"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {P(c.Mix.GroupBorder)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
-            ("--beck-edge", "var(--color-base-300, #b9bade)"),
+            // Saturated violet base rail (mock 1e's `#6d28d9` connectors) in place of a muted grey — the
+            // comet overlay reads as a bright accent riding a colourful line, not a neutral one.
+            ("--beck-edge", "var(--color-violet-700, #6d28d9)"),
             ("--beck-packet", "var(--beck-primary)"),
             ("--beck-icon-bg", "var(--color-base-100, #eceafc)"),
             ("--beck-accent", "var(--beck-primary)"),
@@ -74,6 +83,9 @@ public static class ExtrudeStyle
             ("--beck-depth", "var(--color-base-500, #6b6494)"),
             ("--beck-depth-right", "color-mix(in srgb, var(--beck-depth) 38%, var(--beck-node-bg))"),
             ("--beck-depth-bottom", "color-mix(in srgb, var(--beck-depth) 58%, var(--beck-node-bg))"),
+            // The magenta comet hue (mock's `#e879f9`) riding every edge/message — a single fuchsia
+            // token, not a palette, since extrude's identity is one comet colour everywhere.
+            ("--beck-comet", "var(--color-fuchsia-400, #e879f9)"),
         });
 
         // Dark overrides only (layered over the light block, which is emitted first): a deep indigo-black
@@ -92,7 +104,9 @@ public static class ExtrudeStyle
             ("--beck-text", "var(--color-base-50, #f2effc)"),
             ("--beck-text-muted", "var(--color-base-400, #a79fcf)"),
             ("--beck-text-faint", "var(--color-base-500, #7a739e)"),
-            ("--beck-edge", "var(--color-base-700, #454168)"),
+            // A lighter, still-saturated violet so the base rail contrasts the near-black dark surface
+            // (the light table's #6d28d9 would sink into it).
+            ("--beck-edge", "var(--color-violet-500, #8b5cf6)"),
             ("--beck-icon-bg", "var(--color-base-800, #221f36)"),
             // Elevated depth ink + faces lifted above the node surface (mix toward the ink, not toward
             // black), so the offset slab walls contrast the near-black page. Right = more lift (lit wall),
@@ -144,6 +158,25 @@ public static class ExtrudeStyle
             PacketRingFactor = 0.32,
         };
 
+        // The magenta comet (mock 1e): a second path sharing every edge/message's exact d, a 2px lit dash
+        // gliding the whole run every ~2.6s, compiled shared-cycle with a baked per-edge phase (no delay
+        // chain), killed under reduced motion. This IS extrude's headline gap — the mock's `floaty` node
+        // bob is locked out (PressDown above already carries the identity motion); the comet is the only
+        // add. Single magenta hue via --beck-comet (no multi-hue palette — that's metro's trait, not
+        // extrude's), width 4 to read as a weighty "toy-brick" comet over the chunky base rail.
+        StyleEdges edges = c.Edges with
+        {
+            Overlay = EdgeOverlay.Comet,
+            OverlayWidth = 4,
+            OverlayLinecap = "round",
+            CometDash = 2,
+            OverlayPeriod = 2.6,
+            OverlayPalette = new[] { "var(--beck-comet)" },
+            // Solid lifelines (mock 1e draws them as plain `#3b0764` width-1.5 verticals, no dash) —
+            // a dashed scaffold under the chunky slabs read as noise; solid rails match the toy-brick weight.
+            Lifeline = LifelineShape.FaintSolid,
+        };
+
         return c with
         {
             Name = "extrude",
@@ -151,6 +184,7 @@ public static class ExtrudeStyle
             DarkTokens = dark,
             Geometry = geo,
             Motion = motion,
+            Edges = edges,
             // The 2.5D depth-face artwork seam: card/pill/class nodes gain two solid parallelogram faces
             // (DepthOffset px, --beck-depth-*) behind them. Data-only selector — no injected markup.
             Artwork = StyleArtwork.Extruded,

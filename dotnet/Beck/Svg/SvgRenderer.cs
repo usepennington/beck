@@ -310,6 +310,14 @@ internal static class SvgRenderer
         EdgeModel m = e.Edge;
         StyleEdges es = style.Edges;
         var sb = new StringBuilder();
+        // Metro's per-line palette (BaseColorPalette): an edge that uses the *default* colour
+        // (var(--beck-edge)) takes the palette hue for its stable draw-order index, so each relationship
+        // reads as its own transit-line colour. An author's explicit per-edge accent (any non-default
+        // colour) wins — the palette is skipped for that edge. The effective colour drives the base
+        // stroke, the arrowhead marker, and the metro station-dot rings together, so the whole line reads
+        // one hue. Empty palette (classic, every non-metro style) → m.Color unchanged, byte-identical.
+        // Gradient edges (glow) own the default-colour slot instead, so palette + gradient never collide.
+        string edgeColor = style.Strokes.GradientEdges ? m.Color : es.BaseColorFor(idx, m.Color);
         // Glow's luminous edges: an edge that uses the *default* colour (var(--beck-edge)) paints with a
         // per-edge gradient. Author-coloured edges keep their explicit colour, and the arrow markers
         // (still edge-coloured) match the gradient's faint endpoints.
@@ -335,7 +343,7 @@ internal static class SvgRenderer
         }
         else
         {
-            stroke = SvgWriter.Attr(m.Color);
+            stroke = SvgWriter.Attr(edgeColor);
         }
         // Optional static trace-bed underlay (circuit's two-layer trace) — a wider, darker path sharing
         // this edge's exact d, emitted FIRST so it sits behind the base .beck-edge line. Static (no
@@ -350,7 +358,7 @@ internal static class SvgRenderer
         MarkerShape? start = m.MarkerStart ?? (m.Arrow is ArrowEnds.Start or ArrowEnds.Both ? MarkerShape.Arrow : null);
         // Marker colour: the edge's own colour (classic), or the style's comet-hue override (glow) when
         // this edge uses the default colour — a bright arrowhead over a faint slate base rail.
-        string markerColor = es.MarkerColor is { } mkc && m.Color == "var(--beck-edge)" ? mkc : m.Color;
+        string markerColor = es.MarkerColor is { } mkc && m.Color == "var(--beck-edge)" ? mkc : edgeColor;
         if (end is { } ee) sb.Append($" marker-end=\"url(#{markers.Ensure(markerColor, ee, es, style.Geometry.EdgeStroke)})\"");
         if (start is { } ss) sb.Append($" marker-start=\"url(#{markers.Ensure(markerColor, ss, es, style.Geometry.EdgeStroke)})\"");
         sb.Append($" data-edge=\"{SvgWriter.Attr(m.Id)}\"/>");
@@ -376,8 +384,8 @@ internal static class SvgRenderer
         // from the existing route geometry — router untouched, edge still one continuous <path> above.
         if (style.Artwork == StyleArtwork.Metro && e.Points.Count > 0)
         {
-            sb.Append(Artwork.Station(style, e.Points[0].X, e.Points[0].Y, m.Color));
-            sb.Append(Artwork.Station(style, e.Points[^1].X, e.Points[^1].Y, m.Color));
+            sb.Append(Artwork.Station(style, e.Points[0].X, e.Points[0].Y, edgeColor));
+            sb.Append(Artwork.Station(style, e.Points[^1].X, e.Points[^1].Y, edgeColor));
         }
         return sb.ToString();
     }

@@ -42,7 +42,11 @@ internal sealed class Markers
         string sizeDisc = edges.MarkerScaleToWidth
             ? "|w" + SvgWriter.Num(edgeWidth) + "x" + SvgWriter.Num(edges.MarkerScale)
             : edges.MarkerScale != 1.0 ? "|x" + SvgWriter.Num(edges.MarkerScale) : "";
-        string key = $"{shape}|{color}{disc}{sizeDisc}";
+        // The contrast-outline colour discriminates the key (brutalist's outlined arrowhead), so a distinct
+        // outline never shares a def with a flat-filled one; unset (classic) contributes nothing.
+        string outlineDisc = edges.MarkerOutline is { } oc && edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow
+            ? "|o" + oc : "";
+        string key = $"{shape}|{color}{disc}{sizeDisc}{outlineDisc}";
         if (_byKey.TryGetValue(key, out string? hit)) return hit;
 
         string id = $"beck-arrow-{_seq++}-{_hash}";
@@ -66,7 +70,11 @@ internal sealed class Markers
             (mw, mh) = (w * edges.MarkerScale, h * edges.MarkerScale);
             units = "";
         }
-        _defs.Append($"<marker id=\"{id}\" viewBox=\"{viewBox}\" refX=\"{SvgWriter.Num(refX)}\" refY=\"{refY}\"{units} ")
+        // An outlined arrowhead (brutalist) draws overflow="visible" so the contrast stroke isn't clipped
+        // by the marker viewport; every other marker (classic included) omits the attribute — byte-identical.
+        string overflow = edges.MarkerOutline is not null && edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow
+            ? " overflow=\"visible\"" : "";
+        _defs.Append($"<marker id=\"{id}\" viewBox=\"{viewBox}\" refX=\"{SvgWriter.Num(refX)}\" refY=\"{refY}\"{units}{overflow} ")
              .Append($"markerWidth=\"{SvgWriter.Num(mw)}\" markerHeight=\"{SvgWriter.Num(mh)}\" orient=\"auto-start-reverse\">")
              .Append(body).Append("</marker>");
         _byKey[key] = id;
@@ -94,6 +102,14 @@ internal sealed class Markers
                 $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"{c}\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>"
                 + $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"{c}\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>",
                 "0 0 12 10", 10, 8, 8);
+        // Outlined filled arrowhead (brutalist): the classic filled polygon gains a contrasting outline
+        // stroke (the mock's lime fill + white 1.5 stroke). Same points/viewBox/refX/size as the classic
+        // filled arrow, so placement is unchanged; the marker is drawn overflow="visible" (see Ensure) so
+        // the 1.5 stroke isn't clipped. Only the plain filled arrowhead — closed UML ends keep their bodies.
+        if (edges.MarkerOutline is { } outline && edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow)
+            return (
+                $"<polygon points=\"0,1 10,5 0,9\" fill=\"{c}\" stroke=\"{SvgWriter.Attr(outline)}\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>",
+                "0 0 10 10", 8, 6, 6);
         return shape switch
         {
             MarkerShape.ArrowOpen => (

@@ -26,11 +26,24 @@ namespace Beck;
 /// elements drawn over it. Group boxes, ghosts, and pseudo-states carry no stations. NodeStroke stays
 /// 1.5 (classic <c>MeasureBorder</c>) so every card box measures identically — only the drawn chrome,
 /// the thick edge stroke, and the typography change.</para>
+/// <para><b>Per-line colours + white train (the edge-presentation seam).</b> Metro's headline is carried by
+/// <see cref="StyleEdges"/>: <see cref="StyleEdges.BaseColorPalette"/> recolours each relationship as its own
+/// saturated transit line (rose / cyan / amber, cycled by stable draw order), and the effective hue drives the
+/// base stroke, its arrowhead marker, and its station-dot rings together so a line reads one colour end to end.
+/// A <see cref="EdgeOverlay.Comet"/> overlay then rides every line as an always-on <em>white train</em> — a
+/// short round-capped dot sharing the edge's exact <c>d</c>, its per-edge phase baked from the content hash and
+/// compiled onto a shared-cycle <c>linear infinite</c> loop (no delay chain, killed under reduced motion). The
+/// overlay carries no palette, so its hue is the single <c>--beck-edge-overlay</c> fallback pointed at the same
+/// station-fill white — one white train on every coloured line, ambient and flow-independent. Because the thick
+/// 5px line would otherwise blow a stroke-width-scaled arrowhead into a blob,
+/// <see cref="StyleEdges.MarkerScaleToWidth"/> switches markers to an absolute size that grows sub-linearly with
+/// the line width (the mock draws no arrowheads on transit lines; scale-to-width is the locked adaptation).</para>
 /// <para><b>Train packets.</b> The default packet glyph is <see cref="Beck.PacketGlyph.Train"/>: an
 /// elongated rounded-rect capsule centred on the offset point with <c>offset-rotate:auto</c>, so it is
 /// the one glyph that rotates with the path — a carriage leaning through curves. No new motion
 /// mechanism; it rides the same <c>offset-path</c> track every packet uses. An author's explicit
-/// <c>packet.shape</c> still overrides it (the glyph is only the style default).</para>
+/// <c>packet.shape</c> still overrides it (the glyph is only the style default). This flow-driven train is
+/// distinct from the ambient white-train overlay above (which runs on every line with or without a flow).</para>
 /// <para><b>Station-sign type.</b> The card / pill / class / diagram title roles gain roomier
 /// letter-spacing sized against the embedded Archivo table (<see cref="MetricsFont.Archivo"/>), so the
 /// boxes measure to the tracked run and the <c>textLength</c> guard keeps the drawn text inside its
@@ -73,6 +86,17 @@ public static class MetroStyle
             ("--beck-packet", "var(--beck-primary)"),
             ("--beck-icon-bg", "var(--color-base-100, #eef1f5)"),
             ("--beck-accent", "var(--beck-primary)"),
+            // The white "train" overlay hue. The Comet overlay carries no OverlayPalette, so it takes the
+            // seam's single fallback token (var(--beck-edge-overlay, var(--beck-accent))); pointing that at
+            // the SAME station-fill chain the station dots use makes the train dot and the stations one white
+            // that theme-adapts (near-white on light, deep-surface on dark), while BaseColorPalette colours
+            // the lines beneath — the mock's single white train riding every coloured line.
+            ("--beck-edge-overlay", "var(--beck-station-fill, var(--beck-surface))"),
+            // Per-line transit palette (the mock's rose / blue / amber lines) — dedicated tokens so a host
+            // can retint them; the saturated hues read on both themes, so no dark override is needed.
+            ("--beck-line-1", "var(--color-rose-400, #fb7185)"),
+            ("--beck-line-2", "var(--color-sky-400, #38bdf8)"),
+            ("--beck-line-3", "var(--color-amber-400, #fbbf24)"),
         });
 
         // Dark overrides only (layered over the light block, which is always emitted first): a deep
@@ -143,6 +167,36 @@ public static class MetroStyle
             PacketGlyph = PacketGlyph.Train,
         };
 
+        // The metro edge treatment (the star of the style) — every knob maps to the shared edge-presentation
+        // seam, so metro is (with sketch/glow) one of its reference consumers:
+        //  - BaseColorPalette: each relationship a different transit-line colour (rose / cyan / amber),
+        //    cycled by stable draw order — architecture edge index and sequence participant-column index
+        //    (a message follows its source participant's line) — so the assignment is reproducible, not
+        //    hash-driven. An author's explicit per-edge/participant accent still wins. The effective hue
+        //    feeds the base stroke, its arrowhead marker, AND its station-dot rings together, so a line +
+        //    its heads + its stations read one colour.
+        //  - Overlay = Comet: the always-on "white train" — a short round-capped dot (CometDash 3, width
+        //    3.5) riding every line, its per-edge phase baked from the content hash and compiled onto the
+        //    shared OverlayPeriod cycle by CssCompiler.EdgeOverlayCss (no animation-delay chain, killed under
+        //    reduced motion). It carries NO OverlayPalette, so its hue is the single --beck-edge-overlay
+        //    fallback (resolved above to the station-fill white) — one white train on every coloured line,
+        //    ambient and flow-independent (distinct from the flow-driven Train packet glyph). Mirrors the
+        //    mock's `stroke:#f8fafc;stroke-width:3.5;stroke-dasharray:3 300;animation:ptd 3s linear infinite`.
+        //  - MarkerScaleToWidth: the metro jury gripe — the 5px transit line blows a strokeWidth-scaled
+        //    arrowhead into a blob. Switch markers to an absolute (userSpaceOnUse) size that grows only
+        //    sub-linearly with the line width so the heads stay sane. The mock has no arrows on transit lines
+        //    and no seam suppresses arrowheads outright, so scale-to-width is the locked pragmatic adaptation.
+        StyleEdges edges = StyleEdges.Classic with
+        {
+            BaseColorPalette = new[] { "var(--beck-line-1)", "var(--beck-line-2)", "var(--beck-line-3)" },
+            Overlay = EdgeOverlay.Comet,
+            OverlayWidth = 3.5,
+            OverlayLinecap = "round",
+            CometDash = 3,
+            OverlayPeriod = 3.0,
+            MarkerScaleToWidth = true,
+        };
+
         return c with
         {
             Name = "metro",
@@ -151,6 +205,7 @@ public static class MetroStyle
             Geometry = geo,
             Typography = typography,
             Motion = motion,
+            Edges = edges,
             // The station-dot artwork seam: each edge drops a white-fill, line-coloured-ring circle at
             // both anchor endpoints. Data-only selector — no injected markup, router untouched.
             Artwork = StyleArtwork.Metro,
