@@ -45,13 +45,19 @@ internal static class Defaults
             [NodeKind.Ghost] = new(AccentToken.Neutral, "service", NodeVariant.Ghost),
         };
 
+    /// <summary>The default edge stroke token. This is also the sentinel every "does this edge still
+    /// use its default colour?" eligibility check compares against (palette recolouring, glow's
+    /// gradient/marker overrides) — always reference this constant, never the literal, so the token
+    /// and its eligibility checks can't drift apart.</summary>
+    public const string EdgeColor = "var(--beck-edge)";
+
     /// <summary>Per-edge-kind defaults: line style and stroke color token.</summary>
     public static readonly IReadOnlyDictionary<EdgeKind, EdgeKindDefault> EdgeKindDefaults =
         new Dictionary<EdgeKind, EdgeKindDefault>
         {
-            [EdgeKind.Data] = new(EdgeStyle.Solid, "var(--beck-edge)"),
-            [EdgeKind.Control] = new(EdgeStyle.Solid, "var(--beck-edge)"),
-            [EdgeKind.Async] = new(EdgeStyle.Dashed, "var(--beck-edge)"),
+            [EdgeKind.Data] = new(EdgeStyle.Solid, EdgeColor),
+            [EdgeKind.Control] = new(EdgeStyle.Solid, EdgeColor),
+            [EdgeKind.Async] = new(EdgeStyle.Dashed, EdgeColor),
             [EdgeKind.Dependency] = new(EdgeStyle.Dashed, "var(--beck-neutral)"),
         };
 

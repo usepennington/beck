@@ -219,6 +219,56 @@ public sealed class EdgePresentationTests
         }, stations);
     }
 
+    // A sequence message departs in the colour of its SOURCE participant's line: when the source
+    // carries an explicit accent, the message (like the source's lifeline) keeps that accent — not
+    // the destination/worker accent the model folded into edge.Color, and not a palette hue.
+    [Fact]
+    public void BaseColorPalette_SequenceMessageFollowsExplicitSourceAccent()
+    {
+        const string yaml = """
+            type: sequence
+            participants:
+              - { id: a, title: A, accent: danger }
+              - { id: b, title: B }
+            messages:
+              - { from: a, to: b, label: go }
+            """;
+        string svg = BeckSvg.Render(yaml,
+            new SvgRenderOptions
+            {
+                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)" } }),
+            });
+
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.Equal(new[] { "var(--beck-danger)" }, strokes);
+    }
+
+    // An explicit author color: on a message wins even when its value coincides with the worker
+    // participant's default accent — provenance is the EdgeModel.ColorAuthored flag, never a value
+    // comparison (which would mis-read the coincidence as "default" and palette-recolour it).
+    [Fact]
+    public void BaseColorPalette_SequenceAuthoredMessageColorWins_EvenWhenItEqualsADefault()
+    {
+        const string yaml = """
+            type: sequence
+            participants:
+              - { id: a, title: A }
+              - { id: b, title: B }
+            messages:
+              - { from: a, to: b, label: go, color: primary }
+            """;
+        string svg = BeckSvg.Render(yaml,
+            new SvgRenderOptions
+            {
+                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)" } }),
+            });
+
+        // `color: primary` equals participant b's kind-default accent (Service → primary); the
+        // authored colour must survive, not become source a's palette hue var(--pl-a).
+        var strokes = Matches(BaseEdgeStroke, svg);
+        Assert.Equal(new[] { "var(--beck-primary)" }, strokes);
+    }
+
     // ---- underlay layer (static trace bed) ----
 
     // A trace-bed underlay drops one additional path PER edge whose d is byte-identical to the edge's own

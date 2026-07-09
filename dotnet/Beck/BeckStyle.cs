@@ -665,31 +665,39 @@ public sealed record StyleEdges
     /// <em>default</em> colour: an architecture edge whose colour is the default <c>var(--beck-edge)</c>
     /// (an author's explicit per-edge accent, or a kind default like a dependency's <c>--beck-neutral</c>,
     /// keeps its colour and its matching marker/stations); a sequence participant whose accent is its
-    /// kind default (an explicit participant accent keeps its colour on its own lifeline); and a message
-    /// whose colour is the model-derived default (an explicit <c>color:</c> on the message keeps it).</para>
+    /// kind default (an explicit participant accent keeps its colour on its own lifeline <em>and</em> on
+    /// the messages departing it, so line and hops stay one hue); and a message without an explicit
+    /// <c>color:</c> (<see cref="Rendering.EdgeModel.ColorAuthored"/> — an authored colour always wins).</para>
     /// </summary>
     public IReadOnlyList<string> BaseColorPalette { get; init; } = System.Array.Empty<string>();
 
     /// <summary>
-    /// The palette hue at a stable <paramref name="index"/> (negative-safe modulo, matching
-    /// <see cref="OverlayPalette"/>'s indexing), or <c>null</c> when <see cref="BaseColorPalette"/> is
-    /// empty. Eligibility ("does this element use its default colour?") is decided by each call site, so
-    /// this is purely the cycle.
+    /// The palette entry at a stable draw-order <paramref name="index"/> — the single cycle
+    /// implementation shared by <see cref="BaseColorPalette"/> (via <see cref="PaletteHue"/>) and
+    /// <see cref="OverlayPalette"/>. Negative-safe modulo; every current caller passes a 0-seeded
+    /// draw-order counter, but the guard lives here — exactly once — so a future negative phase
+    /// can't silently diverge between the two palettes.
+    /// </summary>
+    internal static string Cycle(IReadOnlyList<string> palette, int index) =>
+        palette[((index % palette.Count) + palette.Count) % palette.Count];
+
+    /// <summary>
+    /// The palette hue at a stable <paramref name="index"/> (<see cref="Cycle"/>), or <c>null</c> when
+    /// <see cref="BaseColorPalette"/> is empty. Eligibility ("does this element use its default
+    /// colour?") is decided by each call site, so this is purely the cycle.
     /// </summary>
     public string? PaletteHue(int index) =>
-        BaseColorPalette.Count == 0
-            ? null
-            : BaseColorPalette[((index % BaseColorPalette.Count) + BaseColorPalette.Count) % BaseColorPalette.Count];
+        BaseColorPalette.Count == 0 ? null : Cycle(BaseColorPalette, index);
 
     /// <summary>
     /// The effective base colour for an architecture/class edge: its palette hue when
     /// <see cref="BaseColorPalette"/> is set <em>and</em> the edge uses the default colour
-    /// (<c>var(--beck-edge)</c>) — otherwise the edge's own <paramref name="edgeColor"/> unchanged, so an
-    /// author's explicit accent wins. Byte-inert (returns <paramref name="edgeColor"/>) when the palette
-    /// is empty.
+    /// (<see cref="Rendering.Defaults.EdgeColor"/>) — otherwise the edge's own
+    /// <paramref name="edgeColor"/> unchanged, so an author's explicit accent wins. Byte-inert
+    /// (returns <paramref name="edgeColor"/>) when the palette is empty.
     /// </summary>
     public string BaseColorFor(int index, string edgeColor) =>
-        BaseColorPalette.Count > 0 && edgeColor == "var(--beck-edge)"
+        BaseColorPalette.Count > 0 && edgeColor == Rendering.Defaults.EdgeColor
             ? PaletteHue(index)!
             : edgeColor;
 

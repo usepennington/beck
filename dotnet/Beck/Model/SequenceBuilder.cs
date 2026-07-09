@@ -51,6 +51,7 @@ internal static class SequenceBuilder
             bool dashed = reply || kind == EdgeKind.Async;
             // A message is tinted by the participant doing the work.
             string worker = reply ? from : to;
+            string? authoredColor = OptColor(m.GetValueOrDefault("color"));
             edges.Add(new EdgeModel
             {
                 Id = $"msg{edges.Count}",
@@ -61,8 +62,9 @@ internal static class SequenceBuilder
                     dashed ? EdgeStyle.Dashed : EdgeStyle.Solid),
                 Curve = EdgeCurve.Straight,
                 Kind = kind,
-                Color = OptColor(m.GetValueOrDefault("color")) ?? accentOf.GetValueOrDefault(worker)
+                Color = authoredColor ?? accentOf.GetValueOrDefault(worker)
                     ?? Defaults.EdgeKindDefaults[kind].Color,
+                ColorAuthored = authoredColor != null,
                 Arrow = ArrowEnds.End,
                 MarkerEnd = dashed ? MarkerShape.ArrowOpen : MarkerShape.Arrow,
                 Note = OptString(m.GetValueOrDefault("note")),
