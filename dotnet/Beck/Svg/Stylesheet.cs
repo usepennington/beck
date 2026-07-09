@@ -12,9 +12,7 @@ namespace Beck.Rendering.Svg;
 internal static class Stylesheet
 {
     private static string Sw(double n) => SvgWriter.Num(n);
-    /// <summary>Format a style integer (mix percentage, font weight) invariantly so a comma-decimal
-    /// locale can never perturb the emitted CSS.</summary>
-    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    private static string P(int n) => SvgWriter.Int(n);
 
     public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style)
     {
@@ -82,7 +80,10 @@ internal static class Stylesheet
           .Append($"stroke-width:{Sw(geo.NodeStroke)};")
           .Append($"filter:{geo.NodeShadow};")
           .Append("}");
-        sb.Append($"[data-theme='dark'] {scope} .beck-node,@media (prefers-color-scheme:dark){{:root:not([data-theme='light']) {scope} .beck-node}}{{filter:{geo.NodeShadowDark};}}");
+        sb.Append($"[data-theme='dark'] {scope} .beck-node{{filter:{geo.NodeShadowDark};}}");
+        sb.Append("@media (prefers-color-scheme: dark){");
+        sb.Append($":root:not([data-theme='light']) {scope} .beck-node{{filter:{geo.NodeShadowDark};}}");
+        sb.Append('}');
         sb.Append($"{scope} .beck-node--external{{stroke-dasharray:{strokes.NodeDash};}}");
         sb.Append($"{scope} .beck-node--subtle{{opacity:.72;}}");
         sb.Append($"{scope} .beck-node--ghost{{fill:transparent;stroke-dasharray:{strokes.NodeDash};filter:none;}}");

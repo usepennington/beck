@@ -59,26 +59,45 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
         var fence = ParseInfo(languageId);
         if (!fence.IsBeck) return null; // defer every other fence to the next preprocessor
 
-        string html;
+        // A `beck:symbol` fence body may name several files; each is its own document and
+        // must render (and fail) independently — one malformed file must not drop the rest.
+        List<string> yamls;
         try
         {
-            string yaml = fence.IsFileEmbed ? ReadEmbeddedYaml(code) : code;
-            if (fence.StyleName is { } style) yaml = ApplyStyle(yaml, style, languageId);
-            string svg = _renderer.Render(yaml, fence.Animation).Svg;
-            html = $"<div class=\"beck-embed\">{svg}{ZoomButton}</div>";
+            yamls = fence.IsFileEmbed ? ReadEmbeddedYaml(code) : [code];
         }
         catch (Exception ex)
         {
-            // A malformed diagram (or a missing embed file) should fail loud (build log +
-            // a visible box), never silently vanish or crash the whole page build.
             Console.Error.WriteLine($"[beck] fence render failed ({languageId}): {ex.Message}");
-            html = "<div class=\"beck-embed beck-embed--error\"><pre><code>"
-                 + WebUtility.HtmlEncode(code) + "</code></pre></div>";
+            return new CodeBlockPreprocessResult(
+                "<div class=\"beck-embed beck-embed--error\"><pre><code>"
+                    + WebUtility.HtmlEncode(code) + "</code></pre></div>",
+                "beck", SkipTransform: true);
         }
+        var html = string.Concat(yamls.Select(yaml => RenderOne(yaml, fence, languageId)));
 
         // SkipTransform: the output is finished HTML; the annotation/highlight pass
         // must not re-process it.
         return new CodeBlockPreprocessResult(html, "beck", SkipTransform: true);
+    }
+
+    private string RenderOne(string yaml, FenceInfo fence, string languageId)
+    {
+        try
+        {
+            if (fence.StyleName is { } style) yaml = ApplyStyle(yaml, style, languageId);
+            string svg = _renderer.Render(yaml, fence.Animation).Svg;
+            return $"<div class=\"beck-embed\">{svg}{ZoomButton}</div>";
+        }
+        catch (Exception ex)
+        {
+            // A malformed diagram (or a missing embed file) should fail loud (build log +
+            // a visible box), never silently vanish or crash the whole page build. Show the
+            // failing document's own YAML, not the fence body (which for `:symbol` is file paths).
+            Console.Error.WriteLine($"[beck] fence render failed ({languageId}): {ex.Message}");
+            return "<div class=\"beck-embed beck-embed--error\"><pre><code>"
+                 + WebUtility.HtmlEncode(yaml) + "</code></pre></div>";
+        }
     }
 
     /// <summary>
@@ -137,9 +156,11 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     /// line (a trailing <c>" &gt; symbol"</c> selector is ignored — whole-file YAML has no
     /// symbols), resolved with <see cref="Path.GetFullPath(string)"/> so it matches the
     /// working-directory resolution the tree-sitter <c>:symbol</c> embed uses
-    /// (<c>ContentRoot = "."</c>). Multiple paths render as stacked diagrams.
+    /// (<c>ContentRoot = "."</c>). Multiple paths each render as their own diagram (own
+    /// <c>.beck-embed</c>, own zoom button) — the caller renders every returned document
+    /// independently so one bad file surfaces its own error box instead of dropping the rest.
     /// </summary>
-    private static string ReadEmbeddedYaml(string code)
+    private static List<string> ReadEmbeddedYaml(string code)
     {
         var paths = code
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -148,11 +169,8 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
             .ToList();
         if (paths.Count == 0)
             throw new InvalidOperationException("beck:symbol fence has no file path in its body.");
-        if (paths.Count == 1)
-            return File.ReadAllText(Path.GetFullPath(paths[0]));
 
-        // Rare multi-file case: join documents so each renders (the caller wraps the lot).
-        return string.Join("\n---\n", paths.Select(p => File.ReadAllText(Path.GetFullPath(p))));
+        return paths.Select(p => File.ReadAllText(Path.GetFullPath(p))).ToList();
     }
 
     /// <summary>Drops a <c>" &gt; member"</c> tail from a source reference, leaving the file path.</summary>

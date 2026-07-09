@@ -13,6 +13,10 @@ internal static class SvgWriter
     /// -0.02 → <c>-0.02em</c>). Prints the em value directly (shortest round-trippable).</summary>
     public static string Ls(double em) => Js.Str(em) + "em";
 
+    /// <summary>Format a style integer (mix percentage, font weight) invariantly, so a comma-decimal
+    /// locale can never perturb the emitted CSS/SVG.</summary>
+    public static string Int(int n) => n.ToString(CultureInfo.InvariantCulture);
+
     /// <summary>Escape text content (&amp;, &lt;, &gt;).</summary>
     public static string Text(string s)
     {

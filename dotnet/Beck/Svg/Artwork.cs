@@ -245,27 +245,4 @@ internal static class Artwork
     }
 
     private static string F((double X, double Y) pt) => N(pt.X) + " " + N(pt.Y);
-
-    /// <summary>
-    /// A tiny deterministic PRNG seeded from a string (FNV-1a → xorshift32). Produces the same jitter
-    /// sequence for the same seed forever, so the sketch wobble is reproducible from the content hash
-    /// and never uses <see cref="System.Random"/> or the clock.
-    /// </summary>
-    private sealed class Rng
-    {
-        private uint _s;
-        public Rng(string seed)
-        {
-            uint hsh = 2166136261;
-            foreach (char c in seed) { hsh ^= c; hsh *= 16777619; }
-            _s = hsh == 0 ? 1u : hsh;
-        }
-        public double Next()
-        {
-            _s ^= _s << 13;
-            _s ^= _s >> 17;
-            _s ^= _s << 5;
-            return (_s & 0xFFFFFF) / (double)0x1000000;
-        }
-    }
 }

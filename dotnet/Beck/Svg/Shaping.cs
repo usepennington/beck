@@ -67,8 +67,10 @@ internal static class Shaping
 
     /// <summary>Reduce a route polyline to <c>[first, …corners…, last]</c>: drop near-duplicate points
     /// and any collinear straight-through vertex, keeping the true endpoints. Mirrors the router's own
-    /// corner test so a bow segment spans each genuine straight run.</summary>
-    private static List<Point> Simplify(IReadOnlyList<Point> pts)
+    /// corner test so a bow segment spans each genuine straight run. Internal so <see cref="SvgRenderer"/>
+    /// can reuse the same dedupe+corner test for circuit's via dots (its bends are exactly this list's
+    /// interior elements) without duplicating the geometry.</summary>
+    internal static List<Point> Simplify(IReadOnlyList<Point> pts)
     {
         var dedup = new List<Point>();
         foreach (Point p in pts)
@@ -88,27 +90,28 @@ internal static class Shaping
         outp.Add(dedup[^1]);
         return outp;
     }
+}
 
-    /// <summary>
-    /// A tiny deterministic PRNG seeded from a string (FNV-1a → xorshift32) — the same generator
-    /// <see cref="Artwork"/> uses for node wobble, so shaping jitter is reproducible from the content
-    /// hash and never touches <see cref="System.Random"/> or the clock.
-    /// </summary>
-    private sealed class Rng
+/// <summary>
+/// A tiny deterministic PRNG seeded from a string (FNV-1a → xorshift32), shared by <see cref="Shaping"/>
+/// (edge bows, overlay phase) and <see cref="Artwork"/> (node/circle wobble): the same seed produces the
+/// same jitter sequence forever, so every style-shaping decision is reproducible from the diagram's
+/// content hash and never touches <see cref="System.Random"/> or the clock.
+/// </summary>
+internal sealed class Rng
+{
+    private uint _s;
+    public Rng(string seed)
     {
-        private uint _s;
-        public Rng(string seed)
-        {
-            uint hsh = 2166136261;
-            foreach (char c in seed) { hsh ^= c; hsh *= 16777619; }
-            _s = hsh == 0 ? 1u : hsh;
-        }
-        public double Next()
-        {
-            _s ^= _s << 13;
-            _s ^= _s >> 17;
-            _s ^= _s << 5;
-            return (_s & 0xFFFFFF) / (double)0x1000000;
-        }
+        uint hsh = 2166136261;
+        foreach (char c in seed) { hsh ^= c; hsh *= 16777619; }
+        _s = hsh == 0 ? 1u : hsh;
+    }
+    public double Next()
+    {
+        _s ^= _s << 13;
+        _s ^= _s >> 17;
+        _s ^= _s << 5;
+        return (_s & 0xFFFFFF) / (double)0x1000000;
     }
 }

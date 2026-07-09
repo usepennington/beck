@@ -56,10 +56,26 @@ internal static class StyleSanitizer
             NodeShadowDark = Clean(s.Geometry.NodeShadowDark),
             SurfaceBackground = Clean(s.Geometry.SurfaceBackground),
         },
+        Edges = s.Edges with
+        {
+            BaseLinecap = Clean(s.Edges.BaseLinecap),
+            OverlayLinecap = Clean(s.Edges.OverlayLinecap),
+            OverlayBloom = Clean(s.Edges.OverlayBloom),
+            UnderlayColor = Clean(s.Edges.UnderlayColor),
+            MarkerColor = CleanNullable(s.Edges.MarkerColor),
+            MarkerOutline = CleanNullable(s.Edges.MarkerOutline),
+            BaseColorPalette = CleanList(s.Edges.BaseColorPalette),
+            OverlayPalette = CleanList(s.Edges.OverlayPalette),
+        },
     };
 
     private static StyleTokens CleanTokens(StyleTokens t) =>
         new(t.Entries.Select(e => (Clean(e.Name), Clean(e.Value))).ToArray());
+
+    private static IReadOnlyList<string> CleanList(IReadOnlyList<string> list) =>
+        list.Count == 0 ? list : list.Select(Clean).ToArray();
+
+    private static string? CleanNullable(string? value) => value is null ? null : Clean(value);
 
     private static string Clean(string value)
     {

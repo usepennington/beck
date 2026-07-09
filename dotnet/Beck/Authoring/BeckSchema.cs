@@ -56,7 +56,7 @@ public static class BeckSchema
     /// <summary>Top-level document keys.</summary>
     public static IReadOnlyList<string> TopKeys { get; } = new[] { "type", "meta", "nodes", "edges", "groups", "flow" };
     /// <summary><c>meta:</c> keys.</summary>
-    public static IReadOnlyList<string> MetaKeys { get; } = new[] { "title", "subtitle", "style", "direction", "theme", "animate", "loop", "fit", "spacing", "narration" };
+    public static IReadOnlyList<string> MetaKeys { get; } = new[] { "title", "subtitle", "style", "direction", "theme", "animate", "loop", "fit", "spacing", "narrate" };
     /// <summary>Node entry keys.</summary>
     public static IReadOnlyList<string> NodeKeys { get; } = new[] { "id", "title", "subtitle", "icon", "kind", "variant", "status", "accent", "href", "target", "surface", "textColor", "width", "rank", "order", "group", "stereotype", "fields", "methods" };
     /// <summary>Edge entry keys.</summary>
@@ -111,7 +111,7 @@ public static class BeckSchema
         ["loop"] = "Set `false` to play the flow once instead of looping.",
         ["fit"] = "`shrink` scales to fit; `scroll` keeps full size and scrolls.",
         ["spacing"] = "Fine-tune `rank`/`node` gaps and `cornerRadius`.",
-        ["narration"] = "Caption pacing: `wpm`, `min`, `pad` reading-time knobs.",
+        ["narrate"] = "Caption pacing: `wpm`, `min`, `pad` reading-time knobs.",
         // node fields
         ["id"] = "Unique identifier — referenced by edges and group members.",
         ["kind"] = "Preset that picks an icon, accent and shape.",

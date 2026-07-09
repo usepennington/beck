@@ -31,18 +31,21 @@ internal sealed class LabelPlacer
 
     private static string N(double n) => SvgWriter.Num(n);
     private static string I(double n) => Js.Str(Js.Round(n));
-    private static string P(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    private static string P(int n) => SvgWriter.Int(n);
     /// <summary>The measured-width guard attributes, or empty when suppressed by the guard mode.</summary>
     private string Guard(double w) => _guard ? $" textLength=\"{N(w)}\" lengthAdjust=\"spacingAndGlyphs\"" : "";
 
-    public string MidLabel(IReadOnlyList<Point> points, string text, List<IReadOnlyList<Point>> otherLines, ITextMeasurer m)
+    /// <summary><paramref name="lines"/> is every edge's polyline (including this edge's own, at
+    /// <paramref name="selfIndex"/>) built once by the caller; skipped by index here rather than each
+    /// call filtering into a fresh per-call list of every <em>other</em> edge.</summary>
+    public string MidLabel(IReadOnlyList<Point> points, string text, List<IReadOnlyList<Point>> lines, int selfIndex, ITextMeasurer m)
     {
         double w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
         if (w <= 0) w = text.Length * 7;
         double h = _edgeLabel.SizePx; // edge-label ink height ≈ font size
         double hw = w / 2 + LabelPadX, hh = h / 2 + LabelPadY;
         List<Rect> all = _placed.Count > 0 ? _obstacles.Concat(_placed).ToList() : _obstacles;
-        Box box = ChooseLabelBox(points, hw, hh, all, otherLines, PolylineMidpoint(points));
+        Box box = ChooseLabelBox(points, hw, hh, all, lines, selfIndex, PolylineMidpoint(points));
         double tx = box.Anchor == "start" ? box.Cx - w / 2 : box.Anchor == "end" ? box.Cx + w / 2 : box.Cx;
         _placed.Add(new Rect(box.Cx - box.Hw, box.Cy - box.Hh, box.Hw * 2, box.Hh * 2));
         return $"<text class=\"beck-edge-label\" x=\"{I(tx)}\" y=\"{I(box.Cy)}\" text-anchor=\"{box.Anchor}\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{P(_edgeLabel.Weight)}\"{Guard(w)}>{SvgWriter.Text(text)}</text>";
@@ -98,12 +101,16 @@ internal sealed class LabelPlacer
         return min;
     }
 
-    private double Clearance(Box box, List<Rect> obstacles, List<IReadOnlyList<Point>> lines)
+    private double Clearance(Box box, List<Rect> obstacles, List<IReadOnlyList<Point>> lines, int skipIndex)
     {
         double min = double.PositiveInfinity;
         foreach (var o in obstacles) min = Math.Min(min, BoxGap(box, o));
-        foreach (var poly in lines)
+        for (int li = 0; li < lines.Count; li++)
+        {
+            if (li == skipIndex) continue;
+            var poly = lines[li];
             for (int i = 0; i < poly.Count - 1; i++) min = Math.Min(min, SegGap(box, poly[i], poly[i + 1]));
+        }
         return min;
     }
 
@@ -125,7 +132,7 @@ internal sealed class LabelPlacer
         return points.Count > 0 ? points[^1] : new Point(0, 0);
     }
 
-    private Box ChooseLabelBox(IReadOnlyList<Point> points, double hw, double hh, List<Rect> obstacles, List<IReadOnlyList<Point>> lines, Point mid)
+    private Box ChooseLabelBox(IReadOnlyList<Point> points, double hw, double hh, List<Rect> obstacles, List<IReadOnlyList<Point>> lines, int selfIndex, Point mid)
     {
         (double cx, double cy) Clamp(double cx, double cy) => (
             Math.Min(Math.Max(cx, LabelMargin + hw), Math.Max(LabelMargin + hw, _w - LabelMargin - hw)),
@@ -137,7 +144,7 @@ internal sealed class LabelPlacer
         {
             var (cx, cy) = Clamp(cx0, cy0);
             var box = new Box(cx, cy, hw, hh, anchor);
-            double clear = Clearance(box, obstacles, lines);
+            double clear = Clearance(box, obstacles, lines, selfIndex);
             for (int j = 0; j < points.Count - 1; j++) { if (j == segIdx) continue; clear = Math.Min(clear, SegGap(box, points[j], points[j + 1])); }
             double dist = StepRound.Dist(new Point(cx, cy), mid);
             bool tie = clear == bestClear || Math.Abs(clear - bestClear) <= 6;
@@ -177,7 +184,7 @@ internal sealed class LabelPlacer
                 if (StepRound.Dist(a, b) < 1) continue;
                 var (cx, cy) = Clamp((a.X + b.X) / 2, (a.Y + b.Y) / 2);
                 var box = new Box(cx, cy, hw, hh, "middle");
-                double clear = Clearance(box, obstacles, lines);
+                double clear = Clearance(box, obstacles, lines, selfIndex);
                 for (int j = 0; j < points.Count - 1; j++) { if (j == i) continue; clear = Math.Min(clear, SegGap(box, points[j], points[j + 1])); }
                 if (clear > bestClear) { best = box; bestClear = clear; }
             }

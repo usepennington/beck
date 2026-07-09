@@ -12,7 +12,7 @@
         @* Examples: a rich grouped dropdown. Open/close/select are component state; each
            item fetches its sample's YAML from the site's /examples over HttpClient. *@
         <div id="pg-examples" class="pg-dd @(_open == Dd.Examples ? "is-open" : "")">
-            <button type="button" class="pg-dd-trigger" @onclick="ToggleExamples" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Examples)">
+            <button type="button" class="pg-dd-trigger" @onclick="ToggleExamples" @onkeydown="e => OnTriggerKey(e, Dd.Examples)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Examples)">
                 <span class="pg-dd-value">@_exampleLabel</span>
                 <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
@@ -25,7 +25,7 @@
                             <div class="pg-dd-group-label">@group.Label</div>
                             @foreach (var ex in group.Items)
                             {
-                                <button type="button" class="pg-dd-item" role="option" @onclick="() => LoadExample(ex)">
+                                <button type="button" class="pg-dd-item" role="option" @onclick="() => LoadExample(ex)" @onkeydown="e => OnOptionKey(e, Dd.Examples)">
                                     <span class="pg-dd-item-main">
                                         <span class="pg-dd-item-title">@ex.Label</span>
                                         <span class="pg-dd-item-desc">@ex.Desc</span>
@@ -44,7 +44,7 @@
            override; the panel hints as much. Classic is first and is the default. Changing it
            rebuilds the options and re-renders. *@
         <div id="pg-style" class="pg-dd ml-auto @(_open == Dd.Style ? "is-open" : "")">
-            <button type="button" class="pg-dd-trigger" @onclick="ToggleStyle" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Style)" title="Default style — a diagram's meta.style overrides">
+            <button type="button" class="pg-dd-trigger" @onclick="ToggleStyle" @onkeydown="e => OnTriggerKey(e, Dd.Style)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Style)" title="Default style — a diagram's meta.style overrides">
                 <span class="pg-dd-trigger-label">Style</span>
                 <span class="pg-dd-value">@_styleLabel</span>
                 <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -55,7 +55,7 @@
                     <div class="pg-dd-note">Default style — a diagram's <code>meta.style</code> overrides.</div>
                     @foreach (var st in Styles)
                     {
-                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_styleName == st.Name)" @onclick="() => SelectStyle(st)">
+                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_styleName == st.Name)" @onclick="() => SelectStyle(st)" @onkeydown="e => OnOptionKey(e, Dd.Style)">
                             <span class="pg-dd-item-main">
                                 <span class="pg-dd-item-title">@st.Label</span>
                                 <span class="pg-dd-item-desc">@st.Desc</span>
@@ -70,7 +70,7 @@
            on #pg-host[data-scheme] (see BrandStyling). Pure CSS — setting the attribute is
            enough, no re-render. "Default" keeps the site palette and the light/dark toggle. *@
         <div id="pg-scheme" class="pg-dd @(_open == Dd.Scheme ? "is-open" : "")">
-            <button type="button" class="pg-dd-trigger" @onclick="ToggleScheme" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Scheme)">
+            <button type="button" class="pg-dd-trigger" @onclick="ToggleScheme" @onkeydown="e => OnTriggerKey(e, Dd.Scheme)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Scheme)">
                 <span class="pg-swatch" data-scheme="@_scheme"></span>
                 <span class="pg-dd-value">@_schemeLabel</span>
                 <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -80,7 +80,7 @@
                 <div class="pg-dd-panel pg-dd-panel--right" role="listbox" aria-label="Colour scheme">
                     @foreach (var s in Schemes)
                     {
-                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_scheme == s.Value)" @onclick="() => SelectScheme(s)">
+                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_scheme == s.Value)" @onclick="() => SelectScheme(s)" @onkeydown="e => OnOptionKey(e, Dd.Scheme)">
                             <span class="pg-swatch" data-scheme="@s.Value"></span>
                             <span class="pg-dd-item-title">@s.Label</span>
                         </button>
@@ -97,7 +97,7 @@
         <div class="pg-dd-backdrop" @onclick="CloseDropdowns"></div>
     }
 
-    <div class="flex-1 grid grid-cols-2 min-h-0 max-md:grid-cols-1 max-md:grid-rows-2">
+    <div id="pg-panes" class="flex-1 grid grid-cols-2 min-h-0 max-md:grid-cols-1 max-md:grid-rows-2">
         <div class="flex flex-col min-h-0 border-r border-base-200 dark:border-base-800">
             <div class="flex items-center px-4 py-[7px] border-b border-base-200 dark:border-base-800 font-mono text-[11.5px] text-base-400 dark:text-base-500 bg-base-50 dark:bg-base-900">system.beck.yaml</div>
             @* Monaco editor (schema-aware YAML completions + hover, driven from C# off
@@ -195,12 +195,24 @@
     // WASM boots, the shim is present, and the IBM Plex faces have loaded.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        _measurer = new CanvasTextMeasurer((IJSInProcessRuntime)JS);
-        _options = BuildOptions();
-        await JS.InvokeVoidAsync("beckMeasure.fontsReady");
-        RenderNow();
-        StateHasChanged();
+        if (firstRender)
+        {
+            _measurer = new CanvasTextMeasurer((IJSInProcessRuntime)JS);
+            _options = BuildOptions();
+            await JS.InvokeVoidAsync("beckMeasure.fontsReady");
+            RenderNow();
+            StateHasChanged();
+            // The island has activated and painted: disarm the boot watchdog in
+            // beck-editor.js so its "WebAssembly is blocked" notice never shows.
+            await JS.InvokeVoidAsync("beckEditor.ready");
+            return;
+        }
+        // A dropdown was just opened by keyboard: move focus into its option list.
+        if (_focusDdOnRender is { } id)
+        {
+            _focusDdOnRender = null;
+            await JS.InvokeVoidAsync("beckEditor.focusDdOption", id, 0);
+        }
     }
 
     // The editor's initial content + language come from ConstructionOptions; the theme is set
@@ -356,10 +368,60 @@
     private void ToggleScheme() => _open = _open == Dd.Scheme ? Dd.None : Dd.Scheme;
     private void CloseDropdowns() => _open = Dd.None;
 
+    // Keyboard support for the toolbar dropdowns, matching the pre-WASM playground's
+    // wireDropdown: focus stays on the trigger (Enter/Space natively toggle it), ArrowUp/
+    // Down open the panel and rove real focus through the options, Enter/Space on an option
+    // selects it (native button activation → @onclick), and Escape closes + refocuses the
+    // trigger. Option focus is driven from JS (beckEditor.focusDd*) because the grouped list
+    // has no fixed indexable refs. The fixed-height playground never page-scrolls, so the
+    // arrow keys need no preventDefault — which would also have swallowed Tab off the control.
+    private string? _focusDdOnRender;
+
+    private static string RootId(Dd d) => d switch
+    {
+        Dd.Examples => "pg-examples",
+        Dd.Style => "pg-style",
+        Dd.Scheme => "pg-scheme",
+        _ => "",
+    };
+
+    private async Task OnTriggerKey(KeyboardEventArgs e, Dd which)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+            case "ArrowUp":
+                if (_open != which) { _open = which; _focusDdOnRender = RootId(which); }
+                else await JS.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), e.Key == "ArrowUp" ? -1 : 1);
+                break;
+            case "Escape":
+                _open = Dd.None;
+                break;
+        }
+    }
+
+    private async Task OnOptionKey(KeyboardEventArgs e, Dd which)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                await JS.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), 1);
+                break;
+            case "ArrowUp":
+                await JS.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), -1);
+                break;
+            case "Escape":
+                _open = Dd.None;
+                await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", RootId(which));
+                break;
+        }
+    }
+
     private async Task LoadExample(Ex ex)
     {
         _open = Dd.None;
         _exampleLabel = ex.Label;
+        await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-examples");
         try
         {
             // Src is a site path like "/examples/x.beck.yaml"; fetch it relative to the app
@@ -381,19 +443,21 @@
     // The scheme is pure CSS (--beck-* overrides keyed off #pg-host[data-scheme]); setting
     // the attribute recolours the diagram — including CSS-var-driven animation packets —
     // with no re-render.
-    private void SelectScheme(Scheme s)
+    private async Task SelectScheme(Scheme s)
     {
         _open = Dd.None;
         _scheme = s.Value;
         _schemeLabel = s.Label;
+        await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-scheme");
     }
 
     // Selecting a style sets SvgRenderOptions.Style (the site-wide default) and re-renders. A
     // diagram whose meta.style names a different style still overrides this — resolution happens
     // in BeckSvg, so we just supply the default and let precedence do the rest.
-    private void SelectStyle(StyleChoice s)
+    private async Task SelectStyle(StyleChoice s)
     {
         _open = Dd.None;
+        await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-style");
         if (_styleName == s.Name) return;
         _styleName = s.Name;
         _styleLabel = s.Label;
