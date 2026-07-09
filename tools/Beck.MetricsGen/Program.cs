@@ -5,7 +5,7 @@ using HarfBuzzSharp;
 using SkiaSharp;
 
 // Beck.MetricsGen — offline codegen for the embedded font-metrics tables the managed
-// EmbeddedMetricsMeasurer reads (Beck/Text/*MetricsData.g.cs). Each table mirrors
+// EmbeddedMetricsMeasurer reads (src/Beck/Text/*MetricsData.g.cs). Each table mirrors
 // InterMetricsData exactly in shape (SansWeights/SansAscii/SansExtra + Mono*), differing only
 // in data and class name. Measures the committed OFL fonts with HarfBuzz/Skia — the same stack
 // Beck.Skia's SkiaTextMeasurer uses — so a table matches what a host supplying these fonts would
@@ -13,13 +13,13 @@ using SkiaSharp;
 //
 //   dotnet run --project tools/Beck.MetricsGen -c Release [<outputDir>]
 //
-// <outputDir> defaults to Beck/Text (resolved from this file's path). Do not add to CI.
+// <outputDir> defaults to src/Beck/Text (resolved from this file's path). Do not add to CI.
 
 string toolDir = ToolDir();
 string fontsDir = Path.Combine(toolDir, "fonts");
 string outDir = args.Length > 0
     ? Path.GetFullPath(args[0])
-    : Path.GetFullPath(Path.Combine(toolDir, "..", "..", "Beck", "Text"));
+    : Path.GetFullPath(Path.Combine(toolDir, "..", "..", "src", "Beck", "Text"));
 
 Directory.CreateDirectory(outDir);
 

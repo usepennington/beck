@@ -11,8 +11,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Beck\Beck.csproj" />
-    <ProjectReference Include="..\Beck.Skia\Beck.Skia.csproj" />
+    <ProjectReference Include="..\..\src\Beck\Beck.csproj" />
+    <ProjectReference Include="..\..\src\Beck.Skia\Beck.Skia.csproj" />
   </ItemGroup>
 
   <ItemGroup>

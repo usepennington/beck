@@ -123,7 +123,7 @@ public class MetricsTableGenerator
         sb.AppendLine("}");
 
         string outPath = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "../../../../Beck.Rendering/Text/InterMetricsData.g.cs"));
+            AppContext.BaseDirectory, "../../../../../src/Beck/Text/InterMetricsData.g.cs"));
         File.WriteAllText(outPath, sb.ToString());
         Assert.True(File.Exists(outPath), outPath);
     }
