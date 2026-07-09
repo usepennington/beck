@@ -94,6 +94,56 @@ internal static class BrandStyling
           border: 0; background: none; padding: 0; margin: 0; min-height: 0;
         }
 
+        /* ---- diagram fullscreen zoom ---- */
+        /* BeckSvgPreprocessor emits the .beck-zoom button into each embed; site.js opens the
+           .beck-lightbox <dialog>. Both exist only in C#/JS strings, so they stay declarative.
+           The button fades in on embed hover (always visible on touch, where there is no hover). */
+        .beck-zoom {
+          position: absolute; right: 10px; bottom: 10px;
+          display: flex; align-items: center; justify-content: center;
+          width: 30px; height: 30px; padding: 0; cursor: pointer;
+          border: 1px solid var(--color-base-300); border-radius: 8px;
+          background: color-mix(in srgb, var(--color-base-50) 88%, transparent);
+          color: var(--color-base-500);
+          opacity: 0; transition: opacity .15s, color .15s, border-color .15s;
+        }
+        .beck-embed:hover .beck-zoom, .beck-zoom:focus-visible { opacity: 1; }
+        .beck-zoom:hover { color: var(--color-base-900); border-color: var(--color-base-400); }
+        .dark .beck-zoom {
+          border-color: var(--color-base-700);
+          background: color-mix(in srgb, var(--color-base-900) 88%, transparent);
+          color: var(--color-base-400);
+        }
+        .dark .beck-zoom:hover { color: var(--color-base-50); border-color: var(--color-base-600); }
+        @media (hover: none) { .beck-zoom { opacity: 1; } }
+
+        /* The lightbox: a transparent full-viewport dialog whose ::backdrop dims and blurs the
+           page. The cloned SVG renders at its natural size (its width/height attributes), only
+           scaling DOWN when it exceeds the viewport — never up, which made small diagrams look
+           comically large. In-page embeds constrain diagrams to the article column, so natural
+           size is still a real zoom for anything sizable. */
+        .beck-lightbox {
+          border: 0; padding: 0; margin: auto; background: transparent;
+          width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh;
+          overflow: hidden; cursor: zoom-out;
+        }
+        .beck-lightbox[open] { display: flex; align-items: center; justify-content: center; }
+        .beck-lightbox::backdrop {
+          background: rgb(0 0 0 / 0.25);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+        }
+        .beck-lightbox .beck-svg { width: auto; height: auto; max-width: 94vw; max-height: 90vh; }
+        .beck-lightbox-close {
+          position: fixed; top: 18px; right: 18px;
+          display: flex; align-items: center; justify-content: center;
+          width: 38px; height: 38px; padding: 0; cursor: pointer;
+          border: 1px solid rgb(255 255 255 / 0.25); border-radius: 9999px;
+          background: rgb(0 0 0 / 0.35); color: #fff;
+          transition: background-color .15s;
+        }
+        .beck-lightbox-close:hover { background: rgb(0 0 0 / 0.55); }
+
         /* ---- Beck accent remap: differentiate from the emerald brand ---- */
         /* The engine maps `success`->emerald and `info`->violet. On this emerald-branded
            site `success` would collide with `primary` (both emerald), and the violet ramp is

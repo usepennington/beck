@@ -232,6 +232,10 @@
         var theme = await JS.InvokeAsync<string>("beckEditor.observeTheme", _hostRef);
         _editorTheme = theme == "dark" ? "beck-dark" : "beck";
         await BlazorMonaco.Editor.Global.SetTheme(JS, _editorTheme);
+
+        // Arriving here via an enhanced-navigation link click can leave Monaco created but
+        // never painted (see beckEditor.nudge). Kick the render once the editor exists.
+        await JS.InvokeVoidAsync("beckEditor.nudge");
     }
 
     // Live edits: mirror the editor value into _yaml and re-render (debounced). The single

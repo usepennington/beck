@@ -32,6 +32,13 @@
     @* MonorailCSS runtime stylesheet (utilities + ExtraStyles). *@
     <link rel="stylesheet" href="/styles.css" />
 
+    @* Monaco's stylesheet, declared statically. editor.main.js injects this link itself on a
+       full page load, but Blazor enhanced navigation strips dynamically-injected head elements
+       when merging the next page's head — arriving at /playground via a link click then boots
+       Monaco with no CSS (broken layout, uneditable). Shipping the link in the SSR HTML keeps
+       it alive across enhanced navigations. *@
+    <link rel="stylesheet" href="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.css" />
+
     @* Every diagram on the site is rendered to static SVG by the pure-C# engine — content
        ```beck fences at build time, the playground in the browser (WebAssembly). No client
        Beck JS engine is loaded. site.js only drives the theme toggle, copy buttons, and the
@@ -43,7 +50,15 @@
 
     <HeadOutlet />
 </head>
-<body class="bg-white text-base-800 antialiased dark:bg-base-950 dark:text-base-100">
+@* data-enhance-nav="false": every in-site link is a full page load. Blazor's enhanced
+   navigation (blazor.web.js) DOM-merges the next page into the current one, which breaks
+   the playground's Monaco editor three separate ways — it strips Monaco's dynamically
+   injected stylesheet from <head>, swallows the editor's first paint (island activates
+   against a mid-merge DOM), and strands the lazily-loaded YAML tokenizer in a module
+   instance the live editor never consults (no syntax highlighting, no recovery). A full
+   load is byte-identical to direct navigation, which works. The pages are static and
+   small, and the theme is stamped before first paint, so nothing visibly regresses. *@
+<body class="bg-white text-base-800 antialiased dark:bg-base-950 dark:text-base-100" data-enhance-nav="false">
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />

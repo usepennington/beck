@@ -26,5 +26,20 @@ window.beckEditor = (function () {
       observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
       return last;
     },
+    // Kick a stalled first paint. Arriving at /playground via Blazor enhanced navigation can
+    // activate the WASM island while the navigation's DOM merge is still moving nodes, so
+    // Monaco's initial render runs against a detached container and paints nothing — and no
+    // later event re-triggers it (automaticLayout only reacts to size *changes*, and the size
+    // was measured correctly). Re-run layout+render until a line actually paints; on a healthy
+    // boot the first pass is a no-op.
+    nudge: function () {
+      var tries = 0;
+      (function tick() {
+        if (!window.monaco) return;
+        monaco.editor.getEditors().forEach(function (e) { e.layout(); e.render(true); });
+        var painted = document.querySelector('.monaco-editor .view-line');
+        if (!painted && ++tries < 30) requestAnimationFrame(tick);
+      })();
+    },
   };
 })();

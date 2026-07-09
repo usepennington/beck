@@ -170,6 +170,43 @@
     });
   }
 
+  // ---- diagram fullscreen zoom ---------------------------------------------
+  // BeckSvgPreprocessor emits a `.beck-zoom` button into each rendered ```beck embed.
+  // Clicking it opens a native <dialog> lightbox with a CLONE of the diagram SVG —
+  // cloning is safe because all its animation/theming is hash-scoped CSS classes that
+  // apply to the copy too, and its url(#id) refs still resolve to the original's defs,
+  // which stay in the document. The dialog is built per-open and removed on close, so
+  // nothing here can be wiped by Blazor's Router re-rendering the page.
+  function openBeckLightbox(embed) {
+    var svg = embed.querySelector('.beck-svg');
+    if (!svg || document.querySelector('.beck-lightbox')) return;
+
+    var dialog = document.createElement('dialog');
+    dialog.className = 'beck-lightbox';
+    dialog.setAttribute('aria-label', 'Diagram, full screen');
+
+    var clone = svg.cloneNode(true);
+    // Drop the engine's inline sizing (max-width cap + height:auto) so the lightbox
+    // CSS controls the box: natural size from the width/height attributes, shrunk
+    // proportionally only when it exceeds the viewport.
+    clone.removeAttribute('style');
+    dialog.appendChild(clone);
+
+    var close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'beck-lightbox-close';
+    close.setAttribute('aria-label', 'Close full screen view');
+    close.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    dialog.appendChild(close);
+
+    // Any click closes: the backdrop, the diagram itself, or the ✕ (standard
+    // lightbox behavior); Esc is handled natively by <dialog>.
+    dialog.addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('close', function () { dialog.remove(); });
+    document.body.appendChild(dialog);
+    dialog.showModal();
+  }
+
   // ---- boot ---------------------------------------------------------------
   function boot() {
     initNavToggle();
@@ -184,6 +221,11 @@
   // and the buttons are re-rendered fresh (unwired) each time.
   document.addEventListener('click', function (e) {
     if (e.target.closest('.theme-toggle')) toggleTheme();
+    var zoom = e.target.closest('.beck-zoom');
+    if (zoom) {
+      var embed = zoom.closest('.beck-embed');
+      if (embed) openBeckLightbox(embed);
+    }
   });
 
   // Reassert the theme whenever Blazor's Router re-renders <html> and clears it.
