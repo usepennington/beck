@@ -24,8 +24,8 @@
          build time (BeckSvgPreprocessor) — no client JS — and provides the DiagramBuilder
          authoring API the API docs describe. Beck.Skia supplies exact text measurement
          over the site's own fonts. -->
-    <ProjectReference Include="..\..\Beck\Beck.csproj" />
-    <ProjectReference Include="..\..\Beck.Skia\Beck.Skia.csproj" />
+    <ProjectReference Include="..\..\src\Beck\Beck.csproj" />
+    <ProjectReference Include="..\..\src\Beck.Skia\Beck.Skia.csproj" />
   </ItemGroup>
 
   <ItemGroup>

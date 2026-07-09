@@ -22,7 +22,7 @@
     <!-- Shares the exact shaping stack (SkiaSharp + HarfBuzzSharp, same versions) the
          shipping Beck.Skia measurer uses, so generated advances match what a host that
          supplies these fonts to SkiaTextMeasurer would measure at runtime. -->
-    <ProjectReference Include="..\..\Beck.Skia\Beck.Skia.csproj" />
+    <ProjectReference Include="..\..\src\Beck.Skia\Beck.Skia.csproj" />
   </ItemGroup>
 
 </Project>

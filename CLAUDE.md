@@ -31,10 +31,10 @@ WebAssembly (`docs/Beck.Docs.Client`).
 
 ```bash
 dotnet build Beck.slnx                                   # everything (engine, tests, docs site)
-dotnet test Beck.Tests/Beck.Tests.csproj          # the full gate: model/layout/route golden
+dotnet test tests/Beck.Tests/Beck.Tests.csproj           # the full gate: model/layout/route golden
                                                          #   parity, card sizing, render smoke tests
-dotnet run --project Beck.Sample -c Release       # emit a sample diagram's YAML to stdout
-dotnet pack Beck/Beck.csproj -c Release -o <out>  # version comes from `v*` git tags (MinVer)
+dotnet run --project src/Beck.Sample -c Release          # emit a sample diagram's YAML to stdout
+dotnet pack src/Beck/Beck.csproj -c Release -o <out>     # version comes from `v*` git tags (MinVer)
 
 dotnet run --project docs/Beck.Docs                      # docs site dev server (diagrams render live)
 dotnet run --project docs/Beck.Docs -- build             # static docs build to docs/Beck.Docs/output
@@ -98,14 +98,14 @@ packet to its row via the flow step's `edge` id (many messages share one from/to
 - **Measured widths guard the typography.** Every `<text>` whose width fed layout carries
   `textLength` + `lengthAdjust`, so a font mismatch squeezes glyphs instead of breaking layout.
   Change card box-model math only alongside the card-sizing tests.
-- **The frozen goldens are the reference.** `Beck.Tests/Goldens` + `Corpus` were extracted
+- **The frozen goldens are the reference.** `tests/Beck.Tests/Goldens` + `Corpus` were extracted
   from the original TypeScript engine (deleted from the repo; it lives in git history before this
   restructure). They are regression anchors — regenerate them only from the C# engine itself, and
   only when a change is *intentionally* visual.
 
 ## Authoring API ↔ schema contract
 
-`Beck/Authoring/` (namespace `Beck`) is a dependency-free fluent builder family — one per
+`src/Beck/Authoring/` (namespace `Beck`) is a dependency-free fluent builder family — one per
 diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
 `ClassDiagramBuilder` + its reflection `FromTypes`), sharing `MetaOptions` — that emits YAML via a
 tiny hand-rolled `YamlWriter` (no YamlDotNet). The C# enums map to schema tokens in `Tokens.Of(...)`

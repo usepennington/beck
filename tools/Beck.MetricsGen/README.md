@@ -3,14 +3,14 @@
 Dev-time code generator for the embedded font-metrics tables the managed
 `EmbeddedMetricsMeasurer` reads. It measures the committed OFL fonts with the **same**
 SkiaSharp + HarfBuzzSharp stack `Beck.Skia`'s `SkiaTextMeasurer` uses, then emits per-glyph
-advance-per-em tables (plus per-em ascent/descent) as `Beck/Text/*MetricsData.g.cs`.
+advance-per-em tables (plus per-em ascent/descent) as `src/Beck/Text/*MetricsData.g.cs`.
 
 This project is **not** packed and **not** in `Beck.slnx` — that solution carries only the
 shipping engine, its Skia plug-in, the sample, the tests, and the docs site. Run it on demand:
 
 ```bash
 # Writes SourceSerifMetricsData.g.cs / ArchivoMetricsData.g.cs / ShantellSansMetricsData.g.cs
-# into Beck/Text (default output dir, resolved from this project's path).
+# into src/Beck/Text (default output dir, resolved from this project's path).
 dotnet run --project tools/Beck.MetricsGen -c Release
 
 # Or an explicit output dir:
@@ -22,7 +22,7 @@ Each generated table mirrors `InterMetricsData.g.cs` exactly in shape (`SansWeig
 `MonoAdvance`) over the identical charset (ASCII 32–126, Latin-1 supplement, and a handful of
 Unicode punctuation/arrows). It differs only in data and class name. The Inter table itself is
 **not** regenerated here (it predates this tool and is the byte-identity anchor); it still lives in
-`Beck.Tests/MetricsTableGenerator.cs`.
+`tests/Beck.Tests/MetricsTableGenerator.cs`.
 
 ## Mono coverage
 
