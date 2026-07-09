@@ -338,7 +338,9 @@ public sealed class StylePhase4Tests
         "(<rect class=\"beck-pin\" x=\"[0-9.-]+\" y=\"[0-9.-]+\" width=\"[0-9.]+\" height=\"[0-9.]+\" rx=\"[0-9.]+\" style=\"fill:var\\(--beck-pin[^\"]*\\)\"/>){2,}<rect class=\"beck-node",
         RegexOptions.Compiled);
 
-    private static readonly Regex EdgePathDLocal = new("<path class=\"beck-edge[^\"]*\"[^>]*\\bd=\"([^\"]*)\"", RegexOptions.Compiled);
+    // Matches only the base flow edge path (`beck-edge beck-edge--…`), NOT the static trace-bed underlay
+    // (`beck-edge-bed`), which shares the same `d`; counting the bed too would double every edge's bends.
+    private static readonly Regex EdgePathDLocal = new("<path class=\"beck-edge beck-edge--[^\"]*\"[^>]*\\bd=\"([^\"]*)\"", RegexOptions.Compiled);
 
     [Fact]
     public void Circuit_ViaDotCountMatchesEdgeBendCount()

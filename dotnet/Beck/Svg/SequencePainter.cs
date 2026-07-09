@@ -72,16 +72,27 @@ internal sealed class SequencePainter
             double cx = layout.Centers[p.Id];
             Rect card = layout.Nodes[p.Id];
             double y1 = card.Y + card.H + 2, y2 = layout.LifelineBottom;
+            // Optional static trace-bed underlay behind the lifeline (circuit beds lifelines too): a
+            // wider, darker stroke sharing the lifeline's exact geometry, emitted FIRST so it sits behind
+            // the base line. Off (width 0) → nothing (classic, byte-identical).
+            StyleEdges les = _style.Edges;
+            string bedColor = les.UnderlayColor.Length > 0 ? les.UnderlayColor : "var(--beck-edge-underlay, var(--beck-edge))";
             // Lifeline treatment (StyleEdges.Lifeline): classic Dashed + FaintSolid are the straight
             // <line> (the dash on/off is a CSS concern); Wobbly swaps to a single sideways-bowed <path>
             // with its endpoints preserved. Classic is byte-identical.
             if (_style.Edges.Lifeline == LifelineShape.Wobbly)
             {
                 string llD = Shaping.BowLine(cx, y1, cx, y2, Math.Max(_style.Edges.BowAmplitude, 2), _hash + ":ll:" + p.Id);
+                if (les.UnderlayWidth > 0)
+                    sb.Append($"<path class=\"beck-lifeline-bed\" d=\"{llD}\" fill=\"none\" style=\"stroke:{bedColor};stroke-width:{N(les.UnderlayWidth)}\"/>");
                 sb.Append($"<path class=\"beck-lifeline\" d=\"{llD}\" fill=\"none\" style=\"stroke:{stroke}\"/>");
             }
             else
+            {
+                if (les.UnderlayWidth > 0)
+                    sb.Append($"<line class=\"beck-lifeline-bed\" x1=\"{N(cx)}\" y1=\"{N(y1)}\" x2=\"{N(cx)}\" y2=\"{N(y2)}\" style=\"stroke:{bedColor};stroke-width:{N(les.UnderlayWidth)}\"/>");
                 sb.Append($"<line class=\"beck-lifeline\" x1=\"{N(cx)}\" y1=\"{N(y1)}\" x2=\"{N(cx)}\" y2=\"{N(y2)}\" style=\"stroke:{stroke}\"/>");
+            }
         }
 
         // ---- activation bars ----
@@ -170,6 +181,10 @@ internal sealed class SequencePainter
     {
         StyleEdges es = _style.Edges;
         var sb = new StringBuilder();
+        // Optional static trace-bed underlay (circuit's two-layer trace) sharing the message's exact d,
+        // emitted FIRST so it sits behind the base .beck-edge line — matches the architecture edge painter.
+        // Static; off (width 0) → nothing (classic, byte-identical).
+        sb.Append(SvgRenderer.UnderlayPath(_style, d));
         // Optional faint base-layer opacity (glow's dim rail under the bright comet) — matches the
         // architecture edge painter's BaseOpacity treatment. null → no attribute (classic, byte-identical).
         string baseOp = es.BaseOpacity is { } bo ? $";stroke-opacity:{SvgWriter.Num(bo)}" : "";
