@@ -172,6 +172,48 @@ so it participates in the page's cascade and matches it automatically, including
 which is just a matter of `[data-theme="dark"]` (or `prefers-color-scheme`) redefining the
 variables. There is no per-theme rendering and no hardcoded colors.
 
+## Styles
+
+A **style** is a complete visual identity — shapes, strokes, typography, colour bias, and motion
+character — chosen with a single token. Beck ships eleven. A style only ever redefines the *defaults*
+of the `--beck-*` tokens, so a themed diagram still adopts your host palette and still flips with
+light and dark; the theme axis above is orthogonal and works on top of every style.
+
+| name | look |
+|---|---|
+| `classic` | the default card look — soft shadows, rounded corners, Inter + IBM Plex Mono |
+| `minimal` | flat: no shadows, hairline borders, a single travelling dot; glow and rings off |
+| `terminal` | monospace, `[bracketed]` titles, square packets, green-ramp accent, hard-step trails |
+| `blueprint` | drafting surface — faint grid, dashed edges, dimension ticks on groups, mono uppercase labels |
+| `glow` | gradient edges, soft packet bloom, breathing pulse on active nodes |
+| `editorial` | serif textbook figure — hairlines, no fills, `Fig. N —` captions, slow draw-on reveal |
+| `brutalist` | thick strokes, a solid blur-free offset shadow, uppercase Archivo, `steps()` flow motion |
+| `sketch` | hand-drawn — Shantell Sans, deterministically wobbled outlines |
+| `extrude` | 2.5D slabs with static depth faces; highlight presses the node down toward its face |
+| `circuit` | chip nodes with pin stubs and a via dot at every route bend |
+| `metro` | thick transit lines, white station dots at edge ends, train-capsule packets |
+
+Set one per document in YAML, or site-wide from C#:
+
+```yaml
+meta: { style: metro }
+```
+
+```csharp
+using Beck;
+using Beck.Rendering;
+
+// Site-wide default (a document's own meta.style overrides it):
+string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyles.ByName["glow"] });
+```
+
+Precedence runs `meta.style` (YAML) → `SvgRenderOptions.Style` (C# default) → `classic` — the C#
+option is a site-wide default a document opts back out of, deliberately the opposite of `Theme`.
+Every built-in is an instance of the public `BeckStyle` record; derive your own from the closest one
+with a `with` expression and register it in `SvgRenderOptions.Styles`. See the [style
+guide](https://usepennington.github.io/beck/docs/guides/styles) and the [custom-style
+how-to](https://usepennington.github.io/beck/docs/guides/custom-styles).
+
 ## How it works
 
 ```

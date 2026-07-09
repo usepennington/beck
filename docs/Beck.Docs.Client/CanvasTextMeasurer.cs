@@ -20,19 +20,31 @@ public sealed class CanvasTextMeasurer : ITextMeasurer
 
     public CanvasTextMeasurer(IJSInProcessRuntime js) => _js = js;
 
-    public TextMetrics Measure(string text, FontRole role)
-    {
-        FontRoleSpec s = FontRoles.Of(role);
-        string t = s.Uppercase ? text.ToUpperInvariant() : text;
+    /// <inheritdoc />
+    public TextMetrics Measure(string text, FontRole role) => Measure(text, role, FontRoles.Of(role));
 
-        // [advanceWidth, ascent, descent] in CSS px.
-        double[] m = _js.Invoke<double[]>("beckMeasure.text", t, s.Mono, s.Weight, s.SizePx);
+    /// <summary>
+    /// Style-aware measurement: measures against the <em>active style's</em> resolved
+    /// <paramref name="spec"/> (weight / size / mono-vs-sans family / letter-spacing / uppercase)
+    /// rather than the classic <see cref="FontRoles.Of"/> for the role. Without this override a style
+    /// that remaps a role (terminal's uppercase mono titles, brutalist's heavier/larger weights,
+    /// editorial's serif) would be sized against the classic role and rely on the <c>textLength</c>
+    /// guard to squeeze the glyphs back into a mis-sized box; honouring the spec sizes the card to
+    /// what the browser actually draws.
+    /// </summary>
+    public TextMetrics Measure(string text, FontRole role, FontRoleSpec spec)
+    {
+        string t = spec.Uppercase ? text.ToUpperInvariant() : text;
+
+        // [advanceWidth, ascent, descent] in CSS px. mono/weight/size come from the active style's
+        // spec, so a role a style remapped measures at its rendered typography.
+        double[] m = _js.Invoke<double[]>("beckMeasure.text", t, spec.Mono, spec.Weight, spec.SizePx);
         double width = m[0];
 
         // CSS letter-spacing adds a gap after every character (Chrome keeps the trailing gap) —
         // applied here, not in the canvas font string, to match SkiaTextMeasurer exactly.
-        if (s.LetterSpacingEm != 0 && t.Length > 0)
-            width += t.Length * s.LetterSpacingEm * s.SizePx;
+        if (spec.LetterSpacingEm != 0 && t.Length > 0)
+            width += t.Length * spec.LetterSpacingEm * spec.SizePx;
 
         return new TextMetrics(width, m[1], m[2]);
     }

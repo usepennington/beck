@@ -154,5 +154,16 @@ public static class BeckSchema
         ["dependency"] = "A dashed dependency edge.",
         ["TB"] = "Top → bottom.", ["BT"] = "Bottom → top.", ["LR"] = "Left → right.", ["RL"] = "Right → left.",
         ["classic"] = "The default Beck look (unchanged when no `meta.style` is set).",
+        // built-in visual styles (meta.style) — sourced as names from BeckStyles.All
+        ["minimal"] = "Sober flat look: hairline borders, no shadows, a single travelling dot; rings off.",
+        ["terminal"] = "Monospace everything with `[bracketed]` labels, square packets and a green-ramp accent.",
+        ["blueprint"] = "Technical drawing: faint grid surface, dashed edges and dimension ticks on groups.",
+        ["glow"] = "Luminous: gradient edges, soft packet bloom and a breathing pulse on active nodes.",
+        ["editorial"] = "Serif textbook figure: hairlines, no fills, numbered `Fig. N —` captions, slow draw-on.",
+        ["brutalist"] = "Heavy strokes, a hard blur-free offset shadow, uppercase type and stepped motion.",
+        ["sketch"] = "Hand-drawn: wobbly outlines baked deterministically from the content hash.",
+        ["extrude"] = "2.5D slabs with static depth faces; active nodes press down toward the base.",
+        ["circuit"] = "PCB look: chip pin stubs on nodes and via dots at every edge bend.",
+        ["metro"] = "Transit map: thick line edges, white station dots at endpoints and train packets.",
     };
 }

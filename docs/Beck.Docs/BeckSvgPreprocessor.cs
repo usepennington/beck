@@ -1,6 +1,8 @@
 using System.Net;
+using Beck;
 using Beck.Rendering;
 using Pennington.Markdown.Extensions;
+using YamlDotNet.RepresentationModel;
 
 namespace Beck.Docs;
 
@@ -24,6 +26,16 @@ namespace Beck.Docs;
 /// <c>```beck:symbol,static</c> forces the fully-revealed static frame (the old
 /// <c>animate="false"</c>), and <c>,scrub</c> drives the choreography from scroll
 /// position. Flags work on the inline form too (<c>```beck,static</c>).
+///
+/// <para>
+/// <c>```beck,style=metro</c> (or <c>```beck:symbol,style=metro</c>) injects/overrides
+/// <c>meta.style</c> on the document before rendering, so one shared YAML snippet can be
+/// shown in every built-in look without hand-editing eleven copies (this is what the style
+/// gallery uses). The flag <em>wins</em> over the fence's own <c>meta.style</c> — it is a
+/// last-word override, unlike the C# <c>SvgRenderOptions.Style</c> site-wide default that a
+/// document opts out of. An unknown style token fails loud (build-log warning) and the fence
+/// renders with the document's own style unchanged.
+/// </para>
 ///
 /// Text is measured with the site's own IBM Plex Sans + Mono files
 /// (<see cref="BeckDocsFonts"/>) so the C# card sizing matches what the browser
@@ -51,6 +63,7 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
         try
         {
             string yaml = fence.IsFileEmbed ? ReadEmbeddedYaml(code) : code;
+            if (fence.StyleName is { } style) yaml = ApplyStyle(yaml, style, languageId);
             string svg = _renderer.Render(yaml, fence.Animation).Svg;
             html = $"<div class=\"beck-embed\">{svg}</div>";
         }
@@ -66,6 +79,45 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
         // SkipTransform: the output is finished HTML; the annotation/highlight pass
         // must not re-process it.
         return new CodeBlockPreprocessResult(html, "beck", SkipTransform: true);
+    }
+
+    /// <summary>
+    /// Rewrites every document in <paramref name="yaml"/> so its <c>meta.style</c> is
+    /// <paramref name="styleName"/> — the <c>style=</c> fence flag as a last-word override of
+    /// whatever the document itself declares. An unknown style token warns to the build log and
+    /// leaves the YAML untouched (the fence renders with its own style), matching how the rest of
+    /// this preprocessor fails loud rather than silently. Editing the parsed representation graph
+    /// (rather than a text splice) keeps this correct whether <c>meta</c> is block- or flow-styled,
+    /// present or absent, in a single- or multi-document body.
+    /// </summary>
+    private static string ApplyStyle(string yaml, string styleName, string languageId)
+    {
+        if (!BeckStyles.ByName.ContainsKey(styleName))
+        {
+            Console.Error.WriteLine(
+                $"[beck] unknown style \"{styleName}\" in fence `{languageId}` — expected one of "
+                + $"{string.Join(", ", BeckStyles.ByName.Keys)}. Rendering with the document's own style.");
+            return yaml;
+        }
+
+        var stream = new YamlStream();
+        stream.Load(new StringReader(yaml));
+        if (stream.Documents.Count == 0) return yaml;
+
+        foreach (var doc in stream.Documents)
+        {
+            if (doc.RootNode is not YamlMappingNode root) continue;
+            var metaKey = new YamlScalarNode("meta");
+            if (root.Children.TryGetValue(metaKey, out var node) && node is YamlMappingNode meta)
+                meta.Children[new YamlScalarNode("style")] = new YamlScalarNode(styleName);
+            else
+                root.Children[metaKey] = new YamlMappingNode(
+                    new YamlScalarNode("style"), new YamlScalarNode(styleName));
+        }
+
+        using var writer = new StringWriter();
+        stream.Save(writer, assignAnchors: false);
+        return writer.ToString();
     }
 
     /// <summary>
@@ -99,10 +151,13 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     }
 
     /// <summary>
-    /// Parses a fence info-string such as <c>beck</c>, <c>beck:symbol</c>, or
-    /// <c>beck:symbol,static</c> into whether it is a Beck fence, whether the body is a
-    /// file path (<c>:symbol</c>), and the resolved <see cref="AnimationMode"/> from the
-    /// comma-separated flag tail. Non-Beck fences return <see cref="FenceInfo.IsBeck"/> false.
+    /// Parses a fence info-string such as <c>beck</c>, <c>beck:symbol</c>,
+    /// <c>beck:symbol,static</c>, or <c>beck,style=metro</c> into whether it is a Beck fence,
+    /// whether the body is a file path (<c>:symbol</c>), the resolved <see cref="AnimationMode"/>,
+    /// and an optional <c>style=</c> override. Non-Beck fences return <see cref="FenceInfo.IsBeck"/>
+    /// false. Every token after the language is comma-separated — the historical <c>:symbol</c>
+    /// modifier and the comma flag tail are parsed uniformly, so flags work on the inline form
+    /// (<c>beck,static</c>) exactly as on the file-embed form (<c>beck:symbol,static</c>).
     /// </summary>
     private static FenceInfo ParseInfo(string languageId)
     {
@@ -110,30 +165,41 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
         int ws = s.IndexOfAny(' ', '\t');
         if (ws >= 0) s = s[..ws];
 
-        int colon = s.IndexOf(':');
-        ReadOnlySpan<char> baseLang = colon >= 0 ? s[..colon] : s;
+        var segments = s.ToString()
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length == 0) return FenceInfo.NotBeck;
+
+        // The head segment is `beck` or `beck:<modifier>`; split off the colon modifier.
+        ReadOnlySpan<char> head = segments[0].AsSpan();
+        int colon = head.IndexOf(':');
+        ReadOnlySpan<char> baseLang = colon >= 0 ? head[..colon] : head;
         if (!baseLang.Equals("beck", StringComparison.OrdinalIgnoreCase))
             return FenceInfo.NotBeck;
 
+        // Flags = the colon modifier (if any) followed by every comma segment. Parsing them
+        // through one path keeps `beck:symbol`, `beck:symbol,static`, and `beck,style=x` uniform.
         bool fileEmbed = false;
         var animation = AnimationMode.Full;
-        if (colon >= 0)
+        string? styleName = null;
+
+        if (colon >= 0) Apply(head[(colon + 1)..].ToString());
+        for (int i = 1; i < segments.Length; i++) Apply(segments[i]);
+
+        void Apply(string flag)
         {
-            foreach (var range in s[(colon + 1)..].ToString()
-                         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                if (range.Equals("symbol", StringComparison.OrdinalIgnoreCase)) fileEmbed = true;
-                else if (range.Equals("static", StringComparison.OrdinalIgnoreCase)) animation = AnimationMode.Static;
-                else if (range.Equals("scrub", StringComparison.OrdinalIgnoreCase)) animation = AnimationMode.Scrub;
-                // unknown tokens are ignored, matching the tree-sitter flag parser
-            }
+            if (flag.Equals("symbol", StringComparison.OrdinalIgnoreCase)) fileEmbed = true;
+            else if (flag.Equals("static", StringComparison.OrdinalIgnoreCase)) animation = AnimationMode.Static;
+            else if (flag.Equals("scrub", StringComparison.OrdinalIgnoreCase)) animation = AnimationMode.Scrub;
+            else if (flag.StartsWith("style=", StringComparison.OrdinalIgnoreCase))
+                styleName = flag["style=".Length..].Trim();
+            // unknown flags are ignored, matching the tree-sitter flag parser
         }
 
-        return new FenceInfo(true, fileEmbed, animation);
+        return new FenceInfo(true, fileEmbed, animation, styleName);
     }
 
-    private readonly record struct FenceInfo(bool IsBeck, bool IsFileEmbed, AnimationMode Animation)
+    private readonly record struct FenceInfo(bool IsBeck, bool IsFileEmbed, AnimationMode Animation, string? StyleName)
     {
-        public static readonly FenceInfo NotBeck = new(false, false, AnimationMode.Full);
+        public static readonly FenceInfo NotBeck = new(false, false, AnimationMode.Full, null);
     }
 }

@@ -63,9 +63,10 @@ public static class BlueprintStyle
             ("--beck-accent", "var(--beck-primary)"),
             // Faint graph-paper line colour — kept low so the grid reads as a surface, not chrome.
             ("--beck-grid", "color-mix(in srgb, var(--beck-primary) 12%, transparent)"),
-            // Dimension-line colour — a touch stronger than the grid so the group ticks read as an
-            // annotation, but still a subtle primary tint (no resolved literal in shape CSS).
-            ("--beck-dimension", "color-mix(in srgb, var(--beck-primary) 32%, transparent)"),
+            // Dimension-line colour — a saturated primary tint so the group ticks read as a deliberate
+            // drafting annotation, not an incidental hairline (visual-jury tuning: the old 32% mix was
+            // too subtle). Still a token-driven mix, no resolved literal in shape CSS.
+            ("--beck-dimension", "color-mix(in srgb, var(--beck-primary) 55%, transparent)"),
         });
 
         // Dark overrides only (layered over the light block, which is always emitted first): lighter
@@ -82,7 +83,7 @@ public static class BlueprintStyle
             ("--beck-edge", "color-mix(in srgb, var(--beck-primary) 46%, var(--color-base-700, #30363d))"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-primary) 14%, var(--color-base-800, #21262d))"),
             ("--beck-grid", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 15%, transparent)"),
-            ("--beck-dimension", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 34%, transparent)"),
+            ("--beck-dimension", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 56%, transparent)"),
         });
 
         // The faint graph-paper grid: two token-coloured 1px gradients (horizontal + vertical rules) on
@@ -106,9 +107,20 @@ public static class BlueprintStyle
             BandRadius = 4,
             SurfaceBackground = grid,
             // Dimension ticks on group boxes (the StyleArtwork.Blueprint gate below reads this): the
-            // dimension rule sits 9px above each group's top edge with 3px witness overshoot.
-            DimensionTick = 9,
+            // dimension rule sits 12px above each group's top edge with 4px witness overshoot (over =
+            // gap/3). Enlarged from 9 so the annotation reads as an intentional drafting mark rather
+            // than a faint hairline (visual-jury tuning); stays clear of the group's on-edge label and
+            // non-negative on the well-margined corpus (topmost group top edge is y≈46 → tickTop≈30).
+            DimensionTick = 12,
         };
+
+        // Raise sequence message-label contrast a step: the label fill is
+        // color-mix(accent MsgText%, --beck-text), so lowering the accent share pulls the label toward
+        // the high-contrast ink token. On dark (where --beck-text is near-white and --beck-primary is a
+        // saturated mid-blue) the old 34% blue dilution washed the label out against the dark chip;
+        // 24% keeps a blue drafting tint while reading a clear step crisper (visual-jury tuning). The
+        // mix ratio is theme-independent, so light gains a touch of contrast too — harmless.
+        StyleMix mix = c.Mix with { MsgText = 24 };
 
         StyleStrokes strokes = c.Strokes with
         {
@@ -145,6 +157,7 @@ public static class BlueprintStyle
             LightTokens = light,
             DarkTokens = dark,
             Geometry = geo,
+            Mix = mix,
             Strokes = strokes,
             Typography = typography,
             // Group-box dimension lines (the technical-drawing measured-length annotation). The
