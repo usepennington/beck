@@ -48,8 +48,8 @@ public sealed class StylePhase2Tests
     [Fact]
     public void MetaStyle_ValidToken_LandsOnMeta()
     {
-        DiagramModel model = Validate.LoadDiagram(ArchStyled("metro"));
-        Assert.Equal("metro", model.Meta.StyleName);
+        DiagramModel model = Validate.LoadDiagram(ArchStyled("sketch"));
+        Assert.Equal("sketch", model.Meta.StyleName);
     }
 
     [Fact]

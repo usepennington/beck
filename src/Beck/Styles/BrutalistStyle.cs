@@ -158,7 +158,9 @@ public static class BrutalistStyle
             TrailSteps = 6,
             // The border slam (mock 1d's `slam`): a hit card snaps a thick outline on for two frames
             // and snaps back — hard cuts, no easing, no scaling, matching the stepped flow above.
+            // No lift/zoom — brutalist geometry never eases or floats; the slam is the whole cue.
             Pulse = PulseEffect.Slam,
+            LiftEnabled = false,
         };
 
         // The brutalist edge presentation (the identity the mock carries on every connector):

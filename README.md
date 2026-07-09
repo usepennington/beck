@@ -175,7 +175,7 @@ variables. There is no per-theme rendering and no hardcoded colors.
 ## Styles
 
 A **style** is a complete visual identity — shapes, strokes, typography, colour bias, and motion
-character — chosen with a single token. Beck ships eleven. A style only ever redefines the *defaults*
+character — chosen with a single token. Beck ships nine. A style only ever redefines the *defaults*
 of the `--beck-*` tokens, so a themed diagram still adopts your host palette and still flips with
 light and dark; the theme axis above is orthogonal and works on top of every style.
 
@@ -186,17 +186,15 @@ light and dark; the theme axis above is orthogonal and works on top of every sty
 | `terminal` | monospace, `[bracketed]` titles, square packets, green-ramp accent, hard-step trails |
 | `blueprint` | drafting surface — faint grid, dashed edges, dimension ticks on groups, mono uppercase labels |
 | `glow` | gradient edges, soft packet bloom, breathing pulse on active nodes |
-| `editorial` | serif textbook figure — hairlines, no fills, `Fig. N —` captions, slow draw-on reveal |
 | `brutalist` | thick strokes, a solid blur-free offset shadow, uppercase Archivo, `steps()` flow motion |
 | `sketch` | hand-drawn — Shantell Sans, deterministically wobbled outlines |
 | `extrude` | 2.5D slabs with static depth faces; highlight presses the node down toward its face |
 | `circuit` | chip nodes with pin stubs and a via dot at every route bend |
-| `metro` | thick transit lines, white station dots at edge ends, train-capsule packets |
 
 Set one per document in YAML, or site-wide from C#:
 
 ```yaml
-meta: { style: metro }
+meta: { style: sketch }
 ```
 
 ```csharp

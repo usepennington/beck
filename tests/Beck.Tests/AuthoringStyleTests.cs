@@ -16,35 +16,35 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void DiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new DiagramBuilder("T").Style("metro").Node("a", "A").ToYaml();
-        Assert.Contains("style: metro", yaml);
-        Assert.Equal("metro", StyleNameOf(yaml));
+        string yaml = new DiagramBuilder("T").Style("sketch").Node("a", "A").ToYaml();
+        Assert.Contains("style: sketch", yaml);
+        Assert.Equal("sketch", StyleNameOf(yaml));
     }
 
     [Fact]
     public void SequenceDiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new SequenceDiagramBuilder("T").Style("metro")
+        string yaml = new SequenceDiagramBuilder("T").Style("sketch")
             .Participant("a", "A").Participant("b", "B").Message("a", "b", "hi").ToYaml();
-        Assert.Contains("style: metro", yaml);
-        Assert.Equal("metro", StyleNameOf(yaml));
+        Assert.Contains("style: sketch", yaml);
+        Assert.Equal("sketch", StyleNameOf(yaml));
     }
 
     [Fact]
     public void StateDiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new StateDiagramBuilder("T").Style("metro")
+        string yaml = new StateDiagramBuilder("T").Style("sketch")
             .State("s1", "S1").State("s2", "S2").Transition("s1", "s2").ToYaml();
-        Assert.Contains("style: metro", yaml);
-        Assert.Equal("metro", StyleNameOf(yaml));
+        Assert.Contains("style: sketch", yaml);
+        Assert.Equal("sketch", StyleNameOf(yaml));
     }
 
     [Fact]
     public void ClassDiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new ClassDiagramBuilder("T").Style("metro").Class("c", "C").ToYaml();
-        Assert.Contains("style: metro", yaml);
-        Assert.Equal("metro", StyleNameOf(yaml));
+        string yaml = new ClassDiagramBuilder("T").Style("sketch").Class("c", "C").ToYaml();
+        Assert.Contains("style: sketch", yaml);
+        Assert.Equal("sketch", StyleNameOf(yaml));
     }
 
     [Fact]

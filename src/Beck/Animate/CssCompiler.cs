@@ -216,16 +216,6 @@ internal sealed class CssCompiler
                 // baked geometry, only opacity animates.
                 sb.Append($"<circle {cls} cx=\"{Nm(b.X + b.W - 9)}\" cy=\"{Nm(b.Y + 9)}\" r=\"3\" fill=\"{col}\" opacity=\"0\"/>");
                 break;
-            case PulseEffect.StationRipple:
-                // A circular ring radiating from the card centre in the arriving line's colour
-                // (mock 1i's `ringc`).
-                sb.Append($"<circle {cls} cx=\"{Nm(b.X + b.W / 2)}\" cy=\"{Nm(b.Y + b.H / 2)}\" r=\"9\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" {boxScale}/>");
-                break;
-            case PulseEffect.InkFrame:
-                // A thin annotation frame 4px off the card (mock 1j's red editor circle) — inked in
-                // slowly, held, lifted; no scaling.
-                sb.Append($"<rect {cls} x=\"{Nm(b.X - 4)}\" y=\"{Nm(b.Y - 4)}\" width=\"{Nm(b.W + 8)}\" height=\"{Nm(b.H + 8)}\" rx=\"2\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\"/>");
-                break;
             default: // Ripple — classic, byte-identical.
                 sb.Append($"<rect {cls} x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" {boxScale}/>");
                 break;
@@ -612,12 +602,14 @@ internal sealed class CssCompiler
             double s = c.Start;
             switch (c.Kind)
             {
-                case CardFxKind.Pulse:
+                // LiftEnabled=false (the "no zoom" styles): pulse/highlight contribute no transform
+                // at all — their overlay cue carries the whole read. The fail shake below still runs.
+                case CardFxKind.Pulse when _motion.LiftEnabled:
                     pts.Add((s, "none", PulseInCss));
                     pts.Add((s + 0.18, PulsePeak, PulsePeakCss));
                     pts.Add((s + _motion.PulseDur, "none", null));
                     break;
-                case CardFxKind.Highlight:
+                case CardFxKind.Highlight when _motion.LiftEnabled:
                     pts.Add((s, "none", HighlightInCss));
                     pts.Add((s + 0.21, ActivePeak, HighlightPeakCss));
                     pts.Add((s + _motion.HighlightDur, "none", null));
@@ -631,6 +623,10 @@ internal sealed class CssCompiler
                     break;
             }
         }
+        // Every effect on this node was a lift-disabled pulse/highlight: the track would be
+        // all-"none" keyframes, so emit nothing at all (the card genuinely never moves).
+        if (pts.Count == 1) return;
+
         pts.Add((_t, "none", null));
         pts.Sort((a, b) => a.T.CompareTo(b.T));
 
@@ -666,8 +662,6 @@ internal sealed class CssCompiler
             case PulseEffect.Flicker: FlickerCss(sb, j, start); break;
             case PulseEffect.GlowRing: ScaleRingCss(sb, j, start, 0.6, 1.3); break;
             case PulseEffect.Led: LedCss(sb, j, start); break;
-            case PulseEffect.StationRipple: ScaleRingCss(sb, j, start, 0.55, 2.6); break;
-            case PulseEffect.InkFrame: InkFrameCss(sb, j, start); break;
             default: RippleCss(sb, j, start); break;
         }
     }
@@ -726,8 +720,7 @@ internal sealed class CssCompiler
         sb.Append("100%{opacity:0;}}");
     }
 
-    // Glow's bloom ripple / metro's station ripple: the eased expanding ring, parameterised by
-    // duration and how far it swells (glow 1.3 off the card border, metro 2.6 off its centre dot).
+    // Glow's bloom ripple: the eased expanding ring, parameterised by duration and how far it swells.
     private void ScaleRingCss(StringBuilder sb, int j, double start, double dur, double scale)
     {
         double s = Pct(start), end = Pct(start + dur), e = 0.01;
@@ -748,22 +741,6 @@ internal sealed class CssCompiler
         sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
         if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
         sb.Append($"{P(s)}%{{opacity:{Nm(_motion.EffectAmplitude)};animation-timing-function:{Power2OutCss};}}");
-        sb.Append($"{P(end)}%{{opacity:0;}}");
-        sb.Append("100%{opacity:0;}}");
-    }
-
-    // Editorial's ink annotation, paced by PulseDur: ink in over the first quarter, hold, lift.
-    private void InkFrameCss(StringBuilder sb, int j, double start)
-    {
-        double d = _motion.PulseDur;
-        double s = Pct(start), inEnd = Pct(start + 0.25 * d), hold = Pct(start + 0.7 * d), end = Pct(start + d), e = 0.01;
-        string amp = Nm(_motion.EffectAmplitude);
-        sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
-        sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
-        sb.Append($"{P(s)}%{{opacity:0;animation-timing-function:linear;}}");
-        sb.Append($"{P(inEnd)}%{{opacity:{amp};}}");
-        sb.Append($"{P(hold)}%{{opacity:{amp};}}");
         sb.Append($"{P(end)}%{{opacity:0;}}");
         sb.Append("100%{opacity:0;}}");
     }

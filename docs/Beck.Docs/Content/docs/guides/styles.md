@@ -1,12 +1,12 @@
 ---
 title: Pick a built-in style
-description: The eleven built-in styles — classic, minimal, terminal, blueprint, glow, editorial, brutalist, sketch, extrude, circuit, and metro — each shown across an architecture, a sequence, and a class diagram.
+description: The nine built-in styles — classic, minimal, terminal, blueprint, glow, brutalist, sketch, extrude, and circuit — each shown across an architecture, a sequence, and a class diagram.
 order: 32
 sectionLabel: Cross-cutting
 uid: docs.guide.styles
 ---
 
-A **style** is a complete visual identity for a diagram — its shapes, strokes, typography, colour bias, and motion character — chosen with a single token. Beck ships eleven: `classic` (the default, unchanged when you set nothing) plus ten designed looks. Set one per diagram with `meta.style`, or site-wide from C# with `SvgRenderOptions.Style` (a diagram's own `meta.style` opts back out). A style only ever redefines the *defaults* of the `--beck-*` tokens, so a themed diagram still adopts your host palette and still flips with light and dark — the [theme guide](/docs/guides/theme) covers that axis, which every style honours. To build your own by deriving from a built-in with a `with` expression, see [Author a custom style](/docs/guides/custom-styles).
+A **style** is a complete visual identity for a diagram — its shapes, strokes, typography, colour bias, and motion character — chosen with a single token. Beck ships nine: `classic` (the default, unchanged when you set nothing) plus eight designed looks. Set one per diagram with `meta.style`, or site-wide from C# with `SvgRenderOptions.Style` (a diagram's own `meta.style` opts back out). A style only ever redefines the *defaults* of the `--beck-*` tokens, so a themed diagram still adopts your host palette and still flips with light and dark — the [theme guide](/docs/guides/theme) covers that axis, which every style honours. To build your own by deriving from a built-in with a `with` expression, see [Author a custom style](/docs/guides/custom-styles).
 
 ## The three diagrams
 
@@ -56,12 +56,6 @@ The "designed by Claude" option: gradient strokes, a soft bloom around nodes, an
 
 <div class="beck-lazy"><a href="/fragments/styles/glow.html">View the glow gallery</a></div>
 
-## editorial
-
-A serif textbook figure: hairline rules, no fills, `Fig. N —` caption styling on the narration bar, and a slow draw-on reveal. When the flow reaches a node, the editor slowly inks a thin red frame around it, holds, and lifts it. Source Serif for the body. Best when a diagram sits inside long-form writing and should read as a printed figure rather than a UI.
-
-<div class="beck-lazy"><a href="/fragments/styles/editorial.html">View the editorial gallery</a></div>
-
 ## brutalist
 
 Thick strokes, a hard solid offset shadow (no blur), uppercase Archivo, and `steps()` easing on the flow — a hit card slams its border thick for two frames and snaps back. Loud and structural. The shadow is a static offset — nothing snaps or pops at rest; the stepped motion appears only in the choreography.
@@ -85,12 +79,6 @@ Nodes as 2.5D slabs with static depth faces. The depth never floats or bobs; a h
 Nodes as chips with pin stubs, right-angle traces with a via dot at every bend, and pulse packets riding the traces — an amber LED on the chip blinks when a signal lands. The vias are emitted by the SVG layer at the router's existing bend points — the routing itself is untouched. A natural fit for hardware and data-path diagrams.
 
 <div class="beck-lazy"><a href="/fragments/styles/circuit.html">View the circuit gallery</a></div>
-
-## metro
-
-Edges as thick transit lines with white station dots at their ends and train-capsule packets sliding along them — a station ripples in its line's colour when the train arrives. Per-edge accents colour each line, so a multi-line diagram reads like a transit map. Line weight comes from the style's geometry, not the edge data.
-
-<div class="beck-lazy"><a href="/fragments/styles/metro.html">View the metro gallery</a></div>
 
 ---
 

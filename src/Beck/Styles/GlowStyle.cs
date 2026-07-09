@@ -168,8 +168,10 @@ public static class GlowStyle
             GlowEnabled = true,
             PacketGlowBlur = 5,
             // The bloom ripple (mock 1g's glowing `ringx`): arrivals expand the classic ring but
-            // carried on a drop-shadow halo, swelling further before it fades.
+            // carried on a drop-shadow halo, swelling further before it fades. No lift/zoom — the
+            // light blooms off a stationary card.
             Pulse = PulseEffect.GlowRing,
+            LiftEnabled = false,
         };
 
         StyleEdges edges = c.Edges with

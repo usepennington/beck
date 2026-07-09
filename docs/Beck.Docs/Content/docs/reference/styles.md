@@ -49,7 +49,7 @@ Because built-ins are consulted first, a custom style cannot shadow a built-in n
 
 ## Built-in styles
 
-`BeckStyles.All` lists all eleven in declaration order; `BeckStyles.ByName` keys them by
+`BeckStyles.All` lists all nine in declaration order; `BeckStyles.ByName` keys them by
 `BeckStyle.Name`. `classic` is the default and is byte-identical when no style is set.
 
 | name | artwork | identity |
@@ -59,12 +59,10 @@ Because built-ins are consulted first, a custom style cannot shadow a built-in n
 | `terminal` | `Plain` | Monospace everything, `[bracketed]` titles, square packets, green-ramp accent, hard-step trails. |
 | `blueprint` | `Blueprint` | Drafting surface — faint grid, dashed edges, dimension ticks on groups, mono uppercase labels. |
 | `glow` | `Plain` | Gradient edges, soft packet bloom, breathing pulse on active nodes. |
-| `editorial` | `Plain` | Serif textbook figure — hairlines, no fills, `Fig. N —` captions, slow draw-on reveal. |
 | `brutalist` | `Brutalist` | Thick strokes, a solid blur-free offset shadow, uppercase Archivo, `steps()` flow motion. |
 | `sketch` | `Sketch` | Hand-drawn — Shantell Sans, deterministically wobbled outlines. |
 | `extrude` | `Extruded` | 2.5D slabs with static depth faces; highlight presses the node down toward its face. |
 | `circuit` | `Circuit` | Chip nodes with pin stubs and a via dot at every route bend. |
-| `metro` | `Metro` | Thick transit lines, white station dots at edge ends, train-capsule packets. |
 
 ## The `BeckStyle` record
 
@@ -143,10 +141,11 @@ Fixed `color-mix(in srgb, …)` percentages, all whole numbers. Members: `GroupB
 | `PacketGlyph` | `PacketGlyph?` | `null` | Style default packet glyph, under the author's explicit `packet.shape`. |
 | `TrailSteps` | `int?` | `null` | `steps(n)` timing on the trail reveal (terminal's hard-step trails). |
 | `PacketSteps` | `int?` | `null` | `steps(n)` timing on the packet's own advance (brutalist's stepped flow). |
-| `SequenceRevealScale` | `double` | `1.0` | Multiplier on the sequence-reveal ramp windows (editorial's slow draw-on). |
+| `SequenceRevealScale` | `double` | `1.0` | Multiplier on the sequence-reveal ramp windows (a slow, soft scenery draw-on). |
 | `PressDown` | `bool` | `false` | Active-effect transform presses down toward the depth faces (extrude). |
 | `Pulse` | `PulseEffect` | `Ripple` | The node-pulse arrival character — see [PulseEffect](#pulseeffect). |
-| `PulseColor` | `string?` | `null` | Colour override for the pulse overlay, as a `var(--beck-*)` token (circuit's `--beck-gold` LED, editorial's `--beck-danger` pen). `null` keeps the arriving packet's colour. |
+| `PulseColor` | `string?` | `null` | Colour override for the pulse overlay, as a `var(--beck-*)` token (circuit's `--beck-gold` LED). `null` keeps the arriving packet's colour. |
+| `LiftEnabled` | `bool` | `true` | Whether pulse/highlight run the card transform (classic's lift / extrude's press). `false` (minimal, terminal, glow, brutalist, circuit) pins the card — the overlay cue alone carries the arrival, no zoom. The fail shake is unaffected. |
 
 ### StyleGeometry
 
@@ -215,8 +214,6 @@ deterministic, shared-cycle, and inside the reduced-motion guard.
 | `Flicker` | terminal | The face invert-flickers twice, CRT-style. |
 | `GlowRing` | glow | The expanding ring, carried on a drop-shadow bloom halo. |
 | `Led` | circuit | A small dot in the card's top-right corner blinks once. |
-| `StationRipple` | metro | A circular ring radiates from the card's centre in the line colour. |
-| `InkFrame` | editorial | A thin frame is inked around the card, held, then lifted (paced by `PulseDur`). |
 
 ## MetricsFont
 
@@ -228,8 +225,8 @@ Mono roles always resolve against the shared IBM Plex Mono coverage.
 | value | sans slot |
 |---|---|
 | `Inter` | Inter (classic default). |
-| `SourceSerif` | Source Serif 4 (editorial). |
-| `Archivo` | Archivo, covers weight 800 (brutalist, metro headers). |
+| `SourceSerif` | Source Serif 4 (for serif custom styles). |
+| `Archivo` | Archivo, covers weight 800 (brutalist). |
 | `ShantellSans` | Shantell Sans (sketch). |
 
 ## SvgRenderOptions

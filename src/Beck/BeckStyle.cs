@@ -6,8 +6,7 @@ namespace Beck;
 /// The packet glyph a style prefers by default (<see cref="StyleMotion.PacketGlyph"/>) — a small,
 /// public, style-scoped vocabulary distinct from the per-packet author-facing
 /// <see cref="Beck.PacketShape"/> (<c>Dot|Circle|Ring</c>), since a style-level default may pick a
-/// shape no individual flow step can yet author. <c>Train</c> (metro's elongated capsule packet) is
-/// Phase-4 artwork and intentionally not a member here yet.
+/// shape no individual flow step can yet author.
 /// </summary>
 public enum PacketGlyph
 {
@@ -17,7 +16,8 @@ public enum PacketGlyph
     Ring,
     /// <summary>A centred square/block — terminal's identity glyph.</summary>
     Square,
-    /// <summary>An elongated rounded-rect capsule oriented along the path — metro's train packet.</summary>
+    /// <summary>An elongated rounded-rect capsule oriented along the path — a transit-map "train"
+    /// packet for custom styles (no built-in uses it).</summary>
     Train,
 }
 
@@ -55,12 +55,6 @@ public enum PulseEffect
     /// <summary>Circuit's status LED: a small dot in the card's top-right corner blinks once as the
     /// signal lands. Position is baked geometry; only opacity animates.</summary>
     Led,
-    /// <summary>Metro's station ripple: a circular ring radiates from the card's centre in the
-    /// arriving line's colour — the transit-map "you are here" ping.</summary>
-    StationRipple,
-    /// <summary>Editorial's ink annotation: a thin frame is slowly inked around the card, held, then
-    /// lifted — the editor circling a figure. Paced by <see cref="StyleMotion.PulseDur"/>.</summary>
-    InkFrame,
 }
 
 /// <summary>
@@ -1013,11 +1007,22 @@ public sealed record StyleMotion
 
     /// <summary>
     /// Optional colour override for the pulse overlay — a CSS value, kept as a <c>var(--beck-*)</c>
-    /// token so it theme-adapts (circuit's amber LED <c>var(--beck-gold)</c>, editorial's red editor
-    /// pen <c>var(--beck-danger)</c>). <c>null</c> (classic, and every style that doesn't set it)
-    /// keeps the arriving packet's own colour, unchanged.
+    /// token so it theme-adapts (circuit's amber LED <c>var(--beck-gold)</c>). <c>null</c> (classic,
+    /// and every style that doesn't set it) keeps the arriving packet's own colour, unchanged.
     /// </summary>
     public string? PulseColor { get; init; }
+
+    /// <summary>
+    /// Whether the pulse/highlight card <em>transform</em> — classic's <c>translateY(-2px)
+    /// scale(1.04)</c> lift (or <see cref="PressDown"/>'s dip) — runs at all. <c>false</c> (minimal,
+    /// terminal, glow, brutalist, circuit) pins the card in place so the style's overlay cue (tint
+    /// flash, CRT flicker, bloom ring, border slam, LED blink) carries the whole arrival read — no
+    /// zoom. The fail shake is orthogonal and unchanged, and a <see cref="PulseEffect.MarkerPop"/>
+    /// style keeps its jolt (the transform <em>is</em> its effect) by leaving this <c>true</c>.
+    /// <c>true</c> (classic, and every style that doesn't set it) keeps the historical lift —
+    /// byte-identical.
+    /// </summary>
+    public bool LiftEnabled { get; init; } = true;
 }
 
 /// <summary>Corner radii, stroke widths, border insets, and the card box-model constants.</summary>

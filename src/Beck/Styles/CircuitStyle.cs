@@ -142,8 +142,10 @@ public static class CircuitStyle
             PacketGlowBlur = 4.0,
             // The status LED (mock 1h): a small amber dot inset in the chip's top-right corner blinks
             // once as the signal lands — --beck-gold, the same hue as the ambient signal comet.
+            // No lift/zoom — chips are soldered down; only the LED reacts.
             Pulse = PulseEffect.Led,
             PulseColor = "var(--beck-gold)",
+            LiftEnabled = false,
         };
 
         // Circuit's signature two-layer trace + the amber signal comet (mock 1h's headline motion):

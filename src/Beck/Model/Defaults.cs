@@ -1,6 +1,7 @@
 namespace Beck.Rendering;
 
-// A port of src/model/defaults.ts — every table verbatim, plus topoOrder + deriveFlow.
+// A port of src/model/defaults.ts — every table verbatim (except where a remark notes a deliberate
+// divergence), plus topoOrder + deriveFlow.
 
 internal sealed record KindDefault(AccentToken Accent, string Icon, NodeVariant Variant);
 
@@ -74,13 +75,18 @@ internal static class Defaults
         };
 
     /// <summary>Per-edge-kind packet motion: radius, speed, glow, and ease token.</summary>
+    /// <remarks>Speeds are HALF the historical TypeScript values (420/640/300/380) — a deliberate
+    /// divergence from the verbatim port: the original pace read about 2× too fast in review. The
+    /// relative ordering (control fastest, async slowest) is preserved, and the 0.3s minimum hop
+    /// duration in <c>ScheduleBuilder</c> doubled to 0.6s alongside, so short hops slow with the
+    /// rest. An author's explicit <c>packet.speed</c> still overrides per step.</remarks>
     public static readonly IReadOnlyDictionary<EdgeKind, PacketKindStyle> PacketKindStyle =
         new Dictionary<EdgeKind, PacketKindStyle>
         {
-            [EdgeKind.Data] = new(Size: 6, Speed: 420, Glow: true, Ease: PacketEase.Linear),
-            [EdgeKind.Control] = new(Size: 5, Speed: 640, Glow: true, Ease: PacketEase.Accelerate),
-            [EdgeKind.Async] = new(Size: 7.5, Speed: 300, Glow: true, Ease: PacketEase.Smooth),
-            [EdgeKind.Dependency] = new(Size: 4, Speed: 380, Glow: false, Ease: PacketEase.Linear),
+            [EdgeKind.Data] = new(Size: 6, Speed: 210, Glow: true, Ease: PacketEase.Linear),
+            [EdgeKind.Control] = new(Size: 5, Speed: 320, Glow: true, Ease: PacketEase.Accelerate),
+            [EdgeKind.Async] = new(Size: 7.5, Speed: 150, Glow: true, Ease: PacketEase.Smooth),
+            [EdgeKind.Dependency] = new(Size: 4, Speed: 190, Glow: false, Ease: PacketEase.Linear),
         };
 
     /// <summary>Kahn topological sort of node ids; falls back to declared order on a cycle.</summary>

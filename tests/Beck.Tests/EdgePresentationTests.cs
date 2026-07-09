@@ -198,24 +198,31 @@ public sealed class EdgePresentationTests
         Assert.Equal(new[] { "var(--beck-edge)", "var(--beck-edge)", "var(--beck-edge)" }, strokes);
     }
 
-    // Coherence: metro's station-dot RINGS follow the same per-line palette as the base stroke, so a
-    // transit line and its two stations read one hue. On the default-coloured chain each edge i takes
-    // metro's line-(i%3) colour; its two stations take the SAME colour (stations are emitted per edge, in
-    // edge order, two apiece).
+    // Coherence: the station-dot RINGS (the StyleArtwork.Metro transit seam, available to custom
+    // styles) follow the same per-line palette as the base stroke, so a line and its two stations
+    // read one hue. On the default-coloured chain each edge i takes palette[i%3]; its two stations
+    // take the SAME colour (stations are emitted per edge, in edge order, two apiece).
     [Fact]
-    public void BaseColorPalette_MetroStationRingsFollowLineHue()
+    public void BaseColorPalette_StationRingsFollowLineHue()
     {
-        string svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = MetroStyle.Instance });
+        BeckStyle transit = BeckStyle.Classic with
+        {
+            Name = "custom-transit",
+            Artwork = StyleArtwork.Metro,
+            Geometry = BeckStyle.Classic.Geometry with { StationRadius = 4.5 },
+            Edges = StyleEdges.Classic with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-c)" } },
+        };
+        string svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = transit });
 
         var strokes = Matches(BaseEdgeStroke, svg);
-        Assert.Equal(new[] { "var(--beck-line-1)", "var(--beck-line-2)", "var(--beck-line-3)" }, strokes);
+        Assert.Equal(new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-c)" }, strokes);
 
         var stations = Matches(StationStroke, svg);
         Assert.Equal(new[]
         {
-            "var(--beck-line-1)", "var(--beck-line-1)",
-            "var(--beck-line-2)", "var(--beck-line-2)",
-            "var(--beck-line-3)", "var(--beck-line-3)",
+            "var(--pl-a)", "var(--pl-a)",
+            "var(--pl-b)", "var(--pl-b)",
+            "var(--pl-c)", "var(--pl-c)",
         }, stations);
     }
 
@@ -599,16 +606,16 @@ public sealed class EdgePresentationTests
         foreach (string od in overlayD) Assert.Contains(od, baseD);
     }
 
-    // ---- editorial (mock 1j): every connector inks itself in slowly, on architecture AND sequence ----
+    // ---- draw-on: every connector inks itself in slowly, on architecture AND sequence ----
 
-    // Editorial's headline motion is the DrawOn overlay on EVERY edge (not just sequence-storytelling
-    // scenery, which SequenceRevealScale already stretches) — architecture, class, and sequence messages
-    // all get an overlay path sharing the base edge's exact d, on a long (~7s) compiled shared-cycle wipe.
+    // The DrawOn overlay (sketch's headline motion, available to any style) inks EVERY edge —
+    // architecture, class, and sequence messages all get an overlay path sharing the base edge's
+    // exact d, on a compiled shared-cycle wipe.
     [Fact]
-    public void Editorial_DrawsOnEveryArchitectureEdge()
+    public void DrawOn_InksEveryArchitectureEdge()
     {
         string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
-            new SvgRenderOptions { Style = EditorialStyle.Instance });
+            new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn }) });
 
         var baseD = Matches(BaseEdgeD, svg);
         var overlayD = Matches(OverlayD, svg);
@@ -625,7 +632,7 @@ public sealed class EdgePresentationTests
     // `meta.animate: true` class diagram isolates the style's own behaviour from that model-level
     // default.
     [Fact]
-    public void Editorial_DrawsOnClassAndSequenceEdgesToo()
+    public void DrawOn_InksClassAndSequenceEdgesToo()
     {
         const string classYaml = """
             type: class
@@ -644,10 +651,11 @@ public sealed class EdgePresentationTests
             flow:
               steps: []
             """;
-        string classSvg = BeckSvg.Render(classYaml, new SvgRenderOptions { Style = EditorialStyle.Instance });
+        BeckStyle drawOn = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn });
+        string classSvg = BeckSvg.Render(classYaml, new SvgRenderOptions { Style = drawOn });
         Assert.NotEmpty(Matches(OverlayD, classSvg));
 
-        string seqSvg = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = EditorialStyle.Instance });
+        string seqSvg = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = drawOn });
         Assert.NotEmpty(Matches(OverlayD, seqSvg));
     }
 
