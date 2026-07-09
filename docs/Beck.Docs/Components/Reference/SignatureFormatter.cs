@@ -67,7 +67,7 @@ internal static class SignatureFormatter
     /// <summary>
     /// C#-style type name: <c>Action&lt;NodeBuilder&gt;</c>, <c>int?</c>, <c>string[]</c>.
     /// A trimmed copy of the engine's internal <c>ReflectionModel.FriendlyName</c>
-    /// (dotnet/Beck/Authoring/ClassBuilder.cs) — kept local rather than exposing the
+    /// (Beck/Authoring/ClassBuilder.cs) — kept local rather than exposing the
     /// engine's internals to the docs site.
     /// </summary>
     public static string FriendlyName(Type t)

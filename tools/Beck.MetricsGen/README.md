@@ -3,18 +3,18 @@
 Dev-time code generator for the embedded font-metrics tables the managed
 `EmbeddedMetricsMeasurer` reads. It measures the committed OFL fonts with the **same**
 SkiaSharp + HarfBuzzSharp stack `Beck.Skia`'s `SkiaTextMeasurer` uses, then emits per-glyph
-advance-per-em tables (plus per-em ascent/descent) as `dotnet/Beck/Text/*MetricsData.g.cs`.
+advance-per-em tables (plus per-em ascent/descent) as `Beck/Text/*MetricsData.g.cs`.
 
 This project is **not** packed and **not** in `Beck.slnx` — that solution carries only the
 shipping engine, its Skia plug-in, the sample, the tests, and the docs site. Run it on demand:
 
 ```bash
 # Writes SourceSerifMetricsData.g.cs / ArchivoMetricsData.g.cs / ShantellSansMetricsData.g.cs
-# into dotnet/Beck/Text (default output dir, resolved from this project's path).
-dotnet run --project dotnet/tools/Beck.MetricsGen -c Release
+# into Beck/Text (default output dir, resolved from this project's path).
+dotnet run --project tools/Beck.MetricsGen -c Release
 
 # Or an explicit output dir:
-dotnet run --project dotnet/tools/Beck.MetricsGen -c Release -- <outputDir>
+dotnet run --project tools/Beck.MetricsGen -c Release -- <outputDir>
 ```
 
 Each generated table mirrors `InterMetricsData.g.cs` exactly in shape (`SansWeights`, `SansAscent`,

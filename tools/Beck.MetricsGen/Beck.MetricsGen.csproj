@@ -2,7 +2,7 @@
 
   <!--
     Dev-time code generator for the embedded font-metrics tables in
-    dotnet/Beck/Text/*MetricsData.g.cs. NOT part of the NuGet pack and deliberately
+    Beck/Text/*MetricsData.g.cs. NOT part of the NuGet pack and deliberately
     NOT listed in Beck.slnx (that solution carries only the shipping engine, its Skia
     plug-in, the sample, the tests, and the docs site). Build/run it on demand via
     the run command in README.md in this folder.

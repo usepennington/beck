@@ -15,10 +15,10 @@ Every document declares a root `type:` — `architecture` (the layered node/edge
 `state`, or `class` — sharing one meta/flow/theming system (untyped documents render as
 architecture with a one-time deprecation warning). The shipping units are two NuGet packages:
 
-- **`Beck`** (`dotnet/Beck`) — the engine (`Beck.Rendering.*` namespaces: model → measure → layout
+- **`Beck`** (`Beck`) — the engine (`Beck.Rendering.*` namespaces: model → measure → layout
   → route → svg → animate) **plus** the authoring API (`Beck` namespace: `DiagramBuilder` family
   emitting Beck YAML from code). Only dependency: YamlDotNet.
-- **`Beck.Skia`** (`dotnet/Beck.Skia`) — optional exact text measurement (SkiaSharp + HarfBuzzSharp
+- **`Beck.Skia`** (`Beck.Skia`) — optional exact text measurement (SkiaSharp + HarfBuzzSharp
   shaping over user-supplied font files). Never mandatory; the engine defaults to an embedded
   Inter/IBM Plex Mono metrics table.
 
@@ -31,10 +31,10 @@ WebAssembly (`docs/Beck.Docs.Client`).
 
 ```bash
 dotnet build Beck.slnx                                   # everything (engine, tests, docs site)
-dotnet test dotnet/Beck.Tests/Beck.Tests.csproj          # the full gate: model/layout/route golden
+dotnet test Beck.Tests/Beck.Tests.csproj          # the full gate: model/layout/route golden
                                                          #   parity, card sizing, render smoke tests
-dotnet run --project dotnet/Beck.Sample -c Release       # emit a sample diagram's YAML to stdout
-dotnet pack dotnet/Beck/Beck.csproj -c Release -o <out>  # version comes from `v*` git tags (MinVer)
+dotnet run --project Beck.Sample -c Release       # emit a sample diagram's YAML to stdout
+dotnet pack Beck/Beck.csproj -c Release -o <out>  # version comes from `v*` git tags (MinVer)
 
 dotnet run --project docs/Beck.Docs                      # docs site dev server (diagrams render live)
 dotnet run --project docs/Beck.Docs -- build             # static docs build to docs/Beck.Docs/output
@@ -42,7 +42,7 @@ dotnet run --project docs/Beck.Docs -- build             # static docs build to 
 
 The engine targets net8.0; the docs site runs net10.0 (SDK pinned by `global.json`).
 
-## The rendering pipeline (the core of `dotnet/Beck`)
+## The rendering pipeline (the core of `Beck`)
 
 Each stage is a near-pure function with an explicit contract; `BeckSvg.cs` orchestrates them:
 
@@ -98,14 +98,14 @@ packet to its row via the flow step's `edge` id (many messages share one from/to
 - **Measured widths guard the typography.** Every `<text>` whose width fed layout carries
   `textLength` + `lengthAdjust`, so a font mismatch squeezes glyphs instead of breaking layout.
   Change card box-model math only alongside the card-sizing tests.
-- **The frozen goldens are the reference.** `dotnet/Beck.Tests/Goldens` + `Corpus` were extracted
+- **The frozen goldens are the reference.** `Beck.Tests/Goldens` + `Corpus` were extracted
   from the original TypeScript engine (deleted from the repo; it lives in git history before this
   restructure). They are regression anchors — regenerate them only from the C# engine itself, and
   only when a change is *intentionally* visual.
 
 ## Authoring API ↔ schema contract
 
-`dotnet/Beck/Authoring/` (namespace `Beck`) is a dependency-free fluent builder family — one per
+`Beck/Authoring/` (namespace `Beck`) is a dependency-free fluent builder family — one per
 diagram type (`DiagramBuilder`, `SequenceDiagramBuilder`, `StateDiagramBuilder`,
 `ClassDiagramBuilder` + its reflection `FromTypes`), sharing `MetaOptions` — that emits YAML via a
 tiny hand-rolled `YamlWriter` (no YamlDotNet). The C# enums map to schema tokens in `Tokens.Of(...)`

@@ -11,7 +11,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
 
     <PackageId>Beck</PackageId>
-    <!-- Version comes from the latest `v*` git tag via MinVer (see dotnet/Directory.Build.props). -->
+    <!-- Version comes from the latest `v*` git tag via MinVer (see Directory.Build.props). -->
     <Description>Declarative, animated architecture diagrams from YAML — rendered entirely server-side in C#. Turns Beck YAML into a single self-animating inline &lt;svg&gt;: layout, routing, and the full flow choreography are baked into CSS animations inside the SVG, so consumers ship no JavaScript. Includes a dependency-free authoring API (DiagramBuilder) for emitting Beck YAML from code. Pair with Beck.Skia for exact font measurement.</Description>
     <PackageTags>diagram;architecture;yaml;svg;static;animation;css;pennington</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
