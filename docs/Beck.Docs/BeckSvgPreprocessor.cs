@@ -65,7 +65,7 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
             string yaml = fence.IsFileEmbed ? ReadEmbeddedYaml(code) : code;
             if (fence.StyleName is { } style) yaml = ApplyStyle(yaml, style, languageId);
             string svg = _renderer.Render(yaml, fence.Animation).Svg;
-            html = $"<div class=\"beck-embed\">{svg}</div>";
+            html = $"<div class=\"beck-embed\">{svg}{ZoomButton}</div>";
         }
         catch (Exception ex)
         {
@@ -80,6 +80,18 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
         // must not re-process it.
         return new CodeBlockPreprocessResult(html, "beck", SkipTransform: true);
     }
+
+    /// <summary>
+    /// Fullscreen-zoom affordance emitted after the SVG inside every successful embed. site.js
+    /// listens for clicks on <c>.beck-zoom</c> (delegated, so it survives Blazor navigation) and
+    /// opens a <c>&lt;dialog class="beck-lightbox"&gt;</c> with a clone of the diagram over a
+    /// dimmed, blurred backdrop; BrandStyling.cs carries the CSS for both. The icon is an inline
+    /// expand glyph so the button needs no asset.
+    /// </summary>
+    private const string ZoomButton =
+        "<button class=\"beck-zoom\" type=\"button\" aria-label=\"View diagram full screen\" title=\"View full screen\">"
+        + "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">"
+        + "<path d=\"M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7\"/></svg></button>";
 
     /// <summary>
     /// Rewrites every document in <paramref name="yaml"/> so its <c>meta.style</c> is
