@@ -39,10 +39,37 @@
             }
         </div>
 
+        @* Visual style: sets SvgRenderOptions.Style (the site-wide default). A diagram's own
+           meta.style still wins — the documented precedence — so this is a default, not an
+           override; the panel hints as much. Classic is first and is the default. Changing it
+           rebuilds the options and re-renders. *@
+        <div id="pg-style" class="pg-dd ml-auto @(_open == Dd.Style ? "is-open" : "")">
+            <button type="button" class="pg-dd-trigger" @onclick="ToggleStyle" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Style)" title="Default style — a diagram's meta.style overrides">
+                <span class="pg-dd-trigger-label">Style</span>
+                <span class="pg-dd-value">@_styleLabel</span>
+                <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            @if (_open == Dd.Style)
+            {
+                <div class="pg-dd-panel pg-dd-panel--right" role="listbox" aria-label="Diagram style">
+                    <div class="pg-dd-note">Default style — a diagram's <code>meta.style</code> overrides.</div>
+                    @foreach (var st in Styles)
+                    {
+                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_styleName == st.Name)" @onclick="() => SelectStyle(st)">
+                            <span class="pg-dd-item-main">
+                                <span class="pg-dd-item-title">@st.Label</span>
+                                <span class="pg-dd-item-desc">@st.Desc</span>
+                            </span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
         @* Colour scheme: recolours the live diagram by overriding its --beck-* tokens
            on #pg-host[data-scheme] (see BrandStyling). Pure CSS — setting the attribute is
            enough, no re-render. "Default" keeps the site palette and the light/dark toggle. *@
-        <div id="pg-scheme" class="pg-dd ml-auto @(_open == Dd.Scheme ? "is-open" : "")">
+        <div id="pg-scheme" class="pg-dd @(_open == Dd.Scheme ? "is-open" : "")">
             <button type="button" class="pg-dd-trigger" @onclick="ToggleScheme" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Scheme)">
                 <span class="pg-swatch" data-scheme="@_scheme"></span>
                 <span class="pg-dd-value">@_schemeLabel</span>
@@ -134,11 +161,16 @@
     private CancellationTokenSource? _debounce;
 
     // ---- toolbar state ------------------------------------------------------
-    private enum Dd { None, Examples, Scheme }
+    private enum Dd { None, Examples, Style, Scheme }
     private Dd _open = Dd.None;
     private string _exampleLabel = "Load an example…";
     private string _scheme = "default";
     private string _schemeLabel = "Default";
+    // The site-wide default style (SvgRenderOptions.Style). Classic by default; a diagram's
+    // own meta.style still wins over this (see SelectStyle / BuildOptions).
+    private BeckStyle _style = BeckStyle.Classic;
+    private string _styleName = BeckStyle.Classic.Name;
+    private string _styleLabel = "Classic";
 
     // Ask for the site's IBM Plex families (rewrites --beck-font); glyphs are measured in the
     // browser via canvas measureText (CanvasTextMeasurer), so card sizing matches exactly what
@@ -149,7 +181,14 @@
         MonoFamily = "IBM Plex Mono",
         Files = new Dictionary<int, string>(),
     };
+    private ITextMeasurer? _measurer;
     private SvgRenderOptions? _options;
+
+    // The canvas measurer + the selected style folded into the render options. Rebuilt whenever
+    // the style default changes (SvgRenderOptions is init-only). Style is the lowest-precedence
+    // default: a diagram's own meta.style resolves over it inside BeckSvg.
+    private SvgRenderOptions BuildOptions() =>
+        new() { Font = Font, Measurer = _measurer!, Style = _style };
 
     // Render only happens in the browser: measurement needs canvas, which doesn't exist during
     // server prerender. Prerender emits the chrome (toolbar/editor); the diagram appears once
@@ -157,7 +196,8 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        _options = new SvgRenderOptions { Font = Font, Measurer = new CanvasTextMeasurer((IJSInProcessRuntime)JS) };
+        _measurer = new CanvasTextMeasurer((IJSInProcessRuntime)JS);
+        _options = BuildOptions();
         await JS.InvokeVoidAsync("beckMeasure.fontsReady");
         RenderNow();
         StateHasChanged();
@@ -308,6 +348,7 @@
 
     // ---- dropdowns ----------------------------------------------------------
     private void ToggleExamples() => _open = _open == Dd.Examples ? Dd.None : Dd.Examples;
+    private void ToggleStyle() => _open = _open == Dd.Style ? Dd.None : Dd.Style;
     private void ToggleScheme() => _open = _open == Dd.Scheme ? Dd.None : Dd.Scheme;
     private void CloseDropdowns() => _open = Dd.None;
 
@@ -341,6 +382,23 @@
         _open = Dd.None;
         _scheme = s.Value;
         _schemeLabel = s.Label;
+    }
+
+    // Selecting a style sets SvgRenderOptions.Style (the site-wide default) and re-renders. A
+    // diagram whose meta.style names a different style still overrides this — resolution happens
+    // in BeckSvg, so we just supply the default and let precedence do the rest.
+    private void SelectStyle(StyleChoice s)
+    {
+        _open = Dd.None;
+        if (_styleName == s.Name) return;
+        _styleName = s.Name;
+        _styleLabel = s.Label;
+        _style = s.Style;
+        if (_options is not null)
+        {
+            _options = BuildOptions();
+            RenderNow();
+        }
     }
 
     public void Dispose()
@@ -412,4 +470,31 @@
         new("one-dark", "One Dark"),
         new("hot-dog", "Hot Dog Stand"),
     };
+
+    private static string Cap(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    // Short plain-text descriptions (no markdown — these render as text in the panel). Keyed by
+    // the built-in style name; a custom style added later simply shows no blurb. Declared before
+    // Styles so it is initialised first (static field initialisers run in source order).
+    private static readonly Dictionary<string, string> StyleBlurbs = new()
+    {
+        ["classic"] = "The default Beck look",
+        ["minimal"] = "Sober flat: hairlines, no shadows, rings off",
+        ["terminal"] = "Monospace, bracketed labels, square packets",
+        ["blueprint"] = "Grid surface, dashed edges, dimension ticks",
+        ["glow"] = "Gradient edges, soft bloom, breathing pulse",
+        ["editorial"] = "Serif figure: hairlines, numbered captions",
+        ["brutalist"] = "Thick strokes, hard offset shadow, stepped motion",
+        ["sketch"] = "Hand-drawn wobbly outlines",
+        ["extrude"] = "2.5D slabs with depth faces, press-down",
+        ["circuit"] = "Chip pins on nodes, via dots at bends",
+        ["metro"] = "Transit lines, station dots, train packets",
+    };
+
+    // The visual styles, sourced from the engine registry so the list never drifts from the
+    // built-ins (classic is first — BeckStyles.All's declaration order). Each carries a display
+    // label (capitalised name) and a one-line plain-text blurb for the panel.
+    private sealed record StyleChoice(string Name, string Label, string Desc, BeckStyle Style);
+    private static readonly StyleChoice[] Styles =
+        BeckStyles.All.Select(s => new StyleChoice(s.Name, Cap(s.Name), StyleBlurbs.GetValueOrDefault(s.Name, ""), s)).ToArray();
 }

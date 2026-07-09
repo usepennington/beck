@@ -1,0 +1,19 @@
+type: architecture
+meta: { title: Read path, direction: LR }
+nodes:
+  - { id: client, title: Client, kind: user }
+  - { id: api, title: API, kind: gateway }
+  - { id: cache, title: Redis, kind: cache }
+  - { id: db, title: Postgres, kind: db }
+edges:
+  - { from: client, to: api }
+  - { from: api, to: cache, kind: async }
+  - { from: api, to: db }
+flow:
+  repeat: -1
+  repeatDelay: 1.2
+  steps:
+    - packet: { from: client, to: api, label: GET /item }
+    - packet: { from: api, to: cache, label: lookup, color: info }
+    - packet: { from: api, to: db, label: SELECT, color: warn }
+    - packet: { from: db, to: api, color: success }

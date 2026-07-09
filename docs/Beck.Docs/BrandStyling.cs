@@ -139,6 +139,18 @@ internal static class BrandStyling
         .dark .pg-dd-trigger:hover { border-color: var(--color-base-600); }
         .pg-dd.is-open .pg-dd-trigger { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 20%, transparent); }
         .pg-dd-value { white-space: nowrap; }
+        /* Dimmed lead-in label inside a trigger (e.g. "Style  Classic") so the value reads
+           as the selection while the control still says what it controls. */
+        .pg-dd-trigger-label { font-weight: 500; color: var(--color-base-400); }
+        .dark .pg-dd-trigger-label { color: var(--color-base-500); }
+        /* Hint line at the top of a panel (the style dropdown's precedence note). */
+        .pg-dd-note {
+          font-size: 11.5px; line-height: 1.45; color: var(--color-base-500);
+          padding: 6px 12px 8px; margin-bottom: 4px;
+          border-bottom: 1px solid var(--color-base-100);
+        }
+        .dark .pg-dd-note { color: var(--color-base-400); border-bottom-color: var(--color-base-800); }
+        .pg-dd-note code { font-family: var(--font-mono); font-size: 11px; }
         .pg-dd-caret { width: 13px; height: 13px; opacity: .5; transition: transform .18s ease; }
         .pg-dd.is-open .pg-dd-caret { transform: rotate(180deg); }
 

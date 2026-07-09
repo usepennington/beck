@@ -63,8 +63,11 @@ public static class BrutalistStyle
             ("--beck-icon-bg", "var(--color-base-100, #f1f5f9)"),
             ("--beck-accent", "var(--beck-primary)"),
             // The hard-offset shadow ink for the StyleArtwork.Brutalist shadow rect (behind each node).
-            // Same near-black ramp as the border, so the sticker shadow reads as one with the outline.
-            ("--beck-shadow", "var(--color-base-900, #0f172a)"),
+            // A solid, *neutral* near-black — one rung darker than the border's base-900 slate and free
+            // of its blue tint — so the thin offset sliver reads as crisp black sticker ink rather than a
+            // faint grey-navy shadow on a near-white surface (visual-jury tuning). Still token-driven:
+            // a host --color-base-950 (or --beck-shadow) override wins; #0a0a0a is only the last resort.
+            ("--beck-shadow", "var(--color-base-950, #0a0a0a)"),
         });
 
         // Dark overrides only (layered over the light block, which is always emitted first): borders and

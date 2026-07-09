@@ -177,8 +177,15 @@ internal static class Artwork
     {
         r = Math.Max(0, Math.Min(r, Math.Min(w, h) / 2));
         var rng = new Rng(seed);
-        const double A = 2.2;   // endpoint jitter amplitude
-        const double B = 1.8;   // edge-bow amplitude
+        // Amplitude grows with node size so the hand-drawn wobble stays legible on large rectangular
+        // cards/group boxes (where a fixed few-px jitter proportionally vanished and the sketch read
+        // rested on the Shantell font alone) while small pills/ghosts stay subtly wobbled. Keyed off the
+        // long dimension: s ramps 0→1 from ~90px to ~310px, lifting the endpoint jitter ~2.2→3.6 and the
+        // edge bow ~1.8→2.9. Still a few px — deep inside the card's ≥14px padding, so text still fits
+        // (the wobble perturbs only the outline path, never the measured content box).
+        double s = Math.Clamp((Math.Max(w, h) - 90) / 220.0, 0, 1);
+        double A = 2.2 + 1.4 * s;   // endpoint jitter amplitude
+        double B = 1.8 + 1.1 * s;   // edge-bow amplitude
         double J() => (rng.Next() - 0.5) * 2 * A;
         double Bow() => (rng.Next() - 0.5) * 2 * B;
 
