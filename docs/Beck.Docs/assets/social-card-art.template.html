@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Slate + emerald ramps as MonorailCSS emits them (Tailwind values). */
+  :root {
+    --color-base-50:#f8fafc; --color-base-100:#f1f5f9; --color-base-200:#e2e8f0;
+    --color-base-300:#cbd5e1; --color-base-400:#94a3b8; --color-base-500:#64748b;
+    --color-base-600:#475569; --color-base-700:#334155; --color-base-800:#1e293b;
+    --color-base-900:#0f172a; --color-base-950:#020617;
+    --color-primary-400:#34d399; --color-primary-500:#10b981; --color-primary-600:#059669;
+    --color-primary-700:#047857; --color-primary-950:#022c22;
+    --color-emerald-500:#10b981; --color-green-500:#22c55e; --color-sky-500:#0ea5e9;
+    --color-amber-500:#f59e0b; --color-red-500:#ef4444;
+  }
+  body { margin:0; background:#333; font-family:'IBM Plex Sans',system-ui,sans-serif; }
+
+  /* The site's accent remap (BrandStyling): success→green, info→sky. */
+  .beck-svg { --beck-success: var(--color-green-500); --beck-info: var(--color-sky-500); }
+
+  .card {
+    position: relative; width: 1200px; height: 630px; overflow: hidden;
+    /* the site's signature dark dot-grid surface */
+    background-color: var(--color-base-900);
+    background-image: radial-gradient(#26344d 1.2px, transparent 1.2px);
+    background-size: 18px 18px;
+  }
+  /* soft emerald glow anchoring the diagram side */
+  .card .glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 720px 560px at 78% 42%,
+      rgb(16 185 129 / 0.10), transparent 70%);
+  }
+  /* the diagram, subtle: faded overall + masked out toward the text side */
+  .card .art {
+    position: absolute; top: 50%; right: 44px; transform: translateY(-50%);
+    width: 460px;
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(to left, black 60%, transparent 100%);
+            mask-image: linear-gradient(to left, black 60%, transparent 100%);
+  }
+  .card .art svg { width: 100%; height: auto; display: block; }
+
+  /* sample text overlay — judged here, drawn by Ashcroft in production */
+  .card .text { position: absolute; left: 64px; top: 50%; transform: translateY(-50%); max-width: 560px; }
+  .card .eyebrow {
+    font-family:'IBM Plex Mono',monospace; font-size: 22px; font-weight: 600;
+    letter-spacing: .18em; color: var(--color-primary-400); margin-bottom: 22px;
+  }
+  .card .title { font-size: 62px; font-weight: 700; line-height: 1.08; color: var(--color-base-50); margin-bottom: 20px; }
+  .card .desc  { font-size: 27px; font-weight: 400; line-height: 1.35; color: var(--color-base-400); }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="glow"></div>
+  <div class="art"><!--SVG--></div>
+  <div class="text" id="text">
+    <div class="eyebrow">BECK</div>
+    <div class="title">Animated architecture diagrams</div>
+    <div class="desc">Declarative YAML in, a self-animating SVG out. No JavaScript.</div>
+  </div>
+</div>
+</body>
+</html>
