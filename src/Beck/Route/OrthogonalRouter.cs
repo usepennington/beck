@@ -1,5 +1,24 @@
 namespace Beck.Rendering.Route;
 
+/// <summary>
+/// One edge's turn lane on a node face: which channel it takes among the <paramref name="Count"/>
+/// edges sharing that face, ordered outermost-bend first. Lane 0 turns nearest its own node.
+/// </summary>
+internal readonly record struct Lane(int Index, int Count)
+{
+    public static readonly Lane Solo = new(0, 1);
+
+    /// <summary>This lane's signed offset from the gap's midpoint, spread over <paramref name="usable"/> px.</summary>
+    public double Offset(double usable)
+    {
+        if (Count < 2) return 0;
+        double step = Math.Min(MaxStep, usable / (Count - 1));
+        return (Index - (Count - 1) / 2.0) * step;
+    }
+
+    private const double MaxStep = 20;
+}
+
 internal sealed record RouteRequest(
     Rect From, Rect To, Side? FromSide, Side? ToSide, EdgeCurve Curve,
     IReadOnlyList<Rect> Obstacles, double Radius, bool PrimaryHorizontal,
@@ -7,7 +26,8 @@ internal sealed record RouteRequest(
     // Whether each anchor sits on a face shared with other edges. A fanned face's anchors are
     // evenly spread by AnchorShifts, and sliding any one of them — including the middle edge,
     // whose shift is 0 — breaks that spacing. Not inferable from the shift alone.
-    bool FromFanned = false, bool ToFanned = false);
+    bool FromFanned = false, bool ToFanned = false,
+    Lane FromLane = default, Lane ToLane = default);
 
 internal sealed record RoutedPath(string D, IReadOnlyList<Point> Points);
 
@@ -24,7 +44,8 @@ internal static class OrthogonalRouter
     private const double SelfLoopExtent = 30;
     private const double SameRankEps = 6;
     private const double StraightenInset = 6;    // keep a nudged anchor this far off a face corner
-    private const double StraightenTotal = 24;   // most the anchors may slide, combined
+    private const double StraightenLone = 28;    // most a lone anchor may slide to erase a kink
+    private const double StraightenSplit = 24;   // most two fanned anchors may slide, combined
 
     private static Point Center(Rect r) => new(r.X + r.W / 2, r.Y + r.H / 2);
     private static bool IsVertical(Side s) => s is Side.Top or Side.Bottom;
@@ -71,8 +92,8 @@ internal static class OrthogonalRouter
             // as a feedback edge over intermediate ranks does.
             Point a = Anchor(from, auto.FromSide), b = Anchor(to, auto.ToSide);
             List<Point> simple = IsVertical(auto.FromSide)
-                ? new() { a, new(a.X, Channel(a.Y, b.Y, 0, 0)), new(b.X, Channel(a.Y, b.Y, 0, 0)), b }
-                : new() { a, new(Channel(a.X, b.X, 0, 0), a.Y), new(Channel(a.X, b.X, 0, 0), b.Y), b };
+                ? new() { a, new(a.X, Channel(a.Y, b.Y, Lane.Solo, Lane.Solo)), new(b.X, Channel(a.Y, b.Y, Lane.Solo, Lane.Solo)), b }
+                : new() { a, new(Channel(a.X, b.X, Lane.Solo, Lane.Solo), a.Y), new(Channel(a.X, b.X, Lane.Solo, Lane.Solo), b.Y), b };
             if (PolylineHits(simple, obstacles))
             {
                 // Both gutters are reserved (BackEdgeGutter widens the canvas on either side), so
@@ -210,8 +231,14 @@ internal static class OrthogonalRouter
 
         double aPerp = vert ? a.X : a.Y, bPerp = vert ? b.X : b.Y;
         double off = bPerp - aPerp;
-        if (Math.Abs(off) < 0.5) return false;             // already straight
-        if (Math.Abs(off) > StraightenTotal) return false; // genuine jog — leave it stepped
+        if (Math.Abs(off) < 0.5) return false; // already straight
+
+        // A lone anchor absorbs the whole kink on its own and disturbs nothing, so it gets the
+        // wider budget. Two fanned anchors must split it, and every px they move is spacing lost
+        // on both their faces — so they buy less straightness before we call the jog genuine.
+        bool aFree = !fromFanned, bFree = !toFanned;
+        double budget = aFree || bFree ? StraightenLone : StraightenSplit;
+        if (Math.Abs(off) > budget) return false; // genuine jog — leave it stepped
 
         // Reachable band = the two faces' overlap on the perp axis, inset off the corners.
         double aLo = (vert ? from.X : from.Y) + StraightenInset, aHi = (vert ? from.X + from.W : from.Y + from.H) - StraightenInset;
@@ -221,7 +248,6 @@ internal static class OrthogonalRouter
 
         // Move a lone anchor in preference to a fanned one; only when both faces are fanned (so
         // there is no free anchor to give) do we split the nudge and accept the uneven spread.
-        bool aFree = !fromFanned, bFree = !toFanned;
         double target = aFree && bFree ? (aPerp + bPerp) / 2
             : aFree ? bPerp
             : bFree ? aPerp
@@ -230,7 +256,7 @@ internal static class OrthogonalRouter
 
         // One anchor may absorb the whole gap when it is the only one free to move; when both move
         // they split it, so neither travels far. Either way the combined slide stays in budget.
-        if (Math.Abs(target - aPerp) + Math.Abs(target - bPerp) > StraightenTotal + 0.01) return false;
+        if (Math.Abs(target - aPerp) + Math.Abs(target - bPerp) > budget + 0.01) return false;
 
         Point na = vert ? new Point(target, a.Y) : new Point(a.X, target);
         Point nb = vert ? new Point(target, b.Y) : new Point(b.X, target);
@@ -240,22 +266,34 @@ internal static class OrthogonalRouter
     }
 
     /// <summary>
-    /// The turn column (or row) for a step between opposite parallel faces. Starts at the gap's
-    /// midpoint, then staggers fanned edges (nonzero anchor shifts) toward the fanning node,
-    /// outermost anchor first, so a fan's parallel runs occupy parallel channels instead of
-    /// merging into one visual trunk — collinear runs never cross (their spans are disjoint),
-    /// but they read as a single wire. Clamped clear of both faces; degenerate gaps keep the mid.
+    /// The turn column (or row) for a step between opposite parallel faces. Edges sharing a face
+    /// take separate lanes, spread symmetrically about the gap's midpoint so the bundle uses the
+    /// whole corridor instead of crowding one node.
+    ///
+    /// <para>Lane order is by bend magnitude, outermost first (see <c>EdgePainter.AnchorShifts</c>):
+    /// an edge that must travel far across the rank turns nearest its own node, tucking its long
+    /// run behind the shorter edges' turns so no sibling's straight run crosses it. Ranking by the
+    /// anchor's |shift| instead — as this once did — collapses a symmetric pair onto one channel,
+    /// and when both of them happen to bend the *same* way their runs overlap and read as one wire.
+    /// The two lanes' spans only diverge when the pair bends apart, which a fan off-center from its
+    /// targets does not.</para>
+    ///
+    /// <para>Clamped clear of both faces; degenerate gaps keep the mid.</para>
     /// </summary>
-    private static double Channel(double aC, double bC, double fromShift, double toShift)
+    private static double Channel(double aC, double bC, Lane fromLane, Lane toLane)
     {
         double mid = (aC + bC) / 2;
-        double channel = mid + Math.Sign(bC - aC) * (Math.Abs(toShift) - Math.Abs(fromShift));
         double lo = Math.Min(aC, bC) + ChannelOffset, hi = Math.Max(aC, bC) - ChannelOffset;
-        return lo <= hi ? Math.Clamp(channel, lo, hi) : mid;
+        if (lo > hi) return mid;
+        // The from-fan spreads about the mid; a to-fan spreads the opposite way, so an arriving
+        // edge's long run also tucks nearest its own node.
+        double usable = hi - lo;
+        double offset = fromLane.Offset(usable) - toLane.Offset(usable);
+        return Math.Clamp(mid + Math.Sign(bC - aC) * offset, lo, hi);
     }
 
     private static List<Point> OrthogonalPolyline(
-        Point a, Point b, Side fromSide, Side toSide, double fromShift, double toShift,
+        Point a, Point b, Side fromSide, Side toSide, Lane fromLane, Lane toLane,
         IReadOnlyList<Rect> obstacles, Size? bounds)
     {
         if (fromSide == toSide) return SameFaceLoop(a, b, fromSide, obstacles, bounds);
@@ -265,14 +303,14 @@ internal static class OrthogonalRouter
 
         if (vert)
         {
-            double channelY = Channel(a.Y, b.Y, fromShift, toShift);
+            double channelY = Channel(a.Y, b.Y, fromLane, toLane);
             var simple = new List<Point> { a, new(a.X, channelY), new(b.X, channelY), b };
             if (!PolylineHits(simple, obstacles)) return simple;
             return LaneDetour(a, b, true, obstacles, bounds) ?? simple;
         }
         if (horz)
         {
-            double channelX = Channel(a.X, b.X, fromShift, toShift);
+            double channelX = Channel(a.X, b.X, fromLane, toLane);
             var simple = new List<Point> { a, new(channelX, a.Y), new(channelX, b.Y), b };
             if (!PolylineHits(simple, obstacles)) return simple;
             return LaneDetour(a, b, false, obstacles, bounds) ?? simple;
@@ -330,7 +368,7 @@ internal static class OrthogonalRouter
 
         var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromFanned, req.ToFanned, req.Obstacles, ref a, ref b)
             ? new List<Point> { a, b }
-            : OrthogonalPolyline(a, b, fromSide, toSide, req.FromShift, req.ToShift, req.Obstacles, req.Bounds);
+            : OrthogonalPolyline(a, b, fromSide, toSide, req.FromLane, req.ToLane, req.Obstacles, req.Bounds);
         return new RoutedPath(StepRound.RoundedPath(poly, req.Radius), poly);
     }
 }

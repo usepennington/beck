@@ -4,6 +4,13 @@ namespace Beck.Rendering.Route;
 internal sealed record RoutedEdge(EdgeModel Edge, string D, IReadOnlyList<Point> Points);
 
 /// <summary>
+/// How one end of an edge meets its node face: how far the anchor slid along the face,
+/// whether the face is shared with other edges, and which turn lane the edge takes.
+/// A lone anchor is the default — centred, unfanned, single-lane.
+/// </summary>
+internal readonly record struct AnchorPlan(double Shift, bool Fanned, Lane Lane);
+
+/// <summary>
 /// Routes every edge in a model over a layout — the path-computation half of
 /// <c>src/route/svg.ts:routeEdges</c> (prep → anchor spread → routeEdge). Marker
 /// and label emission land in M5; this produces the animatable path <c>d</c>.
@@ -74,10 +81,11 @@ internal static class EdgePainter
             EdgePrep? p = prep[i];
             if (p is null) continue;
             EdgeModel edge = model.Edges[i];
+            var (from, to) = shifts[i];
             RoutedPath routed = OrthogonalRouter.RouteEdge(new RouteRequest(
                 p.From, p.To, p.FromSide, p.ToSide, edge.Curve, p.Obstacles, radius, primaryHorizontal,
-                new Size(layout.Width, layout.Height), shifts[i].From, shifts[i].To,
-                shifts[i].FromFanned, shifts[i].ToFanned));
+                new Size(layout.Width, layout.Height), from.Shift, to.Shift,
+                from.Fanned, to.Fanned, from.Lane, to.Lane));
             outEdges.Add(new RoutedEdge(edge, routed.D, routed.Points));
         }
         return outEdges;
@@ -87,12 +95,13 @@ internal static class EdgePainter
     /// Spread anchors of edges sharing a node face along it, ordered by their far
     /// endpoints — a port of <c>svg.ts:anchorShifts</c>. Keeps fan-in/out lines
     /// from stacking and A↔B pairs parallel. Also reports which anchors landed on a
-    /// shared (fanned) face, so the router knows not to slide them apart again.
+    /// shared (fanned) face, so the router knows not to slide them apart again, and
+    /// assigns each a turn lane so the fan's runs never share a channel.
     /// </summary>
-    private static (double From, double To, bool FromFanned, bool ToFanned)[] AnchorShifts(
+    private static (AnchorPlan From, AnchorPlan To)[] AnchorShifts(
         IReadOnlyList<EdgeModel> edges, EdgePrep?[] prep, HashSet<string> pointNodes)
     {
-        var shifts = new (double From, double To, bool FromFanned, bool ToFanned)[edges.Count];
+        var shifts = new (AnchorPlan From, AnchorPlan To)[edges.Count];
         var groups = new Dictionary<(string Node, Side Side), List<(int Idx, bool IsFrom)>>();
         void Add(string nodeId, Side side, int idx, bool isFrom)
         {
@@ -153,11 +162,23 @@ internal static class EdgePainter
                 && (sorted.Count - 1 - alignIdx) * step <= half + 0.01)
                 @base = alignIdx;
 
+            // Turn lanes, ranked by bend magnitude: the edge whose far endpoint sits furthest off
+            // this face's centre has the longest run to make, so it turns first (lane 0, nearest
+            // this node) and tucks that run behind its siblings' shorter turns. Ties by edge id.
+            // Ranking by |shift| instead would hand a symmetric pair one shared channel — fine when
+            // they bend apart, a single merged wire when they both bend the same way.
+            var byBend = sorted
+                .OrderByDescending(r => Math.Abs(FarCenter(r) - faceCenter))
+                .ThenBy(r => edges[r.Idx].Id, StringComparer.Ordinal)
+                .ToList();
+            var laneOf = new Dictionary<(int, bool), Lane>();
+            for (int i = 0; i < byBend.Count; i++) laneOf[byBend[i]] = new Lane(i, byBend.Count);
+
             for (int i = 0; i < sorted.Count; i++)
             {
-                double off = (i - @base) * step;
-                if (sorted[i].IsFrom) (shifts[sorted[i].Idx].From, shifts[sorted[i].Idx].FromFanned) = (off, true);
-                else (shifts[sorted[i].Idx].To, shifts[sorted[i].Idx].ToFanned) = (off, true);
+                var plan = new AnchorPlan((i - @base) * step, Fanned: true, laneOf[sorted[i]]);
+                if (sorted[i].IsFrom) shifts[sorted[i].Idx].From = plan;
+                else shifts[sorted[i].Idx].To = plan;
             }
         }
         return shifts;
