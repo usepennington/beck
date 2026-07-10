@@ -35,13 +35,13 @@ internal static class BrandStyling
         body { font-family: var(--font-sans); }
 
         /* ---- signature dot-grid surface (apply to our own diagram frames) ---- */
+        /* Dots only — no solid fill, so the panel sits transparently on the page surface
+           instead of reading as a tinted card. */
         .dot-grid {
-          background-color: var(--color-base-50);
           background-image: radial-gradient(var(--color-base-200) 1px, transparent 1px);
           background-size: 16px 16px;
         }
         .dark .dot-grid {
-          background-color: var(--color-base-900);
           background-image: radial-gradient(var(--color-base-800) 1px, transparent 1px);
         }
 
@@ -87,8 +87,10 @@ internal static class BrandStyling
         .beck-embed--error { border-color: var(--color-red-400, #f87171); }
         .beck-embed--error pre { margin: 0; width: 100%; overflow: auto; font-family: var(--font-mono); font-size: 12px; }
         /* Bare: drop the fence frame so a diagram sits directly on its host surface (the
-           homepage hero renders onto its own dot-grid card). */
-        .beck-embed--bare { border: 0; background: none; padding: 0; margin: 0; min-height: 0; }
+           homepage hero renders onto its own dot-grid card). The `.dark` variant must be
+           repeated — `.dark .beck-embed` above outranks a lone `.beck-embed--bare`, which
+           would repaint a solid panel over the host's dots in dark mode. */
+        .beck-embed--bare, .dark .beck-embed--bare { border: 0; background: none; padding: 0; margin: 0; min-height: 0; }
         /* The playground renders into its own canvas — strip the fence frame there. */
         .pg-preview-canvas .beck-embed {
           border: 0; background: none; padding: 0; margin: 0; min-height: 0;
