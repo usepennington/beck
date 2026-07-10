@@ -6,9 +6,11 @@ namespace Beck.Rendering;
 /// virtual nodes → coords → direction transform); <c>Compute</c> is the recursive
 /// compound driver that lays each group out as a sized super-node. Constants,
 /// iteration counts (6 barycenter sweeps, 6 coordinate iterations), and tie-breaks
-/// mirror the TS exactly, except separation resolution: the TS two-pass sweep is
-/// replaced by pool-adjacent-violators so nodes contending for one position center
-/// as a block instead of left-anchoring (see LayoutCenteringTests).
+/// mirror the TS exactly, with two deliberate departures in coordinate assignment:
+/// separation resolution uses pool-adjacent-violators so nodes contending for one
+/// position center as a block instead of left-anchoring, and a node's desired
+/// position is the MEDIAN of its neighbors rather than their mean, so an odd fan
+/// lands its middle edge dead straight (see LayoutCenteringTests).
 /// </summary>
 internal static class LayeredLayout
 {
@@ -362,6 +364,21 @@ internal static class LayeredLayout
             for (int i = 0; i < row.Count; i++) sec[row[i]] = centers[i] + shift;
         }
 
+        // Where a node wants to sit given its neighbors on the adjacent rank. The MEDIAN, not the
+        // mean: with three sources fanning into one sink, a mean is dragged off-center by whichever
+        // source is widest, so the middle edge misses the sink by a few px and only reaches it via
+        // the router's anchor-sliding straighten cheat — which then skews the whole fan. The median
+        // lands the sink exactly under its middle source, so that edge is straight for free and the
+        // fan stays evenly spaced. Even neighbor counts average the two middles, so the two-source
+        // case (and every golden that depends on it) is unchanged.
+        static double Median(IReadOnlyList<double> values)
+        {
+            if (values.Count == 1) return values[0];
+            var s = values.OrderBy(v => v).ToList();
+            int mid = s.Count / 2;
+            return s.Count % 2 == 1 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+        }
+
         void ResolveSeparation(int r, Dictionary<string, double> desired)
         {
             // Least-squares placement under min-separation (pool-adjacent-violators):
@@ -399,16 +416,21 @@ internal static class LayeredLayout
             }
         }
 
+        // Sweeps alternate, and the LAST one wins outright — nothing re-balances after it. It must
+        // therefore be the up-pass (place each node under its parents), because that is the reading
+        // order: a sink lands beneath the sources feeding it. Ending on the down-pass instead left
+        // every sink holding the median of where its sources sat one pass ago, so a fan-in never
+        // quite closed on its middle parent and the router papered over the gap with a jog.
         for (int it = 0; it < 6; it++)
         {
-            if (it % 2 == 0)
+            if (it % 2 == 1)
                 for (int r = 1; r <= maxRank; r++)
                 {
                     var desired = new Dictionary<string, double>();
                     foreach (var id in order[r])
                     {
                         var neigh = up.GetValueOrDefault(id);
-                        if (neigh is { Count: > 0 }) desired[id] = neigh.Sum(n => sec[n]) / neigh.Count;
+                        if (neigh is { Count: > 0 }) desired[id] = Median(neigh.Select(n => sec[n]).ToList());
                     }
                     ResolveSeparation(r, desired);
                 }
@@ -419,7 +441,7 @@ internal static class LayeredLayout
                     foreach (var id in order[r])
                     {
                         var neigh = down.GetValueOrDefault(id);
-                        if (neigh is { Count: > 0 }) desired[id] = neigh.Sum(n => sec[n]) / neigh.Count;
+                        if (neigh is { Count: > 0 }) desired[id] = Median(neigh.Select(n => sec[n]).ToList());
                     }
                     ResolveSeparation(r, desired);
                 }

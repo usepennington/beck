@@ -40,92 +40,53 @@ public sealed class ClassicSvgGoldenTests
 
     // A single frozen golden per non-classic built-in style (Phase 3 policy: full corpus for
     // classic only, one representative golden + the StyleSmokeTests invariants for the rest).
-    private const string MinimalPinnedSuffix = "min1ma1c";
+    // Each style pins its own IdSuffix so the golden is independent of the content-hash algorithm.
+    public static IEnumerable<object[]> Styles() => StyleCases.Select(c => new object[] { c.Golden });
 
-    [Fact]
-    public void MinimalSvg_MatchesGolden()
+    private static readonly (string Golden, string Suffix, BeckStyle Style)[] StyleCases =
     {
+        ("minimal",   "min1ma1c", MinimalStyle.Instance),
+        ("terminal",  "term1na1", TerminalStyle.Instance),
+        ("blueprint", "b1uepr1n", BlueprintStyle.Instance),
+        ("glow",      "g10wg10w", GlowStyle.Instance),
+        ("brutalist", "brut4115", BrutalistStyle.Instance),
+        ("sketch",    "sk3tchg0", SketchStyle.Instance),
+        ("extrude",   "extrud30", ExtrudeStyle.Instance),
+        ("circuit",   "c1rcu1t0", CircuitStyle.Instance),
+    };
+
+    [Theory]
+    [MemberData(nameof(Styles))]
+    public void StyleSvg_MatchesGolden(string golden)
+    {
+        var c = StyleCases.Single(s => s.Golden == golden);
         string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = MinimalPinnedSuffix, Style = MinimalStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "minimal.svg"));
-        Assert.Equal(golden, actual);
+        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = c.Suffix, Style = c.Style });
+        Assert.Equal(File.ReadAllText(Path.Combine(GoldenDir, golden + ".svg")), actual);
     }
 
-    private const string TerminalPinnedSuffix = "term1na1";
-
+    /// <summary>
+    /// Rewrites every SVG golden in the SOURCE tree from the current engine. Guarded by
+    /// <c>BECK_REGEN=1</c>, so a normal run skips it. Only for an intentional visual change —
+    /// diff the result before committing.
+    /// </summary>
     [Fact]
-    public void TerminalSvg_MatchesGolden()
+    public void Regenerate()
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = TerminalPinnedSuffix, Style = TerminalStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "terminal.svg"));
-        Assert.Equal(golden, actual);
+        if (Environment.GetEnvironmentVariable("BECK_REGEN") != "1") return;
+        string srcGoldens = Path.Combine(SourceDir(), "Goldens", "svg");
+        foreach (string name in new[] { "arch-kitchen", "seq-kitchen", "class" })
+        {
+            string yaml = File.ReadAllText(Path.Combine(CorpusDir, name + ".yaml"));
+            File.WriteAllText(Path.Combine(srcGoldens, name + ".svg"),
+                BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = PinnedSuffix }));
+        }
+        string kitchen = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+        foreach (var c in StyleCases)
+            File.WriteAllText(Path.Combine(srcGoldens, c.Golden + ".svg"),
+                BeckSvg.Render(kitchen, new SvgRenderOptions { IdSuffix = c.Suffix, Style = c.Style }));
     }
 
-    private const string BlueprintPinnedSuffix = "b1uepr1n";
-
-    [Fact]
-    public void BlueprintSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = BlueprintPinnedSuffix, Style = BlueprintStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "blueprint.svg"));
-        Assert.Equal(golden, actual);
-    }
-
-    private const string GlowPinnedSuffix = "g10wg10w";
-
-    [Fact]
-    public void GlowSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = GlowPinnedSuffix, Style = GlowStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "glow.svg"));
-        Assert.Equal(golden, actual);
-    }
-
-    private const string BrutalistPinnedSuffix = "brut4115";
-
-    [Fact]
-    public void BrutalistSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = BrutalistPinnedSuffix, Style = BrutalistStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "brutalist.svg"));
-        Assert.Equal(golden, actual);
-    }
-
-    private const string SketchPinnedSuffix = "sk3tchg0";
-
-    [Fact]
-    public void SketchSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = SketchPinnedSuffix, Style = SketchStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "sketch.svg"));
-        Assert.Equal(golden, actual);
-    }
-
-    private const string ExtrudePinnedSuffix = "extrud30";
-
-    [Fact]
-    public void ExtrudeSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = ExtrudePinnedSuffix, Style = ExtrudeStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "extrude.svg"));
-        Assert.Equal(golden, actual);
-    }
-
-    private const string CircuitPinnedSuffix = "c1rcu1t0";
-
-    [Fact]
-    public void CircuitSvg_MatchesGolden()
-    {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = CircuitPinnedSuffix, Style = CircuitStyle.Instance });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, "circuit.svg"));
-        Assert.Equal(golden, actual);
-    }
-
+    private static string SourceDir([System.Runtime.CompilerServices.CallerFilePath] string self = "") =>
+        Path.GetDirectoryName(self)!;
 }

@@ -54,7 +54,9 @@ internal static class EdgePainter
             foreach (var m in MemberNodeIds(edge.To)) excludeIds.Add(m);
             var obstacles = layout.Nodes.Where(kv => !excludeIds.Contains(kv.Key)).Select(kv => kv.Value).ToList();
 
-            var (fs, ts) = OrthogonalRouter.SidesFor(from.Value, to.Value, dir, edge.Curve, obstacles, edge.FromSide, edge.ToSide);
+            var (fs, ts) = OrthogonalRouter.SidesFor(
+                from.Value, to.Value, dir, edge.Curve, obstacles, edge.FromSide, edge.ToSide,
+                new Size(layout.Width, layout.Height));
             prep[i] = new EdgePrep(from.Value, to.Value, obstacles, fs, ts);
         }
 

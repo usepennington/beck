@@ -1,0 +1,296 @@
+using Beck.Rendering;
+using Beck.Rendering.Route;
+using Beck.Rendering.Text;
+
+namespace Beck.Tests.CleanLines;
+
+/// <summary>A single measured defect on one diagram.</summary>
+internal sealed record Defect(string Kind, string Detail)
+{
+    /// <summary>
+    /// Hard defects are always wrong and gate the build. <c>through-node</c> is excluded: the
+    /// current router escapes a back edge to whichever reserved gutter is clear, but when a
+    /// sibling blocks the row on <em>both</em> sides it has no third option, so a handful of
+    /// crowded feedback shapes still cut a card. Ratcheted rather than asserted — closing it
+    /// for good needs an obstacle-aware path search, not another special case.
+    /// </summary>
+    public bool IsHard => Kind is "off-canvas" or "anchor-off-face" or "anchor-on-corner" or "diagonal";
+}
+
+/// <summary>
+/// The line-quality scorecard for one routed diagram: hard violations (things that are
+/// always wrong) plus soft aesthetics (things we want to drive toward zero).
+/// </summary>
+internal sealed record QualityReport(
+    int Edges,
+    int StraightEdges,
+    int MicroJogs,
+    int Bends,
+    int Faces,
+    int SkewedFaces,
+    int OffCenterFaces,
+    /// <summary>Pairs of segments from different edges sharing a collinear channel.</summary>
+    int MergedRuns,
+    IReadOnlyList<Defect> Violations)
+{
+    public double StraightRate => Edges == 0 ? 1 : (double)StraightEdges / Edges;
+    public double BendsPerEdge => Edges == 0 ? 0 : (double)Bends / Edges;
+}
+
+/// <summary>
+/// Measures how *clean* a routed diagram looks. Two tiers:
+///
+/// <para><b>Violations</b> — never acceptable, asserted hard by the chaos monkey:
+/// off-canvas coordinates, an anchor sitting off (or on the corner of) its node face,
+/// a path cutting through a node that isn't one of its endpoints, and a non-orthogonal
+/// segment on a step-round edge.</para>
+///
+/// <para><b>Aesthetics</b> — counted and ratcheted, never asserted per-diagram:
+/// micro-jogs (a stub cross-axis segment that reads as a kink rather than a turn),
+/// skewed anchor fans (unequal spacing on a shared face), off-center fans, and merged
+/// runs (two edges sharing a collinear channel so they read as one wire).</para>
+///
+/// A jog is only "micro" below <see cref="MicroJogPx"/> — beyond that it is a genuine
+/// turn between two ranks and drawing it as a step is correct.
+/// </summary>
+internal static class LineQuality
+{
+    /// <summary>A cross-axis run shorter than this reads as a kink, not a deliberate turn.</summary>
+    public const double MicroJogPx = 28;
+
+    /// <summary>How far an anchor must stay off its face's corners to still read as "on the face".</summary>
+    public const double CornerInset = 2;
+
+    /// <summary>Slack for calling two anchor gaps equal, or a fan centered.</summary>
+    public const double FanEps = 1.0;
+
+    /// <summary>Collinear runs closer than this on the perpendicular axis merge into one wire.</summary>
+    public const double MergeEps = 1.5;
+
+    /// <summary>Overlap along a shared channel below this is a corner touch, not a merged wire.</summary>
+    public const double MergeOverlapPx = 8;
+
+    public static (DiagramModel Model, LayoutResult Layout, IReadOnlyList<RoutedEdge> Edges) Route(string yaml)
+    {
+        DiagramModel model = Validate.LoadDiagram(yaml);
+        var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, InterMetricsMeasurer.Instance));
+        LayoutResult layout = LayeredLayout.Compute(model, sizes);
+        return (model, layout, EdgePainter.RouteEdges(model, layout));
+    }
+
+    public static QualityReport Analyze(string yaml) => Analyze(Route(yaml));
+
+    public static QualityReport Analyze((DiagramModel Model, LayoutResult Layout, IReadOnlyList<RoutedEdge> Edges) routed)
+    {
+        var (model, layout, edges) = routed;
+        var violations = new List<Defect>();
+        int straight = 0, microJogs = 0, bends = 0, mergedRuns = 0;
+
+        var selfLoops = new HashSet<string>();
+        foreach (var e in model.Edges) if (e.From == e.To) selfLoops.Add(e.Id);
+
+        // ---- per-edge shape ----
+        var runs = new List<(string Edge, Point A, Point B)>();
+        foreach (RoutedEdge re in edges)
+        {
+            var pts = Dedupe(re.Points);
+            foreach (Point p in pts)
+                if (p.X < -0.01 || p.Y < -0.01)
+                    violations.Add(new Defect("off-canvas", $"{re.Edge.Id} passes ({p.X:0.##}, {p.Y:0.##})"));
+
+            if (pts.Count < 2) continue;
+            bool ortho = re.Edge.Curve == Beck.Rendering.EdgeCurve.StepRound;
+
+            for (int i = 0; i < pts.Count - 1; i++)
+            {
+                Point a = pts[i], b = pts[i + 1];
+                if (ortho && Math.Abs(a.X - b.X) > 0.5 && Math.Abs(a.Y - b.Y) > 0.5)
+                    violations.Add(new Defect("diagonal", $"{re.Edge.Id} segment ({a.X:0.#},{a.Y:0.#})→({b.X:0.#},{b.Y:0.#})"));
+                if (ortho && !selfLoops.Contains(re.Edge.Id)) runs.Add((re.Edge.Id, a, b));
+            }
+
+            if (selfLoops.Contains(re.Edge.Id)) continue;
+
+            bends += pts.Count - 2;
+            if (pts.Count == 2) straight++;
+
+            // Interior segments only: the first and last runs leave/enter a face, so a short one
+            // there is an anchor stub, not a jog. A short interior run is the kink we hunt.
+            for (int i = 1; i < pts.Count - 2; i++)
+            {
+                double len = Dist(pts[i], pts[i + 1]);
+                if (len > 0.5 && len < MicroJogPx) microJogs++;
+            }
+
+            CheckObstacles(model, layout, re, violations);
+        }
+
+        // ---- merged runs: two different edges sharing a collinear channel ----
+        for (int i = 0; i < runs.Count; i++)
+            for (int j = i + 1; j < runs.Count; j++)
+            {
+                if (runs[i].Edge == runs[j].Edge) continue;
+                if (SharesChannel(runs[i], runs[j])) mergedRuns++;
+            }
+
+        // ---- anchor fans ----
+        var (faces, skewed, offCenter, fanViolations) = AnalyzeFaces(layout, edges, selfLoops);
+        violations.AddRange(fanViolations);
+
+        int nonLoop = edges.Count(e => !selfLoops.Contains(e.Edge.Id));
+        return new QualityReport(nonLoop, straight, microJogs, bends, faces, skewed, offCenter, mergedRuns, violations);
+    }
+
+    /// <summary>
+    /// The polyline as drawn: coincident points dropped, then collinear interior points
+    /// dissolved. A step whose two runs share an axis is one straight line with a redundant
+    /// vertex, and counting that vertex as a bend would hide exactly the edges we are trying
+    /// to make straight.
+    /// </summary>
+    private static List<Point> Dedupe(IReadOnlyList<Point> pts)
+    {
+        var outp = new List<Point>();
+        foreach (Point p in pts)
+            if (outp.Count == 0 || Dist(outp[^1], p) > 0.5) outp.Add(p);
+        for (int i = outp.Count - 2; i >= 1; i--)
+        {
+            Point a = outp[i - 1], b = outp[i], c = outp[i + 1];
+            bool vert = Math.Abs(a.X - b.X) < 0.5 && Math.Abs(b.X - c.X) < 0.5;
+            bool horz = Math.Abs(a.Y - b.Y) < 0.5 && Math.Abs(b.Y - c.Y) < 0.5;
+            if (vert || horz) outp.RemoveAt(i);
+        }
+        return outp;
+    }
+
+    private static double Dist(Point a, Point b) => Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+
+    /// <summary>Two axis-aligned runs on the same line, overlapping enough to read as one wire.</summary>
+    private static bool SharesChannel((string Edge, Point A, Point B) r, (string Edge, Point A, Point B) s)
+    {
+        bool rVert = Math.Abs(r.A.X - r.B.X) < 0.5, sVert = Math.Abs(s.A.X - s.B.X) < 0.5;
+        bool rHorz = Math.Abs(r.A.Y - r.B.Y) < 0.5, sHorz = Math.Abs(s.A.Y - s.B.Y) < 0.5;
+        if (rVert && sVert && !(rHorz && sHorz))
+        {
+            if (Math.Abs(r.A.X - s.A.X) > MergeEps) return false;
+            return Overlap(r.A.Y, r.B.Y, s.A.Y, s.B.Y) > MergeOverlapPx;
+        }
+        if (rHorz && sHorz && !(rVert && sVert))
+        {
+            if (Math.Abs(r.A.Y - s.A.Y) > MergeEps) return false;
+            return Overlap(r.A.X, r.B.X, s.A.X, s.B.X) > MergeOverlapPx;
+        }
+        return false;
+    }
+
+    private static double Overlap(double a1, double a2, double b1, double b2) =>
+        Math.Min(Math.Max(a1, a2), Math.Max(b1, b2)) - Math.Max(Math.Min(a1, a2), Math.Min(b1, b2));
+
+    private static void CheckObstacles(DiagramModel model, LayoutResult layout, RoutedEdge re, List<Defect> violations)
+    {
+        var pts = Dedupe(re.Points);
+        foreach (var (id, rect) in layout.Nodes)
+        {
+            if (id == re.Edge.From || id == re.Edge.To) continue;
+            for (int i = 0; i < pts.Count - 1; i++)
+                if (SegHitsRect(pts[i], pts[i + 1], rect))
+                {
+                    violations.Add(new Defect("through-node", $"{re.Edge.Id} crosses node '{id}'"));
+                    return;
+                }
+        }
+    }
+
+    // Mirrors OrthogonalRouter.SegHitsRect, with a slightly larger inset so a path grazing a
+    // node's stroke isn't reported. Only a genuine cut through the card counts.
+    private static bool SegHitsRect(Point a, Point b, Rect rect, double inset = 4)
+    {
+        double x1 = rect.X + inset, y1 = rect.Y + inset;
+        double x2 = rect.X + rect.W - inset, y2 = rect.Y + rect.H - inset;
+        if (x2 <= x1 || y2 <= y1) return false;
+        if (Math.Abs(a.Y - b.Y) < 0.5)
+        {
+            double y = a.Y;
+            if (y <= y1 || y >= y2) return false;
+            return Math.Max(a.X, b.X) > x1 && Math.Min(a.X, b.X) < x2;
+        }
+        if (Math.Abs(a.X - b.X) < 0.5)
+        {
+            double x = a.X;
+            if (x <= x1 || x >= x2) return false;
+            return Math.Max(a.Y, b.Y) > y1 && Math.Min(a.Y, b.Y) < y2;
+        }
+        return Math.Max(a.X, b.X) > x1 && Math.Min(a.X, b.X) < x2 && Math.Max(a.Y, b.Y) > y1 && Math.Min(a.Y, b.Y) < y2;
+    }
+
+    /// <summary>
+    /// Recover each edge's anchors from its routed endpoints, bucket them by the node face
+    /// they land on, and measure the fan: anchors must sit on the face (never past a corner),
+    /// consecutive gaps must be equal, and the spread must center on the face.
+    /// </summary>
+    private static (int Faces, int Skewed, int OffCenter, List<Defect> Violations) AnalyzeFaces(
+        LayoutResult layout, IReadOnlyList<RoutedEdge> edges, HashSet<string> selfLoops)
+    {
+        var violations = new List<Defect>();
+        var buckets = new Dictionary<(string Node, Side Side), List<double>>();
+
+        void Record(string nodeId, Point p, string edgeId)
+        {
+            if (!layout.Nodes.TryGetValue(nodeId, out Rect r)) return;
+            Side? side = FaceOf(r, p);
+            if (side is null)
+            {
+                violations.Add(new Defect("anchor-off-face",
+                    $"{edgeId} anchors at ({p.X:0.##}, {p.Y:0.##}) — not on any face of '{nodeId}' {Fmt(r)}"));
+                return;
+            }
+            bool alongY = side is Side.Left or Side.Right;
+            double pos = alongY ? p.Y : p.X;
+            double lo = alongY ? r.Y : r.X, hi = alongY ? r.Y + r.H : r.X + r.W;
+            if (pos < lo + CornerInset - 0.01 || pos > hi - CornerInset + 0.01)
+                violations.Add(new Defect("anchor-on-corner",
+                    $"{edgeId} anchors at {pos:0.##} on the {side} face of '{nodeId}' (span {lo:0.##}..{hi:0.##})"));
+
+            var key = (nodeId, side.Value);
+            if (!buckets.TryGetValue(key, out var list)) buckets[key] = list = new();
+            list.Add(pos);
+        }
+
+        foreach (RoutedEdge re in edges)
+        {
+            if (selfLoops.Contains(re.Edge.Id) || re.Points.Count < 2) continue;
+            Record(re.Edge.From, re.Points[0], re.Edge.Id);
+            Record(re.Edge.To, re.Points[^1], re.Edge.Id);
+        }
+
+        int skewed = 0, offCenter = 0, faces = 0;
+        foreach (var (key, raw) in buckets)
+        {
+            if (raw.Count < 2) continue;
+            faces++;
+            var pos = raw.OrderBy(v => v).ToList();
+            Rect r = layout.Nodes[key.Node];
+            bool alongY = key.Side is Side.Left or Side.Right;
+            double center = alongY ? r.Y + r.H / 2 : r.X + r.W / 2;
+
+            var gaps = new List<double>();
+            for (int i = 1; i < pos.Count; i++) gaps.Add(pos[i] - pos[i - 1]);
+            if (gaps.Max() - gaps.Min() > FanEps) skewed++;
+            if (Math.Abs((pos[0] + pos[^1]) / 2 - center) > FanEps) offCenter++;
+        }
+        return (faces, skewed, offCenter, violations);
+    }
+
+    private static Side? FaceOf(Rect r, Point p)
+    {
+        const double eps = 0.6;
+        bool inX = p.X >= r.X - eps && p.X <= r.X + r.W + eps;
+        bool inY = p.Y >= r.Y - eps && p.Y <= r.Y + r.H + eps;
+        if (inX && Math.Abs(p.Y - r.Y) < eps) return Side.Top;
+        if (inX && Math.Abs(p.Y - (r.Y + r.H)) < eps) return Side.Bottom;
+        if (inY && Math.Abs(p.X - r.X) < eps) return Side.Left;
+        if (inY && Math.Abs(p.X - (r.X + r.W)) < eps) return Side.Right;
+        return null;
+    }
+
+    private static string Fmt(Rect r) => $"[{r.X:0.##},{r.Y:0.##} {r.W:0.##}×{r.H:0.##}]";
+}

@@ -55,7 +55,7 @@ internal static class OrthogonalRouter
 
     public static (Side FromSide, Side ToSide) SidesFor(
         Rect from, Rect to, Direction dir, EdgeCurve curve, IReadOnlyList<Rect> obstacles,
-        Side? explicitFrom, Side? explicitTo)
+        Side? explicitFrom, Side? explicitTo, Size? bounds = null)
     {
         bool primaryHorizontal = dir is Direction.LR or Direction.RL;
         var auto = AutoSides(from, to, primaryHorizontal);
@@ -72,8 +72,17 @@ internal static class OrthogonalRouter
                 : new() { a, new(Channel(a.X, b.X, 0, 0), a.Y), new(Channel(a.X, b.X, 0, 0), b.Y), b };
             if (PolylineHits(simple, obstacles))
             {
-                Side face = primaryHorizontal ? Side.Top : Side.Left;
-                return (face, face);
+                // Both gutters are reserved (BackEdgeGutter widens the canvas on either side), so
+                // take whichever one this edge can actually reach: the run from each anchor out to
+                // the lane travels along its own rank, and a sibling card sitting between the node
+                // and the near gutter would be sliced straight through. Near face first, so a clear
+                // route keeps the historical side.
+                Side near = primaryHorizontal ? Side.Top : Side.Left;
+                Side far = primaryHorizontal ? Side.Bottom : Side.Right;
+                foreach (Side face in new[] { near, far })
+                    if (!PolylineHits(SameFaceLoop(Anchor(from, face), Anchor(to, face), face, obstacles, bounds), obstacles))
+                        return (face, face);
+                return (near, near);
             }
         }
         return (explicitFrom ?? auto.FromSide, explicitTo ?? auto.ToSide);
