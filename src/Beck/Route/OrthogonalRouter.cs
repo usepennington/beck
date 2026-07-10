@@ -53,36 +53,29 @@ internal static class OrthogonalRouter
         return dx >= 0 ? (Side.Right, Side.Left) : (Side.Left, Side.Right);
     }
 
-    private static bool SpansObstacle(Rect from, Rect to, IReadOnlyList<Rect> obstacles, bool primaryHorizontal)
-    {
-        double aLo = primaryHorizontal ? from.X : from.Y;
-        double aHi = primaryHorizontal ? from.X + from.W : from.Y + from.H;
-        double bLo = primaryHorizontal ? to.X : to.Y;
-        double bHi = primaryHorizontal ? to.X + to.W : to.Y + to.H;
-        double gapLo = Math.Min(aHi, bHi);
-        double gapHi = Math.Max(aLo, bLo);
-        if (gapHi <= gapLo) return false;
-        foreach (var o in obstacles)
-        {
-            double oLo = primaryHorizontal ? o.X : o.Y;
-            double oHi = primaryHorizontal ? o.X + o.W : o.Y + o.H;
-            if (oHi > gapLo && oLo < gapHi) return true;
-        }
-        return false;
-    }
-
     public static (Side FromSide, Side ToSide) SidesFor(
         Rect from, Rect to, Direction dir, EdgeCurve curve, IReadOnlyList<Rect> obstacles,
         Side? explicitFrom, Side? explicitTo)
     {
         bool primaryHorizontal = dir is Direction.LR or Direction.RL;
-        if (curve == EdgeCurve.StepRound && explicitFrom is null && explicitTo is null
-            && Geometry.AgainstFlow(from, to, dir) && SpansObstacle(from, to, obstacles, primaryHorizontal))
-        {
-            Side face = primaryHorizontal ? Side.Top : Side.Left;
-            return (face, face);
-        }
         var auto = AutoSides(from, to, primaryHorizontal);
+        if (curve == EdgeCurve.StepRound && explicitFrom is null && explicitTo is null
+            && Geometry.AgainstFlow(from, to, dir))
+        {
+            // A back edge keeps its direct opposite-face route when the corridor is
+            // genuinely clear (e.g. a rank-pinned child sitting behind its parents);
+            // it diverts to the gutter face only when that route would cross a node,
+            // as a feedback edge over intermediate ranks does.
+            Point a = Anchor(from, auto.FromSide), b = Anchor(to, auto.ToSide);
+            List<Point> simple = IsVertical(auto.FromSide)
+                ? new() { a, new(a.X, Channel(a.Y, b.Y, 0, 0)), new(b.X, Channel(a.Y, b.Y, 0, 0)), b }
+                : new() { a, new(Channel(a.X, b.X, 0, 0), a.Y), new(Channel(a.X, b.X, 0, 0), b.Y), b };
+            if (PolylineHits(simple, obstacles))
+            {
+                Side face = primaryHorizontal ? Side.Top : Side.Left;
+                return (face, face);
+            }
+        }
         return (explicitFrom ?? auto.FromSide, explicitTo ?? auto.ToSide);
     }
 

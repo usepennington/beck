@@ -6,7 +6,9 @@ namespace Beck.Rendering;
 /// virtual nodes → coords → direction transform); <c>Compute</c> is the recursive
 /// compound driver that lays each group out as a sized super-node. Constants,
 /// iteration counts (6 barycenter sweeps, 6 coordinate iterations), and tie-breaks
-/// mirror the TS exactly.
+/// mirror the TS exactly, except separation resolution: the TS two-pass sweep is
+/// replaced by pool-adjacent-violators so nodes contending for one position center
+/// as a block instead of left-anchoring (see LayoutCenteringTests).
 /// </summary>
 internal static class LayeredLayout
 {
@@ -362,30 +364,39 @@ internal static class LayeredLayout
 
         void ResolveSeparation(int r, Dictionary<string, double> desired)
         {
+            // Least-squares placement under min-separation (pool-adjacent-violators):
+            // nodes whose desires collide merge into a block placed at the block's mean
+            // desire. Anchoring the first colliding node at its desire instead would
+            // skew shared targets toward the row start (two sources over one sink left
+            // the sink flush under the first source).
             var row = order[r];
-            var pos = new double[row.Count];
+            if (row.Count == 0) return;
+            var cum = new double[row.Count];
+            for (int i = 1; i < row.Count; i++)
+                cum[i] = cum[i - 1] + HalfB(row[i - 1]) + gap + HalfB(row[i]);
+
+            var blockSum = new double[row.Count];
+            var blockCount = new int[row.Count];
+            int top = 0;
             for (int i = 0; i < row.Count; i++)
             {
-                string id = row[i];
-                double p = desired.TryGetValue(id, out double d) ? d : sec[id];
-                if (i > 0)
+                double q = (desired.TryGetValue(row[i], out double d) ? d : sec[row[i]]) - cum[i];
+                blockSum[top] = q;
+                blockCount[top] = 1;
+                top++;
+                while (top > 1 && blockSum[top - 2] / blockCount[top - 2] > blockSum[top - 1] / blockCount[top - 1])
                 {
-                    double min = pos[i - 1] + HalfB(row[i - 1]) + gap + HalfB(id);
-                    if (p < min) p = min;
+                    blockSum[top - 2] += blockSum[top - 1];
+                    blockCount[top - 2] += blockCount[top - 1];
+                    top--;
                 }
-                pos[i] = p;
             }
-            for (int i = row.Count - 2; i >= 0; i--)
+            int idx = 0;
+            for (int b = 0; b < top; b++)
             {
-                string id = row[i];
-                if (!desired.TryGetValue(id, out double want)) continue;
-                double max = pos[i + 1] - HalfB(row[i + 1]) - gap - HalfB(id);
-                if (want < pos[i])
-                    pos[i] = Math.Max(want, i > 0 ? pos[i - 1] + HalfB(row[i - 1]) + gap + HalfB(id) : double.NegativeInfinity);
-                else
-                    pos[i] = Math.Min(want, max);
+                double basePos = blockSum[b] / blockCount[b];
+                for (int k = 0; k < blockCount[b]; k++, idx++) sec[row[idx]] = basePos + cum[idx];
             }
-            for (int i = 0; i < row.Count; i++) sec[row[i]] = pos[i];
         }
 
         for (int it = 0; it < 6; it++)
