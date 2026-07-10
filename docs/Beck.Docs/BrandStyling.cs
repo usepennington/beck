@@ -149,10 +149,36 @@ internal static class BrandStyling
           overflow: hidden; cursor: zoom-out;
         }
         .beck-lightbox[open] { display: flex; align-items: center; justify-content: center; }
+        /* The page behind goes blurred, washed out, and sunk into the app surface, so the
+           diagram is the only saturated thing on screen. The scrim can't say
+           `var(--beck-surface)`: that token is declared on the per-diagram `.b-{hash}` scope
+           inside each SVG, so it doesn't resolve out here on a <dialog> in <body>. Instead
+           this mirrors the token's own definition (base-50 / base-950), which is what makes
+           the scrim read as the page receding rather than a black wash.
+
+           `@starting-style` gives the ::backdrop — which only exists while the dialog is
+           open, and so is always newly rendered — a from-state to transition out of; site.js
+           removes the dialog on close, so this is an entrance-only cue. */
         .beck-lightbox::backdrop {
-          background: rgb(0 0 0 / 0.25);
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
+          background-color: color-mix(in srgb, var(--color-base-50, #ffffff) 55%, transparent);
+          backdrop-filter: blur(12px) saturate(0.1);
+          -webkit-backdrop-filter: blur(12px) saturate(0.1);
+          transition: background-color .18s ease-out, backdrop-filter .18s ease-out,
+                      -webkit-backdrop-filter .18s ease-out;
+        }
+        .dark .beck-lightbox::backdrop {
+          background-color: color-mix(in srgb, var(--color-base-950, #0d1117) 60%, transparent);
+        }
+        /* One from-state serves both themes — fully transparent either way. */
+        @starting-style {
+          .beck-lightbox[open]::backdrop {
+            background-color: transparent;
+            backdrop-filter: blur(0px) saturate(1);
+            -webkit-backdrop-filter: blur(0px) saturate(1);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .beck-lightbox::backdrop { transition: none; }
         }
         .beck-lightbox .beck-svg { width: auto; height: auto; max-width: 94vw; max-height: 90vh; }
         .beck-lightbox-close {
