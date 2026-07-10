@@ -170,6 +170,10 @@ internal static class Stylesheet
             sb.Append($"{scope} .beck-node-title{{fill:var(--beck-accent);}}");
             sb.Append($"{scope} .beck-class-title{{fill:var(--beck-accent);}}");
             sb.Append($"{scope} .beck-class-divider{{stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ClassHeadBorder)}%, var(--beck-node-border));}}");
+            // The crayon fill (Artwork.Scribble): accent wax, run through the crayon filter (StyleDefs)
+            // for rough pressure edges + grainy holes, and translucent so the paper shows through.
+            // stroke-width is per-path (it scales with the box), so it is NOT set here.
+            sb.Append($"{scope} .beck-scribble{{fill:none;stroke:var(--beck-accent);stroke-linecap:round;stroke-linejoin:round;opacity:.34;filter:url(#beck-crayon-{h});}}");
         }
 
         return sb.ToString();
@@ -190,10 +194,28 @@ internal static class Stylesheet
     /// </summary>
     public static string StyleDefs(string h, BeckStyle style)
     {
-        if (!style.Strokes.GradientNodes) return "";
-        return $"<linearGradient id=\"beck-node-grad-{h}\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">" +
-               "<stop offset=\"0\" stop-color=\"var(--beck-node-grad-a, var(--beck-accent))\"/>" +
-               "<stop offset=\"1\" stop-color=\"var(--beck-node-grad-b, var(--beck-info))\"/>" +
-               "</linearGradient>";
+        string defs = "";
+        if (style.Strokes.GradientNodes)
+            defs += $"<linearGradient id=\"beck-node-grad-{h}\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">" +
+                    "<stop offset=\"0\" stop-color=\"var(--beck-node-grad-a, var(--beck-accent))\"/>" +
+                    "<stop offset=\"1\" stop-color=\"var(--beck-node-grad-b, var(--beck-info))\"/>" +
+                    "</linearGradient>";
+        // Sketch's crayon-wax filter, applied to every .beck-scribble fill path: a low-frequency
+        // turbulence displaces the stroke outline (wobbly hand-pressure edges), then a high-frequency
+        // grain field turned into an alpha mask by the feColorMatrix eats waxy holes in the stroke so
+        // the paper shows through. Seeds are constants — deterministic output — and the noise samples
+        // user space, so every node lands on a different patch of the same field and no two cards
+        // texture alike. One shared def serves all paths.
+        if (style.Artwork == StyleArtwork.Sketch)
+            defs += $"<filter id=\"beck-crayon-{h}\" x=\"-15%\" y=\"-15%\" width=\"130%\" height=\"130%\">" +
+                    "<feTurbulence type=\"fractalNoise\" baseFrequency=\"0.036\" numOctaves=\"3\" seed=\"26\" result=\"warp\"/>" +
+                    "<feDisplacementMap in=\"SourceGraphic\" in2=\"warp\" scale=\"6\" xChannelSelector=\"R\" yChannelSelector=\"G\" result=\"rough\"/>" +
+                    // Anisotropic grain — long and low-frequency along x, tight along y — so the holes
+                    // stretch into drag streaks that follow the colouring strokes, wax not spray-paint.
+                    "<feTurbulence type=\"fractalNoise\" baseFrequency=\"0.28 1.2\" numOctaves=\"2\" seed=\"66\" result=\"grain\"/>" +
+                    "<feColorMatrix in=\"grain\" type=\"matrix\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.02 1.47\" result=\"mask\"/>" +
+                    "<feComposite in=\"rough\" in2=\"mask\" operator=\"in\"/>" +
+                    "</filter>";
+        return defs;
     }
 }

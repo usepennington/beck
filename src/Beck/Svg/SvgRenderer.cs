@@ -539,6 +539,7 @@ internal static class SvgRenderer
         StyleGeometry geo = style.Geometry;
         double bi = geo.NodeBorderInset;
         sb.Append(Artwork.Rect(style, "beck-node beck-node--pill", bi, bi, w - 2 * bi, h - 2 * bi, h / 2, hash + ":" + node.Id, shadow: true));
+        sb.Append(Artwork.Scribble(style, bi, bi, w - 2 * bi, h - 2 * bi, h / 2, hash + ":" + node.Id));
         double titleLine = geo.CardTitleLine, subLine = geo.PillSubLine, gap = geo.PillGap;
         double stackH = titleLine + (node.Subtitle != null ? gap + subLine : 0);
         double top = h / 2 - stackH / 2;
@@ -561,6 +562,8 @@ internal static class SvgRenderer
         bool hasStereo = node.Stereotype != null;
         double headH = (hasStereo ? stereoLine : 0) + titleLine + headPadY * 2 + geo.HeadBorderBottom;
         sb.Append($"<rect class=\"beck-class-head\" x=\"0\" y=\"0\" width=\"{N(w)}\" height=\"{N(headH)}\"/>");
+        // Sketch: crayon-scribble the head compartment only (the member lists stay on clean paper).
+        sb.Append(Artwork.Scribble(style, bi, bi, w - 2 * bi, headH - bi, geo.ClassRadius, hash + ":" + node.Id));
         double ty = headPadY;
         if (hasStereo)
         {
@@ -622,6 +625,7 @@ internal static class SvgRenderer
         if (node.Kind == NodeKind.External) cls += " beck-node--external";
         if (node.Variant == NodeVariant.Subtle) cls += " beck-node--subtle";
         sb.Append(Artwork.Rect(style, cls, bi, bi, w - 2 * bi, h - 2 * bi, geo.CardRadius, hash + ":" + node.Id, shadow: true));
+        sb.Append(Artwork.Scribble(style, bi, bi, w - 2 * bi, h - 2 * bi, geo.CardRadius, hash + ":" + node.Id));
 
         bool hasIcon = Icons.ResolveIcon(node.Icon) != null;
         double padHalf = geo.CardPadX / 2;

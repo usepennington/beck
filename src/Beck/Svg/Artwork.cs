@@ -165,6 +165,67 @@ internal static class Artwork
         return sb.ToString();
     }
 
+    /// <summary>
+    /// The sketch <em>crayon fill</em>: one continuous back-and-forth colouring pass — even
+    /// horizontal rows sweeping the full box width with a fat round-capped stroke, hooking down at
+    /// each edge to the next row, like a patient five-year-old filling in a shape. The geometry stays
+    /// deliberately smooth and gently jittered; all the wax texture comes from the shared crayon
+    /// filter (<c>Stylesheet.StyleDefs</c>): turbulence-displaced pressure edges plus a grain-mask
+    /// that eats waxy holes so the paper shows through. Rows inset where they cross the corner
+    /// radius, so the fill hugs rounded cards and pills alike. Stroke width scales with the box
+    /// (emitted per-path, not in the class rule) and row pitch tracks it for near-total coverage.
+    /// Every coordinate comes from the deterministic seed stream (its own <c>:scribble</c> suffix,
+    /// so the outline wobble is untouched) — the same YAML scribbles the same way forever. Returns
+    /// <c>""</c> for every non-sketch artwork — byte-identical.
+    /// </summary>
+    public static string Scribble(BeckStyle style, double x, double y, double w, double h, double r, string seed)
+    {
+        if (style.Artwork != StyleArtwork.Sketch) return "";
+        // Inset covers the filter's reach: the displacement map shoves wax up to ~scale/2 px outward,
+        // so anything tighter lets specks land outside the wobbly border.
+        const double pad = 4;
+        double ix = x + pad, iy = y + pad, iw = w - 2 * pad, ih = h - 2 * pad;
+        if (iw < 12 || ih < 8) return "";
+        var rng = new Rng(seed + ":scribble");
+        double rr = Math.Max(0, Math.Min(r - pad / 2, Math.Min(iw, ih) / 2));
+        // Fat crayon: width scales with the box so a short chip and a tall card both read as the
+        // same gentle pressure; rows overlap slightly (pitch < width) so coverage is near-total and
+        // the grain mask alone decides where paper peeks through.
+        double sw = Math.Max(5.5, Math.Min(11, ih / 5.5));
+        double pitch = sw * 0.88;
+        // Horizontal extent of a row at height yy, pulled in where it crosses the corner circles.
+        (double L, double R) Extent(double yy)
+        {
+            double d = Math.Min(yy - iy, iy + ih - yy);
+            double inset = d < rr ? rr - Math.Sqrt(Math.Max(0, rr * rr - (rr - d) * (rr - d))) : 0;
+            return (ix + inset, ix + iw - inset);
+        }
+
+        var sb = new StringBuilder();
+        bool rightward = rng.Next() < 0.5;
+        double yTop = iy + sw * 0.45, yBot = iy + ih - sw * 0.45;
+        bool first = true;
+        for (double yy = yTop; yy <= yBot + pitch * 0.4; yy += pitch)
+        {
+            double rowY = Math.Min(yBot, yy) + (rng.Next() - 0.5) * sw * 0.25;
+            var (xl, xr) = Extent(rowY);
+            double x0 = rightward ? xl : xr, x1 = rightward ? xr : xl;
+            // Small per-row overshoot jitter at each end — no two rows start or stop flush.
+            x0 += (rightward ? 1 : -1) * rng.Next() * sw * 0.35;
+            x1 -= (rightward ? 1 : -1) * rng.Next() * sw * 0.35;
+            double yEnd = rowY + (rng.Next() - 0.5) * sw * 0.35;
+            if (first) { sb.Append('M').Append(F((x0, rowY))); first = false; }
+            else sb.Append('L').Append(F((x0, rowY)));   // the edge hook down from the previous row
+            // The sweep itself: a lazy cubic with two mid controls drifting a touch off the row line.
+            sb.Append('C').Append(F((x0 + (x1 - x0) / 3, rowY + (rng.Next() - 0.5) * sw * 0.5))).Append(' ')
+              .Append(F((x0 + 2 * (x1 - x0) / 3, rowY + (rng.Next() - 0.5) * sw * 0.5))).Append(' ')
+              .Append(F((x1, yEnd)));
+            rightward = !rightward;
+        }
+        if (first) return "";
+        return $"<path class=\"beck-scribble\" d=\"{sb}\" stroke-width=\"{N(Math.Round(sw, 2))}\"/>";
+    }
+
     // ---- deterministic wobble geometry ----
 
     /// <summary>
