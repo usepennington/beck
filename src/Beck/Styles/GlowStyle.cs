@@ -1,4 +1,4 @@
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>glow</c> built-in style (mock 1g) — the design brief's "baseline to beat", rebuilt around the

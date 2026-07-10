@@ -1,8 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Text;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Builds a <c>type: sequence</c> Beck diagram — participants become columns,

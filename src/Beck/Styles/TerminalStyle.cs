@@ -1,4 +1,4 @@
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>terminal</c> built-in style (mock 1f): mono everything — every text role renders through the

@@ -1,8 +1,9 @@
 using System.Globalization;
 using System.Text;
-using Beck.Rendering.Svg;
+using Beck.Model;
+using Beck.Svg;
 
-namespace Beck.Rendering.Animate;
+namespace Beck.Animate;
 
 /// <summary>A node's card box in canvas coordinates (for overlay placement).</summary>
 internal readonly record struct NodeBox(double X, double Y, double W, double H, double Rx);

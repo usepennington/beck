@@ -1,6 +1,6 @@
-using Beck.Rendering.Text;
+using Beck.Text;
 
-namespace Beck.Rendering;
+namespace Beck;
 
 /// <summary>How the diagram resolves its light/dark theme. Overrides <c>meta.theme</c>.</summary>
 public enum ThemeMode

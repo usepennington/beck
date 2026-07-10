@@ -1,7 +1,8 @@
 using System.Globalization;
 using System.Text;
+using Beck.Model;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>Small SVG formatting helpers: coordinate rounding and XML escaping.</summary>
 internal static class SvgWriter

@@ -1,12 +1,9 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Builds a <c>type: class</c> Beck diagram — UML class cards (name, fields,
@@ -61,7 +58,7 @@ public sealed class ClassDiagramBuilder
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
     public ClassDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
 
-    /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default) reads the hierarchy top-down.</summary>
+    /// <summary>Set the layout direction — <see cref="Authoring.Direction.TB"/> (default) reads the hierarchy top-down.</summary>
     public ClassDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>

@@ -1,4 +1,4 @@
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// The concrete typography for a <see cref="FontRole"/>: sans-vs-mono, weight,

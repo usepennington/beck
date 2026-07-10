@@ -1,4 +1,6 @@
-namespace Beck.Rendering;
+using Beck.Model;
+
+namespace Beck.Layout;
 
 /// <summary>An intrinsic size in px (a measured card, a laid-out box).</summary>
 internal readonly record struct Size(double W, double H);

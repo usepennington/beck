@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Beck;
+using Beck.Authoring;
 using BlazorMonaco;
 using BlazorMonaco.Editor;
 using BlazorMonaco.Languages;
@@ -61,7 +62,7 @@ internal static class BeckCompletions
 
         string line = lines[lineIdx];
         int col = position.Column; // 1-based; the char before the caret is line[col-2]
-        string pre = line[..System.Math.Min(col - 1, line.Length)];
+        string pre = line[..Math.Min(col - 1, line.Length)];
         string? section = SectionAt(lines, lineIdx);
 
         // ---- value context: `<field>: <partial>` ----

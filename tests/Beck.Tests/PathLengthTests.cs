@@ -1,6 +1,6 @@
+using Beck.Animate;
 using Beck.Rendering;
-using Beck.Rendering.Animate;
-using Beck.Rendering.Svg;
+using Beck.Svg;
 using Xunit;
 
 namespace Beck.Tests;

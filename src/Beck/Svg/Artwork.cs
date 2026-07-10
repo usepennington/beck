@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// The <see cref="StyleArtwork"/> shape seam: emits a node/group/pseudo-state outline as either the

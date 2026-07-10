@@ -1,6 +1,6 @@
-using Beck.Rendering.Text;
+using Beck.Text;
 
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>blueprint</c> built-in style (Phase 3/5, mock 1a): a technical-drawing look — a faint

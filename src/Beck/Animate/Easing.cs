@@ -1,7 +1,8 @@
 using System.Globalization;
 using System.Text;
+using Beck.Model;
 
-namespace Beck.Rendering.Animate;
+namespace Beck.Animate;
 
 /// <summary>
 /// Analytic easing functions (Penner-equivalent, matching GSAP) and their CSS

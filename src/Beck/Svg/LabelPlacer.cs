@@ -1,7 +1,9 @@
-using Beck.Rendering.Route;
-using Beck.Rendering.Text;
+using Beck.Layout;
+using Beck.Model;
+using Beck.Route;
+using Beck.Text;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// Places edge labels + end multiplicities — a port of the label half of

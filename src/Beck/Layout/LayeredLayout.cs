@@ -1,4 +1,6 @@
-namespace Beck.Rendering;
+using Beck.Model;
+
+namespace Beck.Layout;
 
 /// <summary>
 /// The Sugiyama-lite layered engine — a faithful port of <c>src/layout/layered.ts</c>.

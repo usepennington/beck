@@ -1,4 +1,4 @@
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// Non-fatal render-time warnings (e.g. an untyped document). The TS engine writes

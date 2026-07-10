@@ -1,4 +1,4 @@
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// The zero-dependency text measurer, generalized over an embedded <see cref="MetricsTable"/>: it

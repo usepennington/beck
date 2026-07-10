@@ -1,6 +1,4 @@
-using Beck.Rendering.Text;
-
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>extrude</c> built-in style (Phase 4, artwork): playful 2.5D slabs. Every card/pill/class

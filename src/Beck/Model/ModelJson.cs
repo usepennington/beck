@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// Serializes a <see cref="DiagramModel"/> to canonical JSON — recursively

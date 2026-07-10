@@ -1,4 +1,6 @@
-namespace Beck.Rendering;
+using Beck.Model;
+
+namespace Beck.Layout;
 
 internal sealed record MessageRow(int Index, double Y, bool Self);
 

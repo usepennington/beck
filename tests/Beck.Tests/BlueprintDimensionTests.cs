@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Beck.Rendering;
+using Beck.Styles;
 using Xunit;
 
 namespace Beck.Tests;

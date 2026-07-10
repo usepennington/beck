@@ -1,4 +1,6 @@
 using Beck;
+using Beck.Authoring;
+using Beck.Model;
 using Beck.Rendering;
 using Xunit;
 

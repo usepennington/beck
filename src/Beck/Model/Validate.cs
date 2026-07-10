@@ -1,7 +1,7 @@
-using Beck.Rendering.Svg;
-using static Beck.Rendering.Coerce;
+using Beck.Svg;
+using static Beck.Model.Coerce;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// Validate and normalize the raw (parsed-YAML) tree into a full
@@ -35,7 +35,7 @@ internal static class Validate
     {
         string? s = OptString(v);
         if (s is null) return null;
-        if (Beck.BeckStyles.IsValidName(s)) return s;
+        if (BeckStyles.IsValidName(s)) return s;
         BeckDiagnostics.Warn(
             $"Beck: ignoring invalid `meta.style` \"{s}\" — a style name must match [a-z0-9-]+.");
         return null;

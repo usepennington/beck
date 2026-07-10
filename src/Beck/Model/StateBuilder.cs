@@ -1,6 +1,6 @@
-using static Beck.Rendering.Coerce;
+using static Beck.Model.Coerce;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// <c>type: state</c> — a state machine on the layered engine. States are pills;

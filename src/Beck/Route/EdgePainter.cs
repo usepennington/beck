@@ -1,4 +1,10 @@
-namespace Beck.Rendering.Route;
+using Beck.Layout;
+using Beck.Model;
+using DiagramModel = Beck.Model.DiagramModel;
+using Direction = Beck.Model.Direction;
+using EdgeModel = Beck.Model.EdgeModel;
+
+namespace Beck.Route;
 
 /// <summary>A routed edge: the model edge plus its path data + turn points.</summary>
 internal sealed record RoutedEdge(EdgeModel Edge, string D, IReadOnlyList<Point> Points);

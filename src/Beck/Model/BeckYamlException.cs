@@ -1,4 +1,4 @@
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// An error with an author-friendly message about their diagram source. Mirrors

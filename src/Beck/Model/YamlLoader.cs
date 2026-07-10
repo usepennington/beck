@@ -1,7 +1,7 @@
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// Parses a YAML source (via YamlDotNet) into an untyped tree of <c>object?</c>:

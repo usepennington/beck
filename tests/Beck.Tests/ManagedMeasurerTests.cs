@@ -1,6 +1,7 @@
 using Beck.Rendering;
 using Beck.Rendering.Text;
 using Beck.Skia;
+using Beck.Text;
 using Xunit;
 
 namespace Beck.Tests;

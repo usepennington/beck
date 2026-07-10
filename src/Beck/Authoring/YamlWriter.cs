@@ -1,8 +1,6 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// A tiny, dependency-free YAML scalar/flow emitter — just enough to write the
@@ -11,18 +9,13 @@ namespace Beck;
 /// </summary>
 internal static partial class YamlWriter
 {
-    private static readonly HashSet<string> Reserved = new(System.StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> Reserved = new(StringComparer.OrdinalIgnoreCase)
     {
         "true", "false", "null", "yes", "no", "on", "off", "~",
     };
-
-#if NET7_0_OR_GREATER
+    
     [GeneratedRegex(@"^-?\d+(\.\d+)?$")]
     private static partial Regex NumberRegex();
-#else
-    private static readonly Regex _number = new(@"^-?\d+(\.\d+)?$", RegexOptions.Compiled);
-    private static Regex NumberRegex() => _number;
-#endif
 
     /// <summary>Emit a scalar, quoting (and escaping) only when YAML requires it.</summary>
     public static string Scalar(string? value)
@@ -48,7 +41,7 @@ internal static partial class YamlWriter
         // quoting them is always safe, so this is the simplest robust guard.
         if (char.IsDigit(v[0])) return false;
         if (!(char.IsLetterOrDigit(v[0]) || v[0] == '_')) return false;
-        if (v[v.Length - 1] == ' ') return false;
+        if (v[^1] == ' ') return false;
         const string extra = " _.()/+-";
         foreach (var ch in v)
             if (!(char.IsLetterOrDigit(ch) || extra.IndexOf(ch) >= 0))

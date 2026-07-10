@@ -1,3 +1,5 @@
+using Beck.Styles;
+
 namespace Beck;
 
 /// <summary>
@@ -8,7 +10,7 @@ namespace Beck;
 /// A <c>meta.style</c> token (and a custom style's <see cref="BeckStyle.Name"/>) must match
 /// <c>[a-z0-9-]+</c> — see <see cref="IsValidName"/>. The model validates the token against that rule
 /// and warns (then ignores) on a malformed one; <c>BeckSvg</c> resolves a well-formed token through
-/// this table first, then the per-render <see cref="Rendering.SvgRenderOptions.Styles"/> custom registry.
+/// this table first, then the per-render <see cref="SvgRenderOptions.Styles"/> custom registry.
 /// </remarks>
 public static class BeckStyles
 {

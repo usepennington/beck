@@ -1,7 +1,9 @@
 using System.Text.RegularExpressions;
+using Beck.Model;
 using Beck.Rendering;
-using Beck.Rendering.Svg;
 using Beck.Rendering.Text;
+using Beck.Svg;
+using Beck.Text;
 using Xunit;
 
 namespace Beck.Tests;

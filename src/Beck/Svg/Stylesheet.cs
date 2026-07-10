@@ -1,6 +1,7 @@
 using System.Text;
+using Beck.Text;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// Emits the scoped <c>&lt;style&gt;</c> block: the <c>--beck-*</c> token cascade
@@ -107,7 +108,7 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-group-label-bg{{fill:var(--beck-surface);}}");
         // Group labels are already uppercased at the render site; a style can additionally make them
         // mono (blueprint). Classic's GroupLabel role is sans → nothing appended → byte-identical.
-        string glFamily = style.Typography.Roles.Of(Text.FontRole.GroupLabel).Mono ? "font-family:var(--beck-font-mono);" : "";
+        string glFamily = style.Typography.Roles.Of(FontRole.GroupLabel).Mono ? "font-family:var(--beck-font-mono);" : "";
         sb.Append($"{scope} .beck-group-label{{fill:var(--beck-group-label);{glFamily}}}");
 
         // state pills reuse the card treatment; start/end pseudo-states
@@ -135,7 +136,7 @@ internal static class Stylesheet
         // annotations, consistent with its edge/group/band labels). MsgText is a mono role, so
         // uppercasing is width-invariant — the measured chip still fits. Classic's MsgText is
         // non-uppercase → nothing appended → byte-identical.
-        string mtCase = style.Typography.Roles.Of(Text.FontRole.MsgText).Uppercase ? "text-transform:uppercase;" : "";
+        string mtCase = style.Typography.Roles.Of(FontRole.MsgText).Uppercase ? "text-transform:uppercase;" : "";
         sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.MsgText)}%, var(--beck-text));{mtCase}}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-chip{{stroke:none;}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-text,{scope} .beck-msg-text--bare{{fill:var(--beck-text-muted);}}");
@@ -150,7 +151,7 @@ internal static class Stylesheet
         // Edge-label type honours the EdgeLabel role's family/case flags (mono uppercase for blueprint);
         // the textLength guard keeps the run inside its measured box, so this is layout-safe. Classic's
         // EdgeLabel is sans/non-uppercase → nothing appended → byte-identical.
-        var elSpec = style.Typography.Roles.Of(Text.FontRole.EdgeLabel);
+        var elSpec = style.Typography.Roles.Of(FontRole.EdgeLabel);
         string elType = (elSpec.Mono ? "font-family:var(--beck-font-mono);" : "") + (elSpec.Uppercase ? "text-transform:uppercase;" : "");
         sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:{geo.EdgeLabelHalo};stroke-linejoin:round;{elType}}}");
 

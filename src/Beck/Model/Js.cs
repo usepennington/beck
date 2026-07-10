@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// JavaScript semantics the model port depends on: JS <c>number</c> is a double,

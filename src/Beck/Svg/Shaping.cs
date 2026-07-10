@@ -1,6 +1,7 @@
 using System.Text;
+using Beck.Layout;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// The per-style path-<em>shaping</em> seam (<see cref="StyleEdges.BowAmplitude"/> /

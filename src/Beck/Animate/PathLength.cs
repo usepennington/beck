@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Beck.Rendering.Animate;
+namespace Beck.Animate;
 
 /// <summary>
 /// Length of an SVG path <c>d</c> (the M/L/Q paths StepRound emits, plus C for

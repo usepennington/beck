@@ -1,6 +1,7 @@
-using Beck.Rendering.Text;
+using Beck.Svg;
+using Beck.Text;
 
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>sketch</c> built-in style (Phase 4, artwork + edge presentation): a hand-drawn look — warm-paper
@@ -27,7 +28,7 @@ namespace Beck;
 /// dash on <see cref="StyleStrokes"/>.</para>
 /// <para><b>What is a sketch-specific branch</b> (keyed off <see cref="StyleArtwork.Sketch"/>, so every
 /// other style stays byte-identical): the wobbly closed-path node/group/pseudo-state outlines and their
-/// per-node hash-derived rounding (<see cref="Rendering.Svg.Artwork"/>); the opaque-paper node surface
+/// per-node hash-derived rounding (<see cref="Artwork"/>); the opaque-paper node surface
 /// (token <c>--beck-node-bg: var(--beck-surface)</c>) overlaid with a deterministic translucent
 /// <em>crayon-scribble</em> accent fill (<c>Artwork.Scribble</c> + the <c>.beck-scribble</c> rule) on
 /// cards, pills, and class heads; the accent-matched node/class title ink and accent class dividers

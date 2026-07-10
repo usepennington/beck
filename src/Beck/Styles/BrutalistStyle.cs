@@ -1,6 +1,6 @@
-using Beck.Rendering.Text;
+using Beck.Text;
 
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>brutalist</c> built-in style (Phase 4): stark, high-contrast neo-brutalism — heavy black

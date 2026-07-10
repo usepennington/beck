@@ -1,11 +1,16 @@
+using Beck.Animate;
+using Beck.Authoring;
+using Beck.Model;
 using Beck.Rendering.Text;
+using Beck.Svg;
+using Beck.Text;
 
 namespace Beck;
 
 /// <summary>
 /// The packet glyph a style prefers by default (<see cref="StyleMotion.PacketGlyph"/>) — a small,
 /// public, style-scoped vocabulary distinct from the per-packet author-facing
-/// <see cref="Beck.PacketShape"/> (<c>Dot|Circle|Ring</c>), since a style-level default may pick a
+/// <see cref="PacketShape"/> (<c>Dot|Circle|Ring</c>), since a style-level default may pick a
 /// shape no individual flow step can yet author.
 /// </summary>
 public enum PacketGlyph
@@ -217,8 +222,8 @@ public sealed record BeckStyle
     /// arrowhead presentation + marker scaling, deterministic path <em>bow</em> shaping, and the
     /// lifeline/separator treatment. Defaults to <see cref="StyleEdges.Classic"/> (all knobs at their
     /// historical values), so classic and every style that doesn't customise edges stay byte-identical.
-    /// Consumed by the edge/message emitters, <see cref="Rendering.Svg.Markers"/>, and the overlay
-    /// compiler in <see cref="Rendering.Animate.CssCompiler"/>.
+    /// Consumed by the edge/message emitters, <see cref="Markers"/>, and the overlay
+    /// compiler in <see cref="CssCompiler"/>.
     /// </summary>
     public StyleEdges Edges { get; init; } = StyleEdges.Classic;
 
@@ -448,7 +453,7 @@ public sealed record StyleTypography
     /// The embedded metrics table the default measurer sizes against — picked to match
     /// <see cref="SansFamily"/> so layout stays correct with no font dependency. Defaults to
     /// <see cref="MetricsFont.Inter"/> (classic). Only steers the built-in fallback measurer: an
-    /// explicit <see cref="Rendering.SvgRenderOptions.Measurer"/> (e.g. Skia) overrides it. Mono roles resolve
+    /// explicit <see cref="SvgRenderOptions.Measurer"/> (e.g. Skia) overrides it. Mono roles resolve
     /// against the shared IBM Plex Mono coverage regardless of this key.
     /// </summary>
     public MetricsFont MetricsFont { get; init; } = MetricsFont.Inter;
@@ -596,7 +601,7 @@ public enum EdgeArrow
     Filled,
 
     /// <summary>
-    /// A hand-drawn <em>open V</em> arrowhead (sketch): the filled <see cref="Rendering.MarkerShape.Arrow"/> is
+    /// A hand-drawn <em>open V</em> arrowhead (sketch): the filled <see cref="MarkerShape.Arrow"/> is
     /// replaced by <em>two</em> short round-capped strokes running back from the tip, so the arrow reads
     /// as two pen strokes rather than a solid triangle. Closed UML ends (inheritance triangle, composition
     /// diamond) intentionally keep their bodies — only the plain arrowhead opens up.
@@ -605,7 +610,7 @@ public enum EdgeArrow
 
     /// <summary>
     /// A mono <c>&gt;</c> <em>chevron</em> arrowhead (terminal): the plain arrowheads
-    /// (<see cref="Rendering.MarkerShape.Arrow"/> and the open <see cref="Rendering.MarkerShape.ArrowOpen"/>)
+    /// (<see cref="MarkerShape.Arrow"/> and the open <see cref="MarkerShape.ArrowOpen"/>)
     /// become <em>two hard butt-capped strokes</em> forming a crisp <c>&gt;</c> chevron — the deterministic,
     /// measurable equivalent of the mock's mono <c>&gt;</c> text glyph, which stays crisp at classic marker
     /// sizes and scales with <see cref="StyleEdges.MarkerScale"/> / <see cref="StyleEdges.MarkerScaleToWidth"/>.
@@ -703,9 +708,9 @@ public sealed record StyleEdges
     /// keeps its colour and its matching marker/stations); a sequence participant whose accent is its
     /// kind default (an explicit participant accent keeps its colour on its own lifeline <em>and</em> on
     /// the messages departing it, so line and hops stay one hue); and a message without an explicit
-    /// <c>color:</c> (<see cref="Rendering.EdgeModel.ColorAuthored"/> — an authored colour always wins).</para>
+    /// <c>color:</c> (<see cref="EdgeModel.ColorAuthored"/> — an authored colour always wins).</para>
     /// </summary>
-    public IReadOnlyList<string> BaseColorPalette { get; init; } = System.Array.Empty<string>();
+    public IReadOnlyList<string> BaseColorPalette { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// The palette entry at a stable draw-order <paramref name="index"/> — the single cycle
@@ -728,12 +733,12 @@ public sealed record StyleEdges
     /// <summary>
     /// The effective base colour for an architecture/class edge: its palette hue when
     /// <see cref="BaseColorPalette"/> is set <em>and</em> the edge uses the default colour
-    /// (<see cref="Rendering.Defaults.EdgeColor"/>) — otherwise the edge's own
+    /// (<see cref="Defaults.EdgeColor"/>) — otherwise the edge's own
     /// <paramref name="edgeColor"/> unchanged, so an author's explicit accent wins. Byte-inert
     /// (returns <paramref name="edgeColor"/>) when the palette is empty.
     /// </summary>
     public string BaseColorFor(int index, string edgeColor) =>
-        BaseColorPalette.Count > 0 && edgeColor == Rendering.Defaults.EdgeColor
+        BaseColorPalette.Count > 0 && edgeColor == Defaults.EdgeColor
             ? PaletteHue(index)!
             : edgeColor;
 
@@ -795,7 +800,7 @@ public sealed record StyleEdges
 
     /// <summary>
     /// An optional <em>contrast outline</em> stroke drawn around the plain filled arrowhead
-    /// (<see cref="Rendering.MarkerShape.Arrow"/> under <see cref="EdgeArrow.Filled"/>) — brutalist's lime
+    /// (<see cref="MarkerShape.Arrow"/> under <see cref="EdgeArrow.Filled"/>) — brutalist's lime
     /// arrowhead with a white <c>1.5</c> outline. When set, the filled arrow polygon gains
     /// <c>stroke:{MarkerOutline};stroke-width:1.5</c> and the marker element is drawn
     /// <c>overflow="visible"</c> so the outline is not clipped by the marker viewport. A CSS colour, normally
@@ -822,7 +827,7 @@ public sealed record StyleEdges
     /// that leaves it unset — including a DrawOn/Marching overlay style like sketch) falls back to the
     /// single <c>var(--beck-edge-overlay, var(--beck-accent))</c> token — byte-identical.
     /// </summary>
-    public IReadOnlyList<string> OverlayPalette { get; init; } = System.Array.Empty<string>();
+    public IReadOnlyList<string> OverlayPalette { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// An optional CSS <c>filter</c> applied to the overlay path only (glow's comet bloom): a
@@ -1165,7 +1170,7 @@ public sealed record StyleGeometry
     /// centre-aligned CSS stroke to a whole-pixel used-width per side at DPR 1, so this re-derives from
     /// <see cref="NodeStroke"/> as <c>2·round(stroke/2)</c> — 2 for the classic 1.5 stroke — keeping the
     /// measured box matched to the rendered box when a style changes the stroke.</summary>
-    public double MeasureBorder => 2 * Rendering.Js.Round(NodeStroke / 2);
+    public double MeasureBorder => 2 * Js.Round(NodeStroke / 2);
 
     // ---- card box-model ----
     /// <summary>Card total horizontal padding (both sides) reserved around the content column.</summary>

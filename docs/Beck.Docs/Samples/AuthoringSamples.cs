@@ -1,4 +1,5 @@
 using Beck;
+using Beck.Authoring;
 
 namespace Beck.Docs.Samples;
 

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml;
 using Beck.Rendering;
+using Beck.Styles;
 using Xunit;
 
 namespace Beck.Tests;
@@ -75,8 +76,8 @@ public sealed class StyleSmokeTests
 
         var variants = new[]
         {
-            new SvgRenderOptions { Style = style, Theme = Beck.Rendering.ThemeMode.Light },
-            new SvgRenderOptions { Style = style, Theme = Beck.Rendering.ThemeMode.Dark },
+            new SvgRenderOptions { Style = style, Theme = ThemeMode.Light },
+            new SvgRenderOptions { Style = style, Theme = ThemeMode.Dark },
             new SvgRenderOptions { Style = style, Animation = AnimationMode.Scrub },
             new SvgRenderOptions { Style = style, Animation = AnimationMode.Static },
         };

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// The <c>meta:</c> block shared by every diagram-type builder (title, theme,

@@ -1,9 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Builds a <c>type: state</c> Beck diagram — a state machine of pills and
@@ -53,7 +51,7 @@ public sealed class StateDiagramBuilder
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
     public StateDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
 
-    /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default) reads like a lifecycle, <see cref="Beck.Direction.LR"/> like a pipeline.</summary>
+    /// <summary>Set the layout direction — <see cref="Authoring.Direction.TB"/> (default) reads like a lifecycle, <see cref="Authoring.Direction.LR"/> like a pipeline.</summary>
     public StateDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>

@@ -1,4 +1,4 @@
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>circuit</c> built-in style (Phase 4, artwork, mock 1h): a printed-circuit board. Every

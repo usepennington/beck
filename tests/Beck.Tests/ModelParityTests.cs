@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Beck.Model;
 using Beck.Rendering;
 using Xunit;
 

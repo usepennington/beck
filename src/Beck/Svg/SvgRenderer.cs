@@ -1,9 +1,11 @@
 using System.Text;
-using Beck.Rendering.Animate;
-using Beck.Rendering.Route;
-using Beck.Rendering.Text;
+using Beck.Animate;
+using Beck.Layout;
+using Beck.Model;
+using Beck.Route;
+using Beck.Text;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// Assembles the static SVG document for a diagram: theming <c>&lt;style&gt;</c>,

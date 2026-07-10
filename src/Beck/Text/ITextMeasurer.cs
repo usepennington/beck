@@ -1,4 +1,4 @@
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// A typographic role in a Beck diagram. Each value pins a font family, pixel

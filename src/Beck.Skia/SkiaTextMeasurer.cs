@@ -1,5 +1,6 @@
 using Beck.Rendering;
 using Beck.Rendering.Text;
+using Beck.Text;
 using HarfBuzzSharp;
 using SkiaSharp;
 

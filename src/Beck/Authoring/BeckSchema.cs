@@ -1,14 +1,10 @@
-using System.Collections.Generic;
-using System.Linq;
-using Beck.Rendering;
-
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Authoring-time schema metadata for Beck YAML — the token vocabularies, per-section
 /// key lists, and one-line docs that power editor completions and hover in tooling
 /// (the docs playground's Monaco editor). The value vocabularies are sourced from the
-/// engine's own <see cref="Rendering.Tokens"/> maps and icon registry, so they never drift from
+/// engine's own <see cref="Model.Tokens"/> maps and icon registry, so they never drift from
 /// what the parser actually accepts; the key lists and docs are curated here to match
 /// <c>Model/Schema.cs</c>.
 /// </summary>
@@ -16,35 +12,35 @@ public static class BeckSchema
 {
     // ---- value vocabularies (sourced from the engine — always in sync) ------
     /// <summary>Root <c>type:</c> values.</summary>
-    public static IReadOnlyList<string> Types => Rendering.Tokens.DiagramType.Tokens;
+    public static IReadOnlyList<string> Types => Model.Tokens.DiagramType.Tokens;
     /// <summary>Node <c>kind:</c> presets.</summary>
-    public static IReadOnlyList<string> Kinds => Rendering.Tokens.NodeKind.Tokens;
+    public static IReadOnlyList<string> Kinds => Model.Tokens.NodeKind.Tokens;
     /// <summary>Edge <c>kind:</c> values.</summary>
-    public static IReadOnlyList<string> EdgeKinds => Rendering.Tokens.EdgeKind.Tokens;
+    public static IReadOnlyList<string> EdgeKinds => Model.Tokens.EdgeKind.Tokens;
     /// <summary>Accent / colour tokens.</summary>
-    public static IReadOnlyList<string> Accents => Rendering.Tokens.Accent.Tokens;
+    public static IReadOnlyList<string> Accents => Model.Tokens.Accent.Tokens;
     /// <summary>Layout <c>direction:</c> values.</summary>
-    public static IReadOnlyList<string> Directions => Rendering.Tokens.Direction.Tokens;
+    public static IReadOnlyList<string> Directions => Model.Tokens.Direction.Tokens;
     /// <summary><c>theme:</c> values.</summary>
-    public static IReadOnlyList<string> Themes => Rendering.Tokens.Theme.Tokens;
+    public static IReadOnlyList<string> Themes => Model.Tokens.Theme.Tokens;
     /// <summary><c>fit:</c> values.</summary>
-    public static IReadOnlyList<string> Fits => Rendering.Tokens.Fit.Tokens;
+    public static IReadOnlyList<string> Fits => Model.Tokens.Fit.Tokens;
     /// <summary>Node <c>variant:</c> values.</summary>
-    public static IReadOnlyList<string> Variants => Rendering.Tokens.NodeVariant.Tokens;
+    public static IReadOnlyList<string> Variants => Model.Tokens.NodeVariant.Tokens;
     /// <summary>Edge <c>style:</c> values.</summary>
-    public static IReadOnlyList<string> EdgeStyles => Rendering.Tokens.EdgeStyle.Tokens;
+    public static IReadOnlyList<string> EdgeStyles => Model.Tokens.EdgeStyle.Tokens;
     /// <summary>Edge <c>curve:</c> values.</summary>
-    public static IReadOnlyList<string> Curves => Rendering.Tokens.EdgeCurve.Tokens;
+    public static IReadOnlyList<string> Curves => Model.Tokens.EdgeCurve.Tokens;
     /// <summary>Edge <c>arrow:</c> values (plus the <c>true</c>/<c>false</c> shorthands the parser accepts).</summary>
-    public static IReadOnlyList<string> Arrows => Rendering.Tokens.ArrowEnds.Tokens.Concat(Bool).ToArray();
+    public static IReadOnlyList<string> Arrows => Model.Tokens.ArrowEnds.Tokens.Concat(Bool).ToArray();
     /// <summary>Edge side pins (<c>fromSide</c>/<c>toSide</c>).</summary>
-    public static IReadOnlyList<string> Sides => Rendering.Tokens.Side.Tokens;
+    public static IReadOnlyList<string> Sides => Model.Tokens.Side.Tokens;
     /// <summary>Boolean values.</summary>
     public static IReadOnlyList<string> Bool { get; } = new[] { "true", "false" };
     /// <summary>Built-in <c>meta.style</c> names (sourced from the engine registry, never drifts).</summary>
-    public static IReadOnlyList<string> StyleNames { get; } = Beck.BeckStyles.All.Select(s => s.Name).ToArray();
+    public static IReadOnlyList<string> StyleNames { get; } = BeckStyles.All.Select(s => s.Name).ToArray();
     /// <summary>Named icon keys (an <c>icon:</c> may also be raw inline <c>&lt;svg&gt;</c>).</summary>
-    public static IReadOnlyList<string> Icons { get; } = Rendering.Svg.Icons.Registry.Keys.ToArray();
+    public static IReadOnlyList<string> Icons { get; } = Svg.Icons.Registry.Keys.ToArray();
     /// <summary>Flow step discriminators (the key that opens each flow entry).</summary>
     public static IReadOnlyList<string> FlowSteps { get; } = new[]
     {

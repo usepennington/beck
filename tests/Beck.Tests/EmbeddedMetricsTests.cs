@@ -1,6 +1,9 @@
 using Beck;
+using Beck.Layout;
+using Beck.Model;
 using Beck.Rendering;
 using Beck.Rendering.Text;
+using Beck.Text;
 using Xunit;
 
 namespace Beck.Tests;

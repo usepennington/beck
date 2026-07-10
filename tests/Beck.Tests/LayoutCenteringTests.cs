@@ -1,3 +1,5 @@
+using Beck.Layout;
+using Beck.Model;
 using Beck.Rendering;
 using Xunit;
 

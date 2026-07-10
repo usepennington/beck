@@ -1,6 +1,8 @@
-using Beck.Rendering.Svg;
+using Beck.Layout;
+using Beck.Model;
+using Beck.Svg;
 
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// Reproduces the browser's <c>getBoundingClientRect</c> for each node shape from

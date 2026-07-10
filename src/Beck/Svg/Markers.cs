@@ -1,6 +1,7 @@
 using System.Text;
+using Beck.Model;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// Edge end-marker defs — a port of the marker bodies in <c>src/route/svg.ts</c>, now

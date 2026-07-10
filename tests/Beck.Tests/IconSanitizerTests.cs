@@ -1,6 +1,6 @@
 using Beck.Rendering;
-using Beck.Rendering.Svg;
 using Beck.Skia;
+using Beck.Svg;
 using Xunit;
 
 namespace Beck.Tests;

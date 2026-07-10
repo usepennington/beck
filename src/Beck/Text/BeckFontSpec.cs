@@ -1,4 +1,4 @@
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// Describes the fonts a diagram should be measured and rendered with. Lives in

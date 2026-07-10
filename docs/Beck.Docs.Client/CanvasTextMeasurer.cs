@@ -1,4 +1,5 @@
 using Beck.Rendering.Text;
+using Beck.Text;
 using Microsoft.JSInterop;
 
 namespace Beck.Docs.Client;

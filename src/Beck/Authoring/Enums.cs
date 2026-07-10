@@ -1,4 +1,4 @@
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>Primary layout direction.</summary>
 public enum Direction

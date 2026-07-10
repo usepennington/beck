@@ -1,4 +1,6 @@
-namespace Beck.Rendering.Text;
+using Beck.Rendering.Text;
+
+namespace Beck.Text;
 
 /// <summary>
 /// A data-only snapshot of one embedded font family's advance table — the arrays a generated

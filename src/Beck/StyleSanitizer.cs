@@ -1,6 +1,4 @@
-using Beck.Rendering.Text;
-
-namespace Beck.Rendering;
+namespace Beck;
 
 /// <summary>
 /// Neutralises hostile substrings in a <em>custom</em> <see cref="BeckStyle"/> before its string

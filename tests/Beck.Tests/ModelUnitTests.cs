@@ -1,3 +1,4 @@
+using Beck.Model;
 using Beck.Rendering;
 using Xunit;
 

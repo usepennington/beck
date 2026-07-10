@@ -1,4 +1,4 @@
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// The default, zero-dependency text measurer: Inter (sans) + IBM Plex Mono embedded metrics. Kept

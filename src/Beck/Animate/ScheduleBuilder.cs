@@ -1,4 +1,6 @@
-namespace Beck.Rendering.Animate;
+using Beck.Model;
+
+namespace Beck.Animate;
 
 /// <summary>A routed edge as the schedule sees it (id, endpoints, kind, path data).</summary>
 internal sealed record FlowEdge(string Id, string From, string To, EdgeKind Kind, string D);
@@ -316,12 +318,12 @@ internal static class ScheduleBuilder
 
     /// <summary>Maps the public, style-scoped <see cref="Beck.PacketGlyph"/> to the internal
     /// per-hop <see cref="PacketShape"/> the schedule/compiler actually render.</summary>
-    private static PacketShape? StyleGlyph(Beck.PacketGlyph? glyph) => glyph switch
+    private static PacketShape? StyleGlyph(PacketGlyph? glyph) => glyph switch
     {
-        Beck.PacketGlyph.Dot => PacketShape.Dot,
-        Beck.PacketGlyph.Ring => PacketShape.Ring,
-        Beck.PacketGlyph.Square => PacketShape.Square,
-        Beck.PacketGlyph.Train => PacketShape.Train,
+        PacketGlyph.Dot => PacketShape.Dot,
+        PacketGlyph.Ring => PacketShape.Ring,
+        PacketGlyph.Square => PacketShape.Square,
+        PacketGlyph.Train => PacketShape.Train,
         _ => null,
     };
 

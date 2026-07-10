@@ -1,9 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Builds a Beck diagram from code and emits it as YAML (or a fenced
@@ -49,7 +46,7 @@ public sealed class DiagramBuilder
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
     public DiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
 
-    /// <summary>Set the layout direction — <see cref="Beck.Direction.TB"/> (default), <see cref="Beck.Direction.BT"/>, <see cref="Beck.Direction.LR"/>, or <see cref="Beck.Direction.RL"/>.</summary>
+    /// <summary>Set the layout direction — <see cref="Authoring.Direction.TB"/> (default), <see cref="Authoring.Direction.BT"/>, <see cref="Authoring.Direction.LR"/>, or <see cref="Authoring.Direction.RL"/>.</summary>
     public DiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>

@@ -1,4 +1,4 @@
-namespace Beck;
+namespace Beck.Styles;
 
 /// <summary>
 /// The <c>minimal</c> built-in style (Phase 3, mock 1c): a sober flat "no design" look — hairline

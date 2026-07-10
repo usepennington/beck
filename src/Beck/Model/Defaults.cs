@@ -1,4 +1,4 @@
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 // A port of src/model/defaults.ts — every table verbatim (except where a remark notes a deliberate
 // divergence), plus topoOrder + deriveFlow.

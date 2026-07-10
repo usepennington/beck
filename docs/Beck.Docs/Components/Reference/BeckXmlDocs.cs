@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using Beck;
+using Beck.Authoring;
 
 namespace Beck.Docs.Components.Reference;
 

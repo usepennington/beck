@@ -142,12 +142,12 @@ public class MetricsTableGenerator
     private sealed class Loaded : IDisposable
     {
         private readonly SKTypeface _typeface;
-        private readonly HarfBuzzSharp.Font _hb;
+        private readonly Font _hb;
         private readonly Face _face;
         private readonly Blob _blob;
         private readonly int _upem;
 
-        private Loaded(SKTypeface t, HarfBuzzSharp.Font h, Face fa, Blob b, int upem)
+        private Loaded(SKTypeface t, Font h, Face fa, Blob b, int upem)
             => (_typeface, _hb, _face, _blob, _upem) = (t, h, fa, b, upem);
 
         public static Loaded Open(string path)
@@ -156,7 +156,7 @@ public class MetricsTableGenerator
             var blob = Blob.FromFile(path);
             var face = new Face(blob, 0);
             int upem = face.UnitsPerEm;
-            var hb = new HarfBuzzSharp.Font(face);
+            var hb = new Font(face);
             hb.SetFunctionsOpenType();
             hb.SetScale(upem, upem);
             return new Loaded(typeface, hb, face, blob, upem);

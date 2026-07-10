@@ -1,4 +1,4 @@
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// Low-level coercion helpers shared by every diagram-type builder — a port of

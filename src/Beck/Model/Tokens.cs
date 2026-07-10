@@ -1,4 +1,4 @@
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 // The closed token vocabularies, ported verbatim from src/model/schema.ts. Each
 // enum member maps to the exact wire token the YAML/JSON uses, so the model
@@ -74,16 +74,16 @@ internal sealed class TokenMap<TEnum> where TEnum : struct, Enum
 internal static class Tokens
 {
     public static readonly TokenMap<DiagramType> DiagramType = new(
-        (Beck.Rendering.DiagramType.Architecture, "architecture"),
-        (Beck.Rendering.DiagramType.Sequence, "sequence"),
-        (Beck.Rendering.DiagramType.State, "state"),
-        (Beck.Rendering.DiagramType.Class, "class"));
+        (Model.DiagramType.Architecture, "architecture"),
+        (Model.DiagramType.Sequence, "sequence"),
+        (Model.DiagramType.State, "state"),
+        (Model.DiagramType.Class, "class"));
 
     public static readonly TokenMap<Direction> Direction = new(
-        (Beck.Rendering.Direction.TB, "TB"),
-        (Beck.Rendering.Direction.BT, "BT"),
-        (Beck.Rendering.Direction.LR, "LR"),
-        (Beck.Rendering.Direction.RL, "RL"));
+        (Model.Direction.TB, "TB"),
+        (Model.Direction.BT, "BT"),
+        (Model.Direction.LR, "LR"),
+        (Model.Direction.RL, "RL"));
 
     public static readonly TokenMap<ThemeMode> Theme = new(
         (ThemeMode.Auto, "auto"),
@@ -95,75 +95,75 @@ internal static class Tokens
         (FitMode.Scroll, "scroll"));
 
     public static readonly TokenMap<NodeKind> NodeKind = new(
-        (Beck.Rendering.NodeKind.Service, "service"),
-        (Beck.Rendering.NodeKind.Db, "db"),
-        (Beck.Rendering.NodeKind.Queue, "queue"),
-        (Beck.Rendering.NodeKind.Cache, "cache"),
-        (Beck.Rendering.NodeKind.Gateway, "gateway"),
-        (Beck.Rendering.NodeKind.External, "external"),
-        (Beck.Rendering.NodeKind.User, "user"),
-        (Beck.Rendering.NodeKind.Ghost, "ghost"));
+        (Model.NodeKind.Service, "service"),
+        (Model.NodeKind.Db, "db"),
+        (Model.NodeKind.Queue, "queue"),
+        (Model.NodeKind.Cache, "cache"),
+        (Model.NodeKind.Gateway, "gateway"),
+        (Model.NodeKind.External, "external"),
+        (Model.NodeKind.User, "user"),
+        (Model.NodeKind.Ghost, "ghost"));
 
     public static readonly TokenMap<NodeVariant> NodeVariant = new(
-        (Beck.Rendering.NodeVariant.Solid, "solid"),
-        (Beck.Rendering.NodeVariant.Subtle, "subtle"),
-        (Beck.Rendering.NodeVariant.Ghost, "ghost"));
+        (Model.NodeVariant.Solid, "solid"),
+        (Model.NodeVariant.Subtle, "subtle"),
+        (Model.NodeVariant.Ghost, "ghost"));
 
     public static readonly TokenMap<NodeShape> NodeShape = new(
-        (Beck.Rendering.NodeShape.Card, "card"),
-        (Beck.Rendering.NodeShape.Pill, "pill"),
-        (Beck.Rendering.NodeShape.Start, "start"),
-        (Beck.Rendering.NodeShape.End, "end"),
-        (Beck.Rendering.NodeShape.Class, "class"));
+        (Model.NodeShape.Card, "card"),
+        (Model.NodeShape.Pill, "pill"),
+        (Model.NodeShape.Start, "start"),
+        (Model.NodeShape.End, "end"),
+        (Model.NodeShape.Class, "class"));
 
     public static readonly TokenMap<EdgeStyle> EdgeStyle = new(
-        (Beck.Rendering.EdgeStyle.Solid, "solid"),
-        (Beck.Rendering.EdgeStyle.Dashed, "dashed"));
+        (Model.EdgeStyle.Solid, "solid"),
+        (Model.EdgeStyle.Dashed, "dashed"));
 
     public static readonly TokenMap<EdgeCurve> EdgeCurve = new(
-        (Beck.Rendering.EdgeCurve.StepRound, "step-round"),
-        (Beck.Rendering.EdgeCurve.Straight, "straight"),
-        (Beck.Rendering.EdgeCurve.S, "s"));
+        (Model.EdgeCurve.StepRound, "step-round"),
+        (Model.EdgeCurve.Straight, "straight"),
+        (Model.EdgeCurve.S, "s"));
 
     public static readonly TokenMap<EdgeKind> EdgeKind = new(
-        (Beck.Rendering.EdgeKind.Data, "data"),
-        (Beck.Rendering.EdgeKind.Control, "control"),
-        (Beck.Rendering.EdgeKind.Async, "async"),
-        (Beck.Rendering.EdgeKind.Dependency, "dependency"));
+        (Model.EdgeKind.Data, "data"),
+        (Model.EdgeKind.Control, "control"),
+        (Model.EdgeKind.Async, "async"),
+        (Model.EdgeKind.Dependency, "dependency"));
 
     public static readonly TokenMap<PacketEase> PacketEase = new(
-        (Beck.Rendering.PacketEase.Linear, "linear"),
-        (Beck.Rendering.PacketEase.Smooth, "smooth"),
-        (Beck.Rendering.PacketEase.Accelerate, "accelerate"),
-        (Beck.Rendering.PacketEase.Decelerate, "decelerate"),
-        (Beck.Rendering.PacketEase.Expo, "expo"),
-        (Beck.Rendering.PacketEase.Sine, "sine"),
-        (Beck.Rendering.PacketEase.Steps, "steps"),
-        (Beck.Rendering.PacketEase.Bounce, "bounce"));
+        (Model.PacketEase.Linear, "linear"),
+        (Model.PacketEase.Smooth, "smooth"),
+        (Model.PacketEase.Accelerate, "accelerate"),
+        (Model.PacketEase.Decelerate, "decelerate"),
+        (Model.PacketEase.Expo, "expo"),
+        (Model.PacketEase.Sine, "sine"),
+        (Model.PacketEase.Steps, "steps"),
+        (Model.PacketEase.Bounce, "bounce"));
 
     public static readonly TokenMap<PacketShape> PacketShape = new(
-        (Beck.Rendering.PacketShape.Dot, "dot"),
-        (Beck.Rendering.PacketShape.Circle, "circle"),
-        (Beck.Rendering.PacketShape.Ring, "ring"));
+        (Model.PacketShape.Dot, "dot"),
+        (Model.PacketShape.Circle, "circle"),
+        (Model.PacketShape.Ring, "ring"));
 
     public static readonly TokenMap<Side> Side = new(
-        (Beck.Rendering.Side.Top, "top"),
-        (Beck.Rendering.Side.Bottom, "bottom"),
-        (Beck.Rendering.Side.Left, "left"),
-        (Beck.Rendering.Side.Right, "right"));
+        (Model.Side.Top, "top"),
+        (Model.Side.Bottom, "bottom"),
+        (Model.Side.Left, "left"),
+        (Model.Side.Right, "right"));
 
     public static readonly TokenMap<ArrowEnds> ArrowEnds = new(
-        (Beck.Rendering.ArrowEnds.None, "none"),
-        (Beck.Rendering.ArrowEnds.End, "end"),
-        (Beck.Rendering.ArrowEnds.Start, "start"),
-        (Beck.Rendering.ArrowEnds.Both, "both"));
+        (Model.ArrowEnds.None, "none"),
+        (Model.ArrowEnds.End, "end"),
+        (Model.ArrowEnds.Start, "start"),
+        (Model.ArrowEnds.Both, "both"));
 
     public static readonly TokenMap<MarkerShape> MarkerShape = new(
-        (Beck.Rendering.MarkerShape.Arrow, "arrow"),
-        (Beck.Rendering.MarkerShape.ArrowOpen, "arrow-open"),
-        (Beck.Rendering.MarkerShape.Triangle, "triangle"),
-        (Beck.Rendering.MarkerShape.Diamond, "diamond"),
-        (Beck.Rendering.MarkerShape.DiamondOpen, "diamond-open"));
+        (Model.MarkerShape.Arrow, "arrow"),
+        (Model.MarkerShape.ArrowOpen, "arrow-open"),
+        (Model.MarkerShape.Triangle, "triangle"),
+        (Model.MarkerShape.Diamond, "diamond"),
+        (Model.MarkerShape.DiamondOpen, "diamond-open"));
 
     public static readonly TokenMap<AccentToken> Accent = new(
         (AccentToken.Primary, "primary"),

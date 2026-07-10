@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Configures a single node inside a <c>Node(id, n => …)</c> callback. Every

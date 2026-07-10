@@ -1,5 +1,6 @@
+using Beck.Model;
 using Beck.Rendering;
-using Beck.Rendering.Svg;
+using Beck.Svg;
 using Xunit;
 using BeckStyle = Beck.BeckStyle;
 
@@ -26,8 +27,8 @@ public sealed class StyleByteIdentityTests
         new(),
         new() { Animation = AnimationMode.Static },
         new() { Animation = AnimationMode.Scrub },
-        new() { Theme = Beck.Rendering.ThemeMode.Dark },
-        new() { Theme = Beck.Rendering.ThemeMode.Light },
+        new() { Theme = ThemeMode.Dark },
+        new() { Theme = ThemeMode.Light },
     };
 
     [Theory]

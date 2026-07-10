@@ -1,4 +1,4 @@
-namespace Beck.Rendering.Text;
+namespace Beck.Text;
 
 /// <summary>
 /// Selects which embedded per-glyph metrics table the default <see cref="EmbeddedMetricsMeasurer"/>

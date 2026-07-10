@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// Color helpers ported from <c>src/util/color.ts</c>. <c>resolveColor</c> is NOT

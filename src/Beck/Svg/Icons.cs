@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Beck.Rendering.Svg;
+namespace Beck.Svg;
 
 /// <summary>
 /// Built-in icon set — a verbatim port of <c>src/render/icons.ts</c>. Each icon

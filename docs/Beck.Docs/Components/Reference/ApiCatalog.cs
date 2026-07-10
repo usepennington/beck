@@ -1,5 +1,6 @@
 using System.Reflection;
 using Beck;
+using Beck.Authoring;
 using Pennington.Highlighting;
 
 namespace Beck.Docs.Components.Reference;
@@ -80,7 +81,7 @@ internal static class ApiCatalog
         var uses = FindUsages().Where(u => u.Owner == root).ToList();
         var rootId = root.Name.ToLowerInvariant();
 
-        var b = new ClassDiagramBuilder().Direction(Beck.Direction.LR).Animate(false);
+        var b = new ClassDiagramBuilder().Direction(Direction.LR).Animate(false);
         b.Class(rootId, c => c.Name(root.Name).Accent(AccentToken.Primary)
             .Link($"/api/#{rootId}").Methods(FocalMethods(root, uses)));
 

@@ -1,6 +1,6 @@
-using static Beck.Rendering.Coerce;
+using static Beck.Model.Coerce;
 
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 /// <summary>
 /// <c>type: class</c> — UML class diagrams on the layered engine. Classes are

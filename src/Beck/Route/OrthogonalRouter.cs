@@ -1,4 +1,7 @@
-namespace Beck.Rendering.Route;
+using Beck.Layout;
+using Beck.Model;
+
+namespace Beck.Route;
 
 /// <summary>
 /// One edge's turn lane on a node face: which channel it takes among the <paramref name="Count"/>

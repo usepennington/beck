@@ -1,4 +1,7 @@
-namespace Beck.Rendering.Route;
+using Beck.Layout;
+using Beck.Model;
+
+namespace Beck.Route;
 
 /// <summary>
 /// Quadratic corner-rounding path builder — a port of <c>src/route/step-round.ts</c>.

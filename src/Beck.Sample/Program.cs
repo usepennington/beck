@@ -1,4 +1,5 @@
-using Beck;
+using Beck.Authoring;
+using Beck.Sample;
 
 // Emits Beck diagrams from code — the general "generate from any model" pattern.
 // Prints raw YAML (so it can be validated/rendered). Pass an argument to pick a
@@ -105,38 +106,41 @@ var yaml = new DiagramBuilder("Web Platform")
 
 Console.WriteLine(yaml);
 
-// Demo domain for the `reflection` sample.
-internal abstract class Entity
+namespace Beck.Sample
 {
-    public Guid Id { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-}
+    // Demo domain for the `reflection` sample.
+    internal abstract class Entity
+    {
+        public Guid Id { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
+    }
 
-internal sealed class Order : Entity
-{
-    public OrderStatus Status { get; set; }
-    public decimal Total { get; set; }
-    public Customer? Customer { get; set; }
-    public List<OrderLine> Lines { get; } = new();
-    public void AddLine(string sku, int qty) => Lines.Add(new OrderLine { Sku = sku, Qty = qty });
-    public void Submit() => Status = OrderStatus.Submitted;
-}
+    internal sealed class Order : Entity
+    {
+        public OrderStatus Status { get; set; }
+        public decimal Total { get; set; }
+        public Customer? Customer { get; set; }
+        public List<OrderLine> Lines { get; } = new();
+        public void AddLine(string sku, int qty) => Lines.Add(new OrderLine { Sku = sku, Qty = qty });
+        public void Submit() => Status = OrderStatus.Submitted;
+    }
 
-internal sealed class OrderLine
-{
-    public string Sku { get; set; } = "";
-    public int Qty { get; set; }
-}
+    internal sealed class OrderLine
+    {
+        public string Sku { get; set; } = "";
+        public int Qty { get; set; }
+    }
 
-internal sealed class Customer : Entity
-{
-    public string Name { get; set; } = "";
-    public string Email { get; set; } = "";
-}
+    internal sealed class Customer : Entity
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+    }
 
-internal enum OrderStatus { Draft, Submitted, Shipped, Cancelled }
+    internal enum OrderStatus { Draft, Submitted, Shipped, Cancelled }
 
-internal interface IOrderNotifier
-{
-    void OrderPlaced(Order order);
+    internal interface IOrderNotifier
+    {
+        void OrderPlaced(Order order);
+    }
 }

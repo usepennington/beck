@@ -1,4 +1,4 @@
-namespace Beck.Rendering;
+namespace Beck.Model;
 
 // The normalized diagram model — a faithful port of src/model/schema.ts. Authoring
 // YAML is parsed and validated into these shapes with every default filled in, so

@@ -1,6 +1,11 @@
+using Beck.Layout;
+using Beck.Model;
 using Beck.Rendering;
-using Beck.Rendering.Route;
 using Beck.Rendering.Text;
+using Beck.Route;
+using Beck.Text;
+using DiagramModel = Beck.Model.DiagramModel;
+using Side = Beck.Authoring.Side;
 
 namespace Beck.Tests.CleanLines;
 
@@ -104,7 +109,7 @@ internal static class LineQuality
                     violations.Add(new Defect("off-canvas", $"{re.Edge.Id} passes ({p.X:0.##}, {p.Y:0.##})"));
 
             if (pts.Count < 2) continue;
-            bool ortho = re.Edge.Curve == Beck.Rendering.EdgeCurve.StepRound;
+            bool ortho = re.Edge.Curve == EdgeCurve.StepRound;
 
             for (int i = 0; i < pts.Count - 1; i++)
             {

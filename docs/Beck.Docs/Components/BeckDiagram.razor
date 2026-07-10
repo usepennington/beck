@@ -25,7 +25,7 @@
         catch (Exception ex)
         {
             _html = $"<div class=\"beck-embed beck-embed--error\"><pre><code>"
-                  + System.Net.WebUtility.HtmlEncode(ex.Message) + "</code></pre></div>";
+                  + WebUtility.HtmlEncode(ex.Message) + "</code></pre></div>";
         }
     }
 }

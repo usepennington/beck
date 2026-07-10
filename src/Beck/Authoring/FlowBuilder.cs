@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 
-namespace Beck;
+namespace Beck.Authoring;
 
 /// <summary>
 /// Scripts the animation timeline inside a <c>Flow(f => …)</c> callback —

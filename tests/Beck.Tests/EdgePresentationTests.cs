@@ -2,7 +2,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Beck;
 using Beck.Rendering;
-using Beck.Rendering.Svg;
+using Beck.Styles;
+using Beck.Svg;
 using Xunit;
 
 namespace Beck.Tests;

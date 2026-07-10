@@ -1,5 +1,6 @@
 using Beck.Rendering;
 using Beck;
+using Beck.Styles;
 using Xunit;
 
 namespace Beck.Tests;
