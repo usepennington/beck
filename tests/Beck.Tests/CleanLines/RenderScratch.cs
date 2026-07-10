@@ -21,5 +21,8 @@ public sealed class RenderScratch
         foreach (var (name, yaml) in new[] { ("three-into-one", CleanLineTests.ThreeIntoOne), ("serve-and-build", CleanLineTests.ServeAndBuild) })
             File.WriteAllText(Path.Combine(outDir, name + ".svg"),
                 BeckSvg.Render(yaml, new SvgRenderOptions { Animation = AnimationMode.Static }));
+        if (Environment.GetEnvironmentVariable("BECK_YAML") is string extra && File.Exists(extra))
+            File.WriteAllText(Path.Combine(outDir, "extra.svg"),
+                BeckSvg.Render(File.ReadAllText(extra), new SvgRenderOptions { Animation = AnimationMode.Static }));
     }
 }

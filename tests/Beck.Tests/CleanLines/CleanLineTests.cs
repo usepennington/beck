@@ -141,6 +141,22 @@ public sealed class CleanLineTests
         foreach (Defect d in r.Violations) _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
     }
 
+    /// <summary>Debugging affordance: score and dump an arbitrary YAML file. BECK_YAML=&lt;path&gt;.</summary>
+    [Fact]
+    public void DumpYaml()
+    {
+        if (Environment.GetEnvironmentVariable("BECK_YAML") is not string path || !File.Exists(path)) return;
+        string yaml = File.ReadAllText(path);
+        QualityReport r = LineQuality.Analyze(yaml);
+        _out.WriteLine(Describe(Path.GetFileName(path), yaml, r));
+        var (_, layout, _) = LineQuality.Route(yaml);
+        foreach (var (id, rect) in layout.Groups.OrderBy(k => k.Key))
+            _out.WriteLine(FormattableString.Invariant(
+                $"  group {id,-8} x {rect.X:0.#}..{rect.X + rect.W:0.#}  y {rect.Y:0.#}..{rect.Y + rect.H:0.#}"));
+        _out.WriteLine($"  canvas {layout.Width} × {layout.Height}");
+        foreach (Defect d in r.Violations) _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
+    }
+
     // ---- pinned real-world shapes: the two diagrams that motivated the harness ----
 
     public const string ServeAndBuild = """
