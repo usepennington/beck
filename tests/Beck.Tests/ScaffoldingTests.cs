@@ -1,7 +1,5 @@
 using System.Globalization;
 using Beck.Model;
-using Beck.Rendering;
-using Beck.Rendering.Text;
 using Beck.Svg;
 using Beck.Text;
 using Xunit;
@@ -14,7 +12,7 @@ public sealed class ScaffoldingTests
     [Fact]
     public void ContentHash_IsEightLowerHexChars()
     {
-        string h = ContentHash.Of("type: architecture\n");
+        var h = ContentHash.Of("type: architecture\n");
         Assert.Equal(8, h.Length);
         Assert.Matches("^[0-9a-f]{8}$", h);
     }
@@ -36,10 +34,10 @@ public sealed class ScaffoldingTests
     [Fact]
     public void ResolveIdSuffix_SameInputSameHash_DifferentOptionsDiffer()
     {
-        const string yaml = "type: architecture\nnodes: [a]\n";
-        var a = BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions());
-        var b = BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions());
-        var c = BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions { Animation = AnimationMode.Static });
+        const string Yaml = "type: architecture\nnodes: [a]\n";
+        var a = BeckSvg.ResolveIdSuffix(Yaml, new SvgRenderOptions());
+        var b = BeckSvg.ResolveIdSuffix(Yaml, new SvgRenderOptions());
+        var c = BeckSvg.ResolveIdSuffix(Yaml, new SvgRenderOptions { Animation = AnimationMode.Static });
         Assert.Equal(a, b);
         Assert.NotEqual(a, c);
     }

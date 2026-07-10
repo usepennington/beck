@@ -11,7 +11,7 @@ public sealed class BeckYamlException : Exception
     public int? Line { get; }
 
     public BeckYamlException(string message, int? line = null)
-        : base(line is int n ? $"{message} (line {n})" : message)
+        : base(line is { } n ? $"{message} (line {n})" : message)
     {
         Line = line;
     }

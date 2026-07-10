@@ -9,7 +9,7 @@ namespace Beck.Model;
 internal enum DiagramType { Architecture, Sequence, State, Class }
 
 /// <summary>Primary layout axis.</summary>
-internal enum Direction { TB, BT, LR, RL }
+internal enum Direction { Tb, Bt, Lr, Rl }
 
 /// <summary>How a diagram wider than its container behaves.</summary>
 internal enum FitMode { Shrink, Scroll }
@@ -80,10 +80,10 @@ internal static class Tokens
         (Model.DiagramType.Class, "class"));
 
     public static readonly TokenMap<Direction> Direction = new(
-        (Model.Direction.TB, "TB"),
-        (Model.Direction.BT, "BT"),
-        (Model.Direction.LR, "LR"),
-        (Model.Direction.RL, "RL"));
+        (Model.Direction.Tb, "TB"),
+        (Model.Direction.Bt, "BT"),
+        (Model.Direction.Lr, "LR"),
+        (Model.Direction.Rl, "RL"));
 
     public static readonly TokenMap<ThemeMode> Theme = new(
         (ThemeMode.Auto, "auto"),

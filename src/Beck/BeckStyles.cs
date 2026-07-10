@@ -15,7 +15,8 @@ namespace Beck;
 public static class BeckStyles
 {
     /// <summary>All built-in styles, in declaration order.</summary>
-    public static IReadOnlyList<BeckStyle> All { get; } = new[] { BeckStyle.Classic, MinimalStyle.Instance, TerminalStyle.Instance, BlueprintStyle.Instance, GlowStyle.Instance, BrutalistStyle.Instance, SketchStyle.Instance, ExtrudeStyle.Instance, CircuitStyle.Instance };
+    public static IReadOnlyList<BeckStyle> All { get; } = [BeckStyle.Classic, MinimalStyle.Instance, TerminalStyle.Instance, BlueprintStyle.Instance, GlowStyle.Instance, BrutalistStyle.Instance, SketchStyle.Instance, ExtrudeStyle.Instance, CircuitStyle.Instance,
+    ];
 
     /// <summary>Built-in styles keyed by <see cref="BeckStyle.Name"/> (ordinal, case-sensitive).</summary>
     public static IReadOnlyDictionary<string, BeckStyle> ByName { get; } =
@@ -27,9 +28,19 @@ public static class BeckStyles
     /// </summary>
     public static bool IsValidName(string name)
     {
-        if (string.IsNullOrEmpty(name)) return false;
-        foreach (char c in name)
-            if (c is not (>= 'a' and <= 'z' or >= '0' and <= '9' or '-')) return false;
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        foreach (var c in name)
+        {
+            if (c is not (>= 'a' and <= 'z' or >= '0' and <= '9' or '-'))
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 }

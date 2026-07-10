@@ -1,7 +1,5 @@
-using Beck;
 using Beck.Authoring;
 using Beck.Model;
-using Beck.Rendering;
 using Xunit;
 
 namespace Beck.Tests;
@@ -18,7 +16,7 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void DiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new DiagramBuilder("T").Style("sketch").Node("a", "A").ToYaml();
+        var yaml = new DiagramBuilder("T").Style("sketch").Node("a", "A").ToYaml();
         Assert.Contains("style: sketch", yaml);
         Assert.Equal("sketch", StyleNameOf(yaml));
     }
@@ -26,7 +24,7 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void SequenceDiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new SequenceDiagramBuilder("T").Style("sketch")
+        var yaml = new SequenceDiagramBuilder("T").Style("sketch")
             .Participant("a", "A").Participant("b", "B").Message("a", "b", "hi").ToYaml();
         Assert.Contains("style: sketch", yaml);
         Assert.Equal("sketch", StyleNameOf(yaml));
@@ -35,7 +33,7 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void StateDiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new StateDiagramBuilder("T").Style("sketch")
+        var yaml = new StateDiagramBuilder("T").Style("sketch")
             .State("s1", "S1").State("s2", "S2").Transition("s1", "s2").ToYaml();
         Assert.Contains("style: sketch", yaml);
         Assert.Equal("sketch", StyleNameOf(yaml));
@@ -44,7 +42,7 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void ClassDiagramBuilder_StyleString_EmitsAndRoundTrips()
     {
-        string yaml = new ClassDiagramBuilder("T").Style("sketch").Class("c", "C").ToYaml();
+        var yaml = new ClassDiagramBuilder("T").Style("sketch").Class("c", "C").ToYaml();
         Assert.Contains("style: sketch", yaml);
         Assert.Equal("sketch", StyleNameOf(yaml));
     }
@@ -52,7 +50,7 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void DiagramBuilder_StyleFromBeckStyle_EmitsItsName()
     {
-        string yaml = new DiagramBuilder("T").Style(BeckStyle.Classic).Node("a", "A").ToYaml();
+        var yaml = new DiagramBuilder("T").Style(BeckStyle.Classic).Node("a", "A").ToYaml();
         Assert.Contains("style: classic", yaml);
         Assert.Equal("classic", StyleNameOf(yaml));
     }
@@ -60,7 +58,7 @@ public sealed class AuthoringStyleTests
     [Fact]
     public void NoStyle_OmitsTheKey()
     {
-        string yaml = new DiagramBuilder("T").Node("a", "A").ToYaml();
+        var yaml = new DiagramBuilder("T").Node("a", "A").ToYaml();
         Assert.DoesNotContain("style:", yaml);
     }
 }

@@ -29,10 +29,13 @@ internal static class Artwork
     public static string Rect(BeckStyle style, string cls, double x, double y, double w, double h,
         double rx, string seed, string? styleAttr = null, bool shadow = false)
     {
-        string sa = styleAttr != null ? $" style=\"{styleAttr}\"" : "";
-        string sh = Behind(style, shadow, x, y, w, h, rx);
+        var sa = styleAttr != null ? $" style=\"{styleAttr}\"" : "";
+        var sh = Behind(style, shadow, x, y, w, h, rx);
         if (style.Artwork != StyleArtwork.Sketch)
+        {
             return $"{sh}<rect class=\"{cls}\" x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(w)}\" height=\"{N(h)}\" rx=\"{N(rx)}\"{sa}/>";
+        }
+
         return $"{sh}<path class=\"{cls}\" d=\"{WobbleRoundRect(x, y, w, h, rx, seed)}\"{sa}/>";
     }
 
@@ -57,22 +60,30 @@ internal static class Artwork
     /// </summary>
     private static string Behind(BeckStyle style, bool want, double x, double y, double w, double h, double rx)
     {
-        if (!want) return "";
+        if (!want)
+        {
+            return "";
+        }
+
         if (style.Artwork == StyleArtwork.Circuit)
         {
-            double len = style.Geometry.PinLength;
-            if (len <= 0) return "";
+            var len = style.Geometry.PinLength;
+            if (len <= 0)
+            {
+                return "";
+            }
+
             double t = style.Geometry.PinThickness, tuck = 2;
             // Pin count per side derives from the node height (deterministic, no measurement jitter):
             // clamp(round(h / pitch), 2, 6). Pins are evenly distributed down each edge.
-            int n = (int)Math.Round(h / style.Geometry.PinPitch, MidpointRounding.AwayFromZero);
+            var n = (int)Math.Round(h / style.Geometry.PinPitch, MidpointRounding.AwayFromZero);
             n = Math.Max(2, Math.Min(6, n));
             var sb = new StringBuilder();
-            string fill = "fill:var(--beck-pin, var(--beck-edge))";
-            for (int i = 0; i < n; i++)
+            var fill = "fill:var(--beck-pin, var(--beck-edge))";
+            for (var i = 0; i < n; i++)
             {
-                double cy = y + h * (i + 0.5) / n;
-                double py = cy - t / 2;
+                var cy = y + h * (i + 0.5) / n;
+                var py = cy - t / 2;
                 // Left pin: protrudes to x-len, tucks `tuck` px under the node (covered by its fill).
                 sb.Append($"<rect class=\"beck-pin\" x=\"{N(x - len)}\" y=\"{N(py)}\" width=\"{N(len + tuck)}\" height=\"{N(t)}\" rx=\"{N(t / 2)}\" style=\"{fill}\"/>");
                 // Right pin: mirror on the far edge.
@@ -82,21 +93,29 @@ internal static class Artwork
         }
         if (style.Artwork == StyleArtwork.Brutalist)
         {
-            double o = style.Geometry.ShadowOffset;
-            if (o <= 0) return "";
+            var o = style.Geometry.ShadowOffset;
+            if (o <= 0)
+            {
+                return "";
+            }
+
             return $"<rect class=\"beck-shadow\" x=\"{N(x + o)}\" y=\"{N(y + o)}\" width=\"{N(w)}\" height=\"{N(h)}\" rx=\"{N(rx)}\" style=\"fill:var(--beck-shadow, var(--beck-node-border))\"/>";
         }
         if (style.Artwork == StyleArtwork.Extruded)
         {
-            double d = style.Geometry.DepthOffset;
-            if (d <= 0) return "";
+            var d = style.Geometry.DepthOffset;
+            if (d <= 0)
+            {
+                return "";
+            }
+
             double xr = x + w, yb = y + h;
             // Bottom face first, then the right face on top at their shared far corner; light source
             // top-left ⇒ the bottom face reads darkest. Both are closed parallelograms whose front
             // edge sits exactly on the node's edge (the opaque node fill covers it), so only the
             // down-right depth sliver shows. All coordinates are node-local and ≥ 0.
-            string bottom = $"<path class=\"beck-depth beck-depth--bottom\" d=\"M{N(x)} {N(yb)}L{N(xr)} {N(yb)}L{N(xr + d)} {N(yb + d)}L{N(x + d)} {N(yb + d)}Z\" style=\"fill:var(--beck-depth-bottom, var(--beck-node-border))\"/>";
-            string right = $"<path class=\"beck-depth beck-depth--right\" d=\"M{N(xr)} {N(y)}L{N(xr + d)} {N(y + d)}L{N(xr + d)} {N(yb + d)}L{N(xr)} {N(yb)}Z\" style=\"fill:var(--beck-depth-right, var(--beck-node-border))\"/>";
+            var bottom = $"<path class=\"beck-depth beck-depth--bottom\" d=\"M{N(x)} {N(yb)}L{N(xr)} {N(yb)}L{N(xr + d)} {N(yb + d)}L{N(x + d)} {N(yb + d)}Z\" style=\"fill:var(--beck-depth-bottom, var(--beck-node-border))\"/>";
+            var right = $"<path class=\"beck-depth beck-depth--right\" d=\"M{N(xr)} {N(y)}L{N(xr + d)} {N(y + d)}L{N(xr + d)} {N(yb + d)}L{N(xr)} {N(yb)}Z\" style=\"fill:var(--beck-depth-right, var(--beck-node-border))\"/>";
             return bottom + right;
         }
         return "";
@@ -110,7 +129,10 @@ internal static class Artwork
     public static string Circle(BeckStyle style, string cls, double cx, double cy, double r, string seed)
     {
         if (style.Artwork != StyleArtwork.Sketch)
+        {
             return $"<circle class=\"{cls}\" cx=\"{N(cx)}\" cy=\"{N(cy)}\" r=\"{N(r)}\"/>";
+        }
+
         return $"<path class=\"{cls}\" d=\"{WobbleCircle(cx, cy, r, seed)}\"/>";
     }
 
@@ -125,9 +147,17 @@ internal static class Artwork
     /// </summary>
     public static string Station(BeckStyle style, double cx, double cy, string ringColor)
     {
-        if (style.Artwork != StyleArtwork.Metro) return "";
-        double r = style.Geometry.StationRadius;
-        if (r <= 0) return "";
+        if (style.Artwork != StyleArtwork.Metro)
+        {
+            return "";
+        }
+
+        var r = style.Geometry.StationRadius;
+        if (r <= 0)
+        {
+            return "";
+        }
+
         return $"<circle class=\"beck-station\" cx=\"{N(cx)}\" cy=\"{N(cy)}\" r=\"{N(r)}\" "
              + $"style=\"fill:var(--beck-station-fill, var(--beck-surface));stroke:{SvgWriter.Attr(ringColor)};stroke-width:{N(style.Geometry.StationRing)}\"/>";
     }
@@ -146,14 +176,22 @@ internal static class Artwork
     /// </summary>
     public static string GroupDimension(BeckStyle style, double x, double y, double w)
     {
-        if (style.Artwork != StyleArtwork.Blueprint) return "";
-        double gap = style.Geometry.DimensionTick;
-        if (gap <= 0) return "";
-        double over = gap / 3;           // witness overshoot past the dimension rule
-        double dy = y - gap;             // the dimension rule sits `gap` px above the top edge
-        double tickTop = dy - over;      // witness ticks run from the box edge (y) up past the rule
-        string col = "stroke:var(--beck-dimension, var(--beck-group-border))";
-        string sw = $"stroke-width:{N(style.Geometry.HairlineStroke)}";
+        if (style.Artwork != StyleArtwork.Blueprint)
+        {
+            return "";
+        }
+
+        var gap = style.Geometry.DimensionTick;
+        if (gap <= 0)
+        {
+            return "";
+        }
+
+        var over = gap / 3;           // witness overshoot past the dimension rule
+        var dy = y - gap;             // the dimension rule sits `gap` px above the top edge
+        var tickTop = dy - over;      // witness ticks run from the box edge (y) up past the rule
+        var col = "stroke:var(--beck-dimension, var(--beck-group-border))";
+        var sw = $"stroke-width:{N(style.Geometry.HairlineStroke)}";
         var sb = new StringBuilder();
         sb.Append("<g class=\"beck-dimension\" style=\"fill:none;").Append(col).Append(';').Append(sw).Append("\">");
         // The extension/dimension rule, parallel to the measured top edge.
@@ -180,49 +218,63 @@ internal static class Artwork
     /// </summary>
     public static string Scribble(BeckStyle style, double x, double y, double w, double h, double r, string seed)
     {
-        if (style.Artwork != StyleArtwork.Sketch) return "";
+        if (style.Artwork != StyleArtwork.Sketch)
+        {
+            return "";
+        }
         // Inset covers the filter's reach: the displacement map shoves wax up to ~scale/2 px outward,
         // so anything tighter lets specks land outside the wobbly border.
-        const double pad = 4;
-        double ix = x + pad, iy = y + pad, iw = w - 2 * pad, ih = h - 2 * pad;
-        if (iw < 12 || ih < 8) return "";
+        const double Pad = 4;
+        double ix = x + Pad, iy = y + Pad, iw = w - 2 * Pad, ih = h - 2 * Pad;
+        if (iw < 12 || ih < 8)
+        {
+            return "";
+        }
+
         var rng = new Rng(seed + ":scribble");
-        double rr = Math.Max(0, Math.Min(r - pad / 2, Math.Min(iw, ih) / 2));
+        var rr = Math.Max(0, Math.Min(r - Pad / 2, Math.Min(iw, ih) / 2));
         // Fat crayon: width scales with the box so a short chip and a tall card both read as the
         // same gentle pressure; rows overlap slightly (pitch < width) so coverage is near-total and
         // the grain mask alone decides where paper peeks through.
-        double sw = Math.Max(5.5, Math.Min(11, ih / 5.5));
-        double pitch = sw * 0.88;
+        var sw = Math.Max(5.5, Math.Min(11, ih / 5.5));
+        var pitch = sw * 0.88;
         // Horizontal extent of a row at height yy, pulled in where it crosses the corner circles.
         (double L, double R) Extent(double yy)
         {
-            double d = Math.Min(yy - iy, iy + ih - yy);
-            double inset = d < rr ? rr - Math.Sqrt(Math.Max(0, rr * rr - (rr - d) * (rr - d))) : 0;
+            var d = Math.Min(yy - iy, iy + ih - yy);
+            var inset = d < rr ? rr - Math.Sqrt(Math.Max(0, rr * rr - (rr - d) * (rr - d))) : 0;
             return (ix + inset, ix + iw - inset);
         }
 
         var sb = new StringBuilder();
-        bool rightward = rng.Next() < 0.5;
+        var rightward = rng.Next() < 0.5;
         double yTop = iy + sw * 0.45, yBot = iy + ih - sw * 0.45;
-        bool first = true;
-        for (double yy = yTop; yy <= yBot + pitch * 0.4; yy += pitch)
+        var first = true;
+        for (var yy = yTop; yy <= yBot + pitch * 0.4; yy += pitch)
         {
-            double rowY = Math.Min(yBot, yy) + (rng.Next() - 0.5) * sw * 0.25;
+            var rowY = Math.Min(yBot, yy) + (rng.Next() - 0.5) * sw * 0.25;
             var (xl, xr) = Extent(rowY);
             double x0 = rightward ? xl : xr, x1 = rightward ? xr : xl;
             // Small per-row overshoot jitter at each end — no two rows start or stop flush.
             x0 += (rightward ? 1 : -1) * rng.Next() * sw * 0.35;
             x1 -= (rightward ? 1 : -1) * rng.Next() * sw * 0.35;
-            double yEnd = rowY + (rng.Next() - 0.5) * sw * 0.35;
+            var yEnd = rowY + (rng.Next() - 0.5) * sw * 0.35;
             if (first) { sb.Append('M').Append(F((x0, rowY))); first = false; }
-            else sb.Append('L').Append(F((x0, rowY)));   // the edge hook down from the previous row
+            else
+            {
+                sb.Append('L').Append(F((x0, rowY)));   // the edge hook down from the previous row
+            }
             // The sweep itself: a lazy cubic with two mid controls drifting a touch off the row line.
             sb.Append('C').Append(F((x0 + (x1 - x0) / 3, rowY + (rng.Next() - 0.5) * sw * 0.5))).Append(' ')
               .Append(F((x0 + 2 * (x1 - x0) / 3, rowY + (rng.Next() - 0.5) * sw * 0.5))).Append(' ')
               .Append(F((x1, yEnd)));
             rightward = !rightward;
         }
-        if (first) return "";
+        if (first)
+        {
+            return "";
+        }
+
         return $"<path class=\"beck-scribble\" d=\"{sb}\" stroke-width=\"{N(Math.Round(sw, 2))}\"/>";
     }
 
@@ -242,7 +294,11 @@ internal static class Artwork
         // — no two cards round alike, the classic hand-drawn tell. Pills (large h/2 radius) and group boxes
         // (larger radius) keep their shape. Drawn from the same deterministic seed stream, so it's stable
         // forever and consumes one value before the wobble (which is why the sketch golden was regenerated).
-        if (r <= 10) r = 6 + Math.Floor(rng.Next() * 4);
+        if (r <= 10)
+        {
+            r = 6 + Math.Floor(rng.Next() * 4);
+        }
+
         r = Math.Max(0, Math.Min(r, Math.Min(w, h) / 2));
         // Amplitude grows with node size so the hand-drawn wobble stays legible on large rectangular
         // cards/group boxes (where a fixed few-px jitter proportionally vanished and the sketch read
@@ -250,11 +306,11 @@ internal static class Artwork
         // long dimension: s ramps 0→1 from ~90px to ~310px, lifting the endpoint jitter ~2.2→3.6 and the
         // edge bow ~1.8→2.9. Still a few px — deep inside the card's ≥14px padding, so text still fits
         // (the wobble perturbs only the outline path, never the measured content box).
-        double s = Math.Clamp((Math.Max(w, h) - 90) / 220.0, 0, 1);
-        double A = 2.2 + 1.4 * s;   // endpoint jitter amplitude
-        double B = 1.8 + 1.1 * s;   // edge-bow amplitude
-        double J() => (rng.Next() - 0.5) * 2 * A;
-        double Bow() => (rng.Next() - 0.5) * 2 * B;
+        var s = Math.Clamp((Math.Max(w, h) - 90) / 220.0, 0, 1);
+        var a = 2.2 + 1.4 * s;   // endpoint jitter amplitude
+        var b = 1.8 + 1.1 * s;   // edge-bow amplitude
+        double J() => (rng.Next() - 0.5) * 2 * a;
+        double Bow() => (rng.Next() - 0.5) * 2 * b;
 
         double x0 = x + r, x1 = x + w - r, y0 = y + r, y1 = y + h - r;
         // Tangent endpoints, clockwise, each jittered a touch off the true rounded-rect tangent.
@@ -286,21 +342,24 @@ internal static class Artwork
     private static string WobbleCircle(double cx, double cy, double r, string seed)
     {
         var rng = new Rng(seed);
-        const int n = 10;
-        double amp = Math.Min(1.6, r * 0.22);
-        var p = new (double X, double Y)[n];
-        for (int i = 0; i < n; i++)
+        const int N = 10;
+        var amp = Math.Min(1.6, r * 0.22);
+        var p = new (double X, double Y)[N];
+        for (var i = 0; i < N; i++)
         {
-            double ang = 2 * Math.PI * i / n;
-            double rr = r + (rng.Next() - 0.5) * 2 * amp;
+            var ang = 2 * Math.PI * i / N;
+            var rr = r + (rng.Next() - 0.5) * 2 * amp;
             p[i] = (cx + rr * Math.Cos(ang), cy + rr * Math.Sin(ang));
         }
         (double X, double Y) Mid(int i, int j) => ((p[i].X + p[j].X) / 2, (p[i].Y + p[j].Y) / 2);
 
         var sb = new StringBuilder();
-        sb.Append('M').Append(F(Mid(n - 1, 0)));
-        for (int i = 0; i < n; i++)
-            sb.Append('Q').Append(F(p[i])).Append(' ').Append(F(Mid(i, (i + 1) % n)));
+        sb.Append('M').Append(F(Mid(N - 1, 0)));
+        for (var i = 0; i < N; i++)
+        {
+            sb.Append('Q').Append(F(p[i])).Append(' ').Append(F(Mid(i, (i + 1) % N)));
+        }
+
         sb.Append('Z');
         return sb.ToString();
     }

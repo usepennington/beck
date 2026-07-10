@@ -19,14 +19,20 @@ internal static class StyleSanitizer
     // Substrings that could break out of the <style> block or inject a rule. `url(` is a documented
     // exfiltration vector once a token value is substituted into a url-consuming property
     // (background-image, filter: url(#x), …), so it is rejected in custom (less-trusted) styles.
-    private static readonly string[] Forbidden = { "</", "<!", "@import", "url(", "{", "}" };
+    private static readonly string[] _forbidden = ["</", "<!", "@import", "url(", "{", "}"];
 
     /// <summary>Return <paramref name="style"/> unchanged if it is a trusted built-in; otherwise a
     /// copy with every CSS-bound string value stripped of forbidden substrings.</summary>
     public static BeckStyle Ensure(BeckStyle style)
     {
-        foreach (BeckStyle builtin in BeckStyles.All)
-            if (ReferenceEquals(builtin, style)) return style;
+        foreach (var builtin in BeckStyles.All)
+        {
+            if (ReferenceEquals(builtin, style))
+            {
+                return style;
+            }
+        }
+
         return Sanitize(style);
     }
 
@@ -81,21 +87,26 @@ internal static class StyleSanitizer
 
     private static string Clean(string value)
     {
-        if (string.IsNullOrEmpty(value)) return value;
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
         // Strip to a fixed point. A single Replace pass does not re-scan its own output, so a crafted
         // value can interleave a forbidden token such that removal rejoins the neighbours into a fresh
         // one (e.g. "<<//style>" → "</style>", "@im@importport" → "@import"). Loop until a full pass
         // finds nothing left to strip; each Replace strictly shrinks the string, so this terminates.
-        bool changed = true;
+        var changed = true;
         while (changed)
         {
             changed = false;
-            foreach (string bad in Forbidden)
+            foreach (var bad in _forbidden)
+            {
                 if (value.Contains(bad, StringComparison.OrdinalIgnoreCase))
                 {
                     value = value.Replace(bad, "", StringComparison.OrdinalIgnoreCase);
                     changed = true;
                 }
+            }
         }
         return value;
     }

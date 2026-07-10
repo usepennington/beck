@@ -16,9 +16,17 @@ internal static class Validate
     /// <summary>Parse <c>meta.narrate</c>: a bool toggles the bar; a mapping tunes the pace.</summary>
     private static NarrationOptions BuildNarration(object? v)
     {
-        NarrationOptions d = Defaults.DefaultNarration;
-        if (v is null) return d;
-        if (v is bool b) return d with { Enabled = b };
+        var d = Defaults.DefaultNarration;
+        if (v is null)
+        {
+            return d;
+        }
+
+        if (v is bool b)
+        {
+            return d with { Enabled = b };
+        }
+
         var o = AsObject(v, "meta.narrate");
         return new NarrationOptions(
             Enabled: OptBool(o.GetValueOrDefault("enabled"), "meta.narrate.enabled", true),
@@ -33,9 +41,17 @@ internal static class Validate
     /// <c>BeckSvg</c>, which sees both the built-in table and the options registry.</summary>
     private static string? BuildStyleName(object? v)
     {
-        string? s = OptString(v);
-        if (s is null) return null;
-        if (BeckStyles.IsValidName(s)) return s;
+        var s = OptString(v);
+        if (s is null)
+        {
+            return null;
+        }
+
+        if (BeckStyles.IsValidName(s))
+        {
+            return s;
+        }
+
         BeckDiagnostics.Warn(
             $"Beck: ignoring invalid `meta.style` \"{s}\" — a style name must match [a-z0-9-]+.");
         return null;
@@ -44,14 +60,14 @@ internal static class Validate
     public static DiagramMeta BuildMeta(IReadOnlyDictionary<string, object?> m, DiagramType type)
     {
         var sp = AsObject(m.GetValueOrDefault("spacing"), "meta.spacing");
-        Spacing spacingDefault = Defaults.SpacingByType[type];
+        var spacingDefault = Defaults.SpacingByType[type];
         return new DiagramMeta
         {
             Type = type,
             Title = OptString(m.GetValueOrDefault("title")),
             Subtitle = OptString(m.GetValueOrDefault("subtitle")),
             StyleName = BuildStyleName(m.GetValueOrDefault("style")),
-            Direction = OneOf(m.GetValueOrDefault("direction"), Tokens.Direction, "meta.direction", Direction.TB),
+            Direction = OneOf(m.GetValueOrDefault("direction"), Tokens.Direction, "meta.direction", Direction.Tb),
             Theme = OneOf(m.GetValueOrDefault("theme"), Tokens.Theme, "meta.theme", ThemeMode.Auto),
             Animate = OptBool(m.GetValueOrDefault("animate"), "meta.animate", true),
             Loop = OptBool(m.GetValueOrDefault("loop"), "meta.loop", true),
@@ -67,12 +83,12 @@ internal static class Validate
 
     public static NodeModel BuildNode(IReadOnlyDictionary<string, object?> n)
     {
-        string id = AsString(n.GetValueOrDefault("id"), "node.id");
-        NodeKind kind = OneOf(n.GetValueOrDefault("kind"), Tokens.NodeKind, $"node \"{id}\" kind", NodeKind.Service);
-        KindDefault kd = Defaults.KindDefaults[kind];
+        var id = AsString(n.GetValueOrDefault("id"), "node.id");
+        var kind = OneOf(n.GetValueOrDefault("kind"), Tokens.NodeKind, $"node \"{id}\" kind", NodeKind.Service);
+        var kd = Defaults.KindDefaults[kind];
         // An explicit but unknown icon key falls back to the kind default; inline
         // <svg> and known keys pass through.
-        string? rawIcon = OptString(n.GetValueOrDefault("icon"));
+        var rawIcon = OptString(n.GetValueOrDefault("icon"));
         return new NodeModel
         {
             Id = id,
@@ -103,15 +119,111 @@ internal static class Validate
         var groups = new Dictionary<string, GroupModel>();
         var order = new List<string>();
 
-        GroupModel Ensure(string id, string? label = null, string? accent = null)
+        // Pass 1: register every explicit group + any inline node.group.
+        foreach (var rg in rawGroups)
         {
-            if (!groups.TryGetValue(id, out GroupModel? g))
+            var g = AsObject(rg, "group");
+            Ensure(AsString(g.GetValueOrDefault("id"), "group.id"),
+                OptString(g.GetValueOrDefault("label")), OptString(g.GetValueOrDefault("accent")));
+        }
+        foreach (var n in nodes)
+        {
+            if (n.Group != null)
+            {
+                Ensure(n.Group);
+            }
+        }
+
+        var groupIds = new HashSet<string>(groups.Keys);
+        bool IsMember(string mid) => nodeIds.Contains(mid) || groupIds.Contains(mid);
+
+        // Pass 2: members may be node ids OR group ids (nesting).
+        foreach (var rg in rawGroups)
+        {
+            var g = AsObject(rg, "group");
+            var id = AsString(g.GetValueOrDefault("id"), "group.id");
+            var grp = groups[id];
+            foreach (var m in AsArray(g.GetValueOrDefault("members"), $"group \"{id}\" members"))
+            {
+                var mid = AsString(m, $"group \"{id}\" member");
+                if (!IsMember(mid))
+                {
+                    throw new BeckYamlException($"Group \"{id}\" references unknown node or group \"{mid}\"");
+                }
+
+                if (mid == id)
+                {
+                    throw new BeckYamlException($"Group \"{id}\" cannot contain itself");
+                }
+
+                if (!grp.Members.Contains(mid))
+                {
+                    grp.Members.Add(mid);
+                }
+            }
+        }
+
+        // Inline node.group membership.
+        foreach (var n in nodes)
+        {
+            if (n.Group == null)
+            {
+                continue;
+            }
+
+            var grp = groups[n.Group];
+            if (!grp.Members.Contains(n.Id))
+            {
+                grp.Members.Add(n.Id);
+            }
+        }
+
+        // Each node/group belongs to at most one parent (membership is a tree).
+        var parentOf = new Dictionary<string, string>();
+        foreach (var id in order)
+        {
+            foreach (var m in groups[id].Members)
+            {
+                if (parentOf.TryGetValue(m, out var prev))
+                {
+                    throw new BeckYamlException($"\"{m}\" is in two groups (\"{prev}\" and \"{id}\")");
+                }
+
+                parentOf[m] = id;
+            }
+        }
+
+        // No cycles: a group cannot be its own ancestor.
+        foreach (var id in order)
+        {
+            var cur = parentOf.GetValueOrDefault(id);
+            var guard = 0;
+            while (cur != null)
+            {
+                if (cur == id)
+                {
+                    throw new BeckYamlException($"Group \"{id}\" is nested inside itself");
+                }
+
+                cur = parentOf.GetValueOrDefault(cur);
+                if (++guard > order.Count + 1)
+                {
+                    break;
+                }
+            }
+        }
+
+        return order.Select(id => groups[id]).ToList();
+
+        void Ensure(string id, string? label = null, string? accent = null)
+        {
+            if (!groups.TryGetValue(id, out var g))
             {
                 g = new GroupModel
                 {
                     Id = id,
                     Label = label ?? id,
-                    Members = new List<string>(),
+                    Members = [],
                     Accent = Colors.AccentToCss(accent, AccentToken.Neutral),
                 };
                 groups[id] = g;
@@ -121,94 +233,47 @@ internal static class Validate
             {
                 g.Label = label;
             }
-            return g;
         }
-
-        // Pass 1: register every explicit group + any inline node.group.
-        foreach (var rg in rawGroups)
-        {
-            var g = AsObject(rg, "group");
-            Ensure(AsString(g.GetValueOrDefault("id"), "group.id"),
-                OptString(g.GetValueOrDefault("label")), OptString(g.GetValueOrDefault("accent")));
-        }
-        foreach (var n in nodes) if (n.Group != null) Ensure(n.Group);
-
-        var groupIds = new HashSet<string>(groups.Keys);
-        bool IsMember(string mid) => nodeIds.Contains(mid) || groupIds.Contains(mid);
-
-        // Pass 2: members may be node ids OR group ids (nesting).
-        foreach (var rg in rawGroups)
-        {
-            var g = AsObject(rg, "group");
-            string id = AsString(g.GetValueOrDefault("id"), "group.id");
-            GroupModel grp = groups[id];
-            foreach (var m in AsArray(g.GetValueOrDefault("members"), $"group \"{id}\" members"))
-            {
-                string mid = AsString(m, $"group \"{id}\" member");
-                if (!IsMember(mid)) throw new BeckYamlException($"Group \"{id}\" references unknown node or group \"{mid}\"");
-                if (mid == id) throw new BeckYamlException($"Group \"{id}\" cannot contain itself");
-                if (!grp.Members.Contains(mid)) grp.Members.Add(mid);
-            }
-        }
-
-        // Inline node.group membership.
-        foreach (var n in nodes)
-        {
-            if (n.Group == null) continue;
-            GroupModel grp = groups[n.Group];
-            if (!grp.Members.Contains(n.Id)) grp.Members.Add(n.Id);
-        }
-
-        // Each node/group belongs to at most one parent (membership is a tree).
-        var parentOf = new Dictionary<string, string>();
-        foreach (var id in order)
-        {
-            foreach (var m in groups[id].Members)
-            {
-                if (parentOf.TryGetValue(m, out string? prev))
-                    throw new BeckYamlException($"\"{m}\" is in two groups (\"{prev}\" and \"{id}\")");
-                parentOf[m] = id;
-            }
-        }
-
-        // No cycles: a group cannot be its own ancestor.
-        foreach (var id in order)
-        {
-            string? cur = parentOf.GetValueOrDefault(id);
-            int guard = 0;
-            while (cur != null)
-            {
-                if (cur == id) throw new BeckYamlException($"Group \"{id}\" is nested inside itself");
-                cur = parentOf.GetValueOrDefault(cur);
-                if (++guard > order.Count + 1) break;
-            }
-        }
-
-        return order.Select(id => groups[id]).ToList();
     }
 
     /// <summary>Arrowheads: accept the legacy bool (true→end, false→none) or an end token.</summary>
     private static ArrowEnds ArrowEndsOf(object? v)
     {
-        if (v is null || (v is bool bt && bt)) return ArrowEnds.End;
-        if (v is bool bf && !bf) return ArrowEnds.None;
+        if (v is null || (v is bool bt && bt))
+        {
+            return ArrowEnds.End;
+        }
+
+        if (v is bool bf && !bf)
+        {
+            return ArrowEnds.None;
+        }
+
         return OneOf(v, Tokens.ArrowEnds, "edge.arrow", ArrowEnds.End);
     }
 
     private static List<EdgeModel> BuildEdges(IReadOnlyList<object?> rawEdges, HashSet<string> validTargets)
     {
         var edges = new List<EdgeModel>(rawEdges.Count);
-        for (int i = 0; i < rawEdges.Count; i++)
+        for (var i = 0; i < rawEdges.Count; i++)
         {
             var e = AsObject(rawEdges[i], "edge");
-            string from = AsString(e.GetValueOrDefault("from"), "edge.from");
-            string to = AsString(e.GetValueOrDefault("to"), "edge.to");
-            if (!validTargets.Contains(from)) throw new BeckYamlException($"Edge references unknown source \"{from}\"");
-            if (!validTargets.Contains(to)) throw new BeckYamlException($"Edge references unknown target \"{to}\"");
-            EdgeKind kind = OneOf(e.GetValueOrDefault("kind"), Tokens.EdgeKind, "edge.kind", EdgeKind.Data);
-            EdgeKindDefault kd = Defaults.EdgeKindDefaults[kind];
-            object? fromSideRaw = e.GetValueOrDefault("fromSide");
-            object? toSideRaw = e.GetValueOrDefault("toSide");
+            var from = AsString(e.GetValueOrDefault("from"), "edge.from");
+            var to = AsString(e.GetValueOrDefault("to"), "edge.to");
+            if (!validTargets.Contains(from))
+            {
+                throw new BeckYamlException($"Edge references unknown source \"{from}\"");
+            }
+
+            if (!validTargets.Contains(to))
+            {
+                throw new BeckYamlException($"Edge references unknown target \"{to}\"");
+            }
+
+            var kind = OneOf(e.GetValueOrDefault("kind"), Tokens.EdgeKind, "edge.kind", EdgeKind.Data);
+            var kd = Defaults.EdgeKindDefaults[kind];
+            var fromSideRaw = e.GetValueOrDefault("fromSide");
+            var toSideRaw = e.GetValueOrDefault("toSide");
             edges.Add(new EdgeModel
             {
                 Id = $"{from}->{to}#{i}",
@@ -245,21 +310,19 @@ internal static class Validate
     private static FlowStep ParseStep(
         IReadOnlyDictionary<string, object?> s, HashSet<string> nodeIds, HashSet<string> groupIds)
     {
-        string Node(string id, string ctx)
-        {
-            if (!nodeIds.Contains(id)) throw new BeckYamlException($"Flow {ctx} references unknown node \"{id}\"");
-            return id;
-        }
         string Endpoint(string id, string ctx)
         {
             if (!nodeIds.Contains(id) && !groupIds.Contains(id))
+            {
                 throw new BeckYamlException($"Flow {ctx} references unknown node or group \"{id}\"");
+            }
+
             return id;
         }
 
-        if (s.ContainsKey("packet"))
+        if (s.TryGetValue("packet", out var value))
         {
-            var p = AsObject(s["packet"], "flow packet");
+            var p = AsObject(value, "flow packet");
             var via = AsArray(p.GetValueOrDefault("via"), "packet.via")
                 .Select(v => Endpoint(AsString(v, "packet.via"), "packet via")).ToList();
             return new PacketStep
@@ -273,20 +336,25 @@ internal static class Validate
                 Knobs = PacketKnobsOf(p),
             };
         }
-        if (s.ContainsKey("burst"))
+        if (s.TryGetValue("burst", out var value1))
         {
-            var p = AsObject(s["burst"], "flow burst");
-            object? toRaw = p.GetValueOrDefault("to");
+            var p = AsObject(value1, "flow burst");
+            var toRaw = p.GetValueOrDefault("to");
             string? toSingle = null;
             List<string>? toList = null;
             if (toRaw is IReadOnlyList<object?> arr)
+            {
                 toList = arr.Select(v => Endpoint(AsString(v, "burst.to"), "burst to")).ToList();
+            }
             else
+            {
                 toSingle = Endpoint(AsString(toRaw, "burst.to"), "burst");
+            }
+
             var via = AsArray(p.GetValueOrDefault("via"), "burst.via")
                 .Select(v => Endpoint(AsString(v, "burst.via"), "burst via")).ToList();
-            int count = (int)Math.Max(1, Math.Min(24, Js.Round(OptNumber(p.GetValueOrDefault("count"), "burst.count") ?? 3)));
-            double stagger = Math.Max(0, OptNumber(p.GetValueOrDefault("stagger"), "burst.stagger") ?? 0.12);
+            var count = (int)Math.Max(1, Math.Min(24, Js.Round(OptNumber(p.GetValueOrDefault("count"), "burst.count") ?? 3)));
+            var stagger = Math.Max(0, OptNumber(p.GetValueOrDefault("stagger"), "burst.stagger") ?? 0.12);
             return new BurstStep
             {
                 From = Endpoint(AsString(p.GetValueOrDefault("from"), "burst.from"), "burst"),
@@ -300,9 +368,9 @@ internal static class Validate
                 Knobs = PacketKnobsOf(p),
             };
         }
-        if (s.ContainsKey("status"))
+        if (s.TryGetValue("status", out var value2))
         {
-            var p = AsObject(s["status"], "flow status");
+            var p = AsObject(value2, "flow status");
             return new StatusStep
             {
                 Node = Node(AsString(p.GetValueOrDefault("node"), "status.node"), "status"),
@@ -310,19 +378,19 @@ internal static class Validate
                 Color = OptColor(p.GetValueOrDefault("color")),
             };
         }
-        if (s.ContainsKey("highlight"))
+        if (s.TryGetValue("highlight", out var value3))
         {
-            var p = AsObject(s["highlight"], "flow highlight");
+            var p = AsObject(value3, "flow highlight");
             return new HighlightStep { Node = Node(AsString(p.GetValueOrDefault("node"), "highlight.node"), "highlight"), Color = OptColor(p.GetValueOrDefault("color")) };
         }
-        if (s.ContainsKey("pulse"))
+        if (s.TryGetValue("pulse", out var value4))
         {
-            var p = AsObject(s["pulse"], "flow pulse");
+            var p = AsObject(value4, "flow pulse");
             return new PulseStep { Node = Node(AsString(p.GetValueOrDefault("node"), "pulse.node"), "pulse"), Color = OptColor(p.GetValueOrDefault("color")) };
         }
-        if (s.ContainsKey("activate"))
+        if (s.TryGetValue("activate", out var value5))
         {
-            var p = AsObject(s["activate"], "flow activate");
+            var p = AsObject(value5, "flow activate");
             return new ActivateStep
             {
                 From = Endpoint(AsString(p.GetValueOrDefault("from"), "activate.from"), "activate"),
@@ -330,9 +398,9 @@ internal static class Validate
                 Color = OptColor(p.GetValueOrDefault("color")),
             };
         }
-        if (s.ContainsKey("stream"))
+        if (s.TryGetValue("stream", out var value6))
         {
-            var p = AsObject(s["stream"], "flow stream");
+            var p = AsObject(value6, "flow stream");
             return new StreamStep
             {
                 From = Endpoint(AsString(p.GetValueOrDefault("from"), "stream.from"), "stream"),
@@ -340,19 +408,19 @@ internal static class Validate
                 Color = OptColor(p.GetValueOrDefault("color")),
             };
         }
-        if (s.ContainsKey("working"))
+        if (s.TryGetValue("working", out var value7))
         {
-            var p = AsObject(s["working"], "flow working");
+            var p = AsObject(value7, "flow working");
             return new WorkingStep { Node = Node(AsString(p.GetValueOrDefault("node"), "working.node"), "working"), Color = OptColor(p.GetValueOrDefault("color")) };
         }
-        if (s.ContainsKey("idle"))
+        if (s.TryGetValue("idle", out var value8))
         {
-            var p = AsObject(s["idle"], "flow idle");
+            var p = AsObject(value8, "flow idle");
             return new IdleStep { Node = Node(AsString(p.GetValueOrDefault("node"), "idle.node"), "idle") };
         }
-        if (s.ContainsKey("fail"))
+        if (s.TryGetValue("fail", out var value9))
         {
-            var p = AsObject(s["fail"], "flow fail");
+            var p = AsObject(value9, "flow fail");
             return new FailStep
             {
                 Node = Node(AsString(p.GetValueOrDefault("node"), "fail.node"), "fail"),
@@ -360,11 +428,13 @@ internal static class Validate
                 Color = OptColor(p.GetValueOrDefault("color")),
             };
         }
-        if (s.ContainsKey("narrate"))
+        if (s.TryGetValue("narrate", out var nar))
         {
-            object? nar = s["narrate"];
             if (nar is string or double or bool)
+            {
                 return new NarrateStep { Text = AsString(nar, "narrate") };
+            }
+
             var p = AsObject(nar, "flow narrate");
             return new NarrateStep
             {
@@ -373,20 +443,40 @@ internal static class Validate
                 Color = OptColor(p.GetValueOrDefault("color")),
             };
         }
-        if (s.ContainsKey("phase"))
-            return new PhaseStep { Label = AsString(s["phase"], "flow phase") };
-        if (s.ContainsKey("wait"))
-            return new WaitStep { Seconds = OptNumber(s["wait"], "flow wait") ?? 0.5 };
-        if (s.ContainsKey("reset"))
-            return new ResetStep();
-        if (s.ContainsKey("parallel"))
+        if (s.TryGetValue("phase", out var value10))
         {
-            var steps = AsArray(s["parallel"], "flow parallel")
+            return new PhaseStep { Label = AsString(value10, "flow phase") };
+        }
+
+        if (s.TryGetValue("wait", out var value11))
+        {
+            return new WaitStep { Seconds = OptNumber(value11, "flow wait") ?? 0.5 };
+        }
+
+        if (s.ContainsKey("reset"))
+        {
+            return new ResetStep();
+        }
+
+        if (s.TryGetValue("parallel", out var value12))
+        {
+            var steps = AsArray(value12, "flow parallel")
                 .Select(p => ParseStep(AsObject(p, "parallel step"), nodeIds, groupIds)).ToList();
             return new ParallelStep { Steps = steps };
         }
+
         throw new BeckYamlException(
             "A flow step must have one of: packet, burst, status, highlight, pulse, activate, stream, working, idle, fail, narrate, phase, wait, reset, parallel");
+
+        string Node(string id, string ctx)
+        {
+            if (!nodeIds.Contains(id))
+            {
+                throw new BeckYamlException($"Flow {ctx} references unknown node \"{id}\"");
+            }
+
+            return id;
+        }
     }
 
     public static FlowModel BuildFlow(
@@ -407,32 +497,46 @@ internal static class Validate
 
     private static DiagramModel BuildArchitectureModel(IReadOnlyDictionary<string, object?> root)
     {
-        DiagramMeta meta = BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.Architecture);
+        var meta = BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.Architecture);
 
         var rawNodes = AsArray(root.GetValueOrDefault("nodes"), "nodes");
-        if (rawNodes.Count == 0) throw new BeckYamlException("A diagram needs at least one node under `nodes`");
+        if (rawNodes.Count == 0)
+        {
+            throw new BeckYamlException("A diagram needs at least one node under `nodes`");
+        }
 
         var nodes = new List<NodeModel>();
         var nodeIds = new HashSet<string>();
         foreach (var rn in rawNodes)
         {
-            NodeModel n = BuildNode(AsObject(rn, "node"));
-            if (!nodeIds.Add(n.Id)) throw new BeckYamlException($"Duplicate node id \"{n.Id}\"");
+            var n = BuildNode(AsObject(rn, "node"));
+            if (!nodeIds.Add(n.Id))
+            {
+                throw new BeckYamlException($"Duplicate node id \"{n.Id}\"");
+            }
+
             nodes.Add(n);
         }
 
-        List<GroupModel> groups = BuildGroups(AsArray(root.GetValueOrDefault("groups"), "groups"), nodes, nodeIds);
+        var groups = BuildGroups(AsArray(root.GetValueOrDefault("groups"), "groups"), nodes, nodeIds);
 
         var validTargets = new HashSet<string>(nodeIds);
-        foreach (var g in groups) validTargets.Add(g.Id);
-        List<EdgeModel> edges = BuildEdges(AsArray(root.GetValueOrDefault("edges"), "edges"), validTargets);
+        foreach (var g in groups)
+        {
+            validTargets.Add(g.Id);
+        }
+
+        var edges = BuildEdges(AsArray(root.GetValueOrDefault("edges"), "edges"), validTargets);
 
         var groupIdSet = new HashSet<string>(groups.Select(g => g.Id));
-        FlowModel flow = root.GetValueOrDefault("flow") != null
+        var flow = root.GetValueOrDefault("flow") != null
             ? BuildFlow(AsObject(root["flow"], "flow"), nodeIds, groupIdSet)
             : Defaults.DeriveFlow(nodes, edges);
 
-        if (!meta.Loop) flow.Repeat = 0;
+        if (!meta.Loop)
+        {
+            flow.Repeat = 0;
+        }
 
         return new DiagramModel { Meta = meta, Nodes = nodes, Groups = groups, Edges = edges, Flow = flow, Sections = [] };
     }

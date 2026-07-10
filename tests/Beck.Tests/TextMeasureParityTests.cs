@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Beck.Skia;
-using Beck.Rendering.Text;
 using Beck.Text;
 using Xunit;
 
@@ -19,20 +18,20 @@ public sealed class TextMeasureParityTests
     [Fact]
     public void SkiaText_MatchesBrowser()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "Goldens", "measure", "text.json");
+        var path = Path.Combine(AppContext.BaseDirectory, "Goldens", "measure", "text.json");
         var cases = JsonSerializer.Deserialize<Case[]>(File.ReadAllText(path),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
         using var m = new SkiaTextMeasurer(TestFonts.Spec());
         var rows = cases.Select(c =>
         {
-            double skia = m.Measure(c.Text, Enum.Parse<FontRole>(c.Role)).Width;
+            var skia = m.Measure(c.Text, Enum.Parse<FontRole>(c.Role)).Width;
             return (c, skia, delta: skia - c.Width);
         }).ToList();
 
-        double maxAbs = rows.Max(r => Math.Abs(r.delta));
-        double mean = rows.Average(r => Math.Abs(r.delta));
-        string worst = string.Join("\n", rows.OrderByDescending(r => Math.Abs(r.delta)).Take(15)
+        var maxAbs = rows.Max(r => Math.Abs(r.delta));
+        var mean = rows.Average(r => Math.Abs(r.delta));
+        var worst = string.Join("\n", rows.OrderByDescending(r => Math.Abs(r.delta)).Take(15)
             .Select(r => $"  {r.c.Role,-16} \"{r.c.Text}\"  browser={r.c.Width,8:0.00}  skia={r.skia,8:0.00}  Δ={r.delta,+7:0.00}"));
 
         // HarfBuzz matches the browser's shaping to ~0.02px (browser 1/64px rounding);

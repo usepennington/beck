@@ -47,14 +47,13 @@ public static class BlueprintStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
+        var c = BeckStyle.Classic;
 
         // Blue-leaning defaults over the host ramp: primary/accent bias to the blue ramp, edges take a
         // blue tint via color-mix, and a faint --beck-grid token carries the graph-paper lines. Every
         // entry keeps the three-tier var(--beck-X, var(--color-Y, literal)) indirection, so a site that
         // defines --color-* (or --beck-* directly) always wins — the literals are only the last resort.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
             ("--beck-node-border", "color-mix(in srgb, var(--beck-primary) 22%, var(--color-base-200, #e2e8f0))"),
@@ -85,12 +84,11 @@ public static class BlueprintStyle
             // flowing dash reads as its own drafting-pen colour over the static dashed rail. Consumed
             // via the seam's default overlay fallback (`var(--beck-edge-overlay, var(--beck-accent))`).
             ("--beck-edge-overlay", "var(--color-sky-300, #7dd3fc)"),
-        });
+        ]);
 
         // Dark overrides only (layered over the light block, which is always emitted first): lighter
         // blue grid lines for contrast on the dark surface, plus the usual dark neutrals.
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #0d1117)"),
             ("--beck-node-bg", "var(--color-base-900, #161b22)"),
             ("--beck-node-border", "color-mix(in srgb, var(--beck-primary) 26%, var(--color-base-700, #30363d))"),
@@ -102,17 +100,17 @@ public static class BlueprintStyle
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-primary) 14%, var(--color-base-800, #21262d))"),
             ("--beck-grid", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 15%, transparent)"),
             ("--beck-dimension", "color-mix(in srgb, var(--color-primary-400, #60a5fa) 56%, transparent)"),
-        });
+        ]);
 
         // The faint graph-paper grid: two token-coloured 1px gradients (horizontal + vertical rules) on
         // a 22px pitch, painted on the root <svg> box. Colour flows through --beck-grid so it
         // theme-adapts; no resolved literal touches shape CSS.
-        const string grid =
+        const string Grid =
             "background-image:linear-gradient(var(--beck-grid) 1px, transparent 1px)," +
             "linear-gradient(90deg, var(--beck-grid) 1px, transparent 1px);" +
             "background-size:22px 22px;";
 
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             // Squarer corners than classic read as drafted/technical (still a data-only radius change).
             CardRadius = 4,
@@ -123,7 +121,7 @@ public static class BlueprintStyle
             GroupLabelBgRadius = 2,
             NarrationRadius = 4,
             BandRadius = 4,
-            SurfaceBackground = grid,
+            SurfaceBackground = Grid,
             // Dimension ticks on group boxes (the StyleArtwork.Blueprint gate below reads this): the
             // dimension rule sits 12px above each group's top edge with 4px witness overshoot (over =
             // gap/3). Enlarged from 9 so the annotation reads as an intentional drafting mark rather
@@ -138,9 +136,9 @@ public static class BlueprintStyle
         // saturated mid-blue) the old 34% blue dilution washed the label out against the dark chip;
         // 24% keeps a blue drafting tint while reading a clear step crisper (visual-jury tuning). The
         // mix ratio is theme-independent, so light gains a touch of contrast too — harmless.
-        StyleMix mix = c.Mix with { MsgText = 24 };
+        var mix = c.Mix with { MsgText = 24 };
 
-        StyleStrokes strokes = c.Strokes with
+        var strokes = c.Strokes with
         {
             // Every edge draws dashed by default (the technical-drawing identity); a longer dash than
             // classic's authored-dashed pattern so the flowing stream overlay reads distinctly over it.
@@ -148,7 +146,7 @@ public static class BlueprintStyle
             EdgeDash = "6 4",
         };
 
-        StyleEdges edges = c.Edges with
+        var edges = c.Edges with
         {
             // The headline mock 1a trait ("connectors are dashed + perpetually flowing"): a Marching
             // overlay sharing every edge/message's exact `d`, a `6 6` dash pattern (CometDash=6 emits
@@ -177,7 +175,7 @@ public static class BlueprintStyle
         // labels, section-band labels, and sequence messages all read the same. MsgText is already a
         // mono role, and mono advance is count-based, so uppercasing is width-invariant: the measured
         // (lowercase) chip still fits the rendered uppercase run with no textLength guard needed.
-        StyleTypography typography = c.Typography with
+        var typography = c.Typography with
         {
             Roles = new FontRoleTable(role => role switch
             {
@@ -190,7 +188,7 @@ public static class BlueprintStyle
 
         // The surveyor ping (mock 1a's `ringx`): an arrival pulses an offset rectangular ring off the
         // card, scaling linearly outward — a measurement mark, not classic's organic ripple.
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             Pulse = PulseEffect.SurveyRing,
         };

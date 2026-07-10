@@ -21,7 +21,11 @@ internal static class SvgWriter
     /// <summary>Escape text content (&amp;, &lt;, &gt;).</summary>
     public static string Text(string s)
     {
-        if (s.IndexOfAny(new[] { '&', '<', '>' }) < 0) return s;
+        if (s.IndexOfAny(['&', '<', '>']) < 0)
+        {
+            return s;
+        }
+
         return s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 
@@ -29,7 +33,7 @@ internal static class SvgWriter
     public static string Attr(string s)
     {
         var sb = new StringBuilder(s.Length);
-        foreach (char c in s)
+        foreach (var c in s)
         {
             switch (c)
             {

@@ -39,8 +39,8 @@ public static class TerminalStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
-        const string green = "var(--color-success-500, #4ade80)";
+        var c = BeckStyle.Classic;
+        const string Green = "var(--color-success-500, #4ade80)";
 
         // Every role renders through the same family stack as --beck-font-mono, so the handful of
         // spots that already opt into var(--beck-font-mono) (class members, msg/band text, packet
@@ -64,8 +64,7 @@ public static class TerminalStyle
         // --beck-packet follows it so packets read green by default too. --beck-neutral biases
         // toward the same success ramp via color-mix — a remapped ratio over the host ramp, still
         // fully overridable by a host --color-success-500 or --color-base-400.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
             ("--beck-node-border", "var(--color-base-200, #e2e8f0)"),
@@ -78,7 +77,7 @@ public static class TerminalStyle
             ("--beck-warn", "var(--color-amber-500, #f59e0b)"),
             ("--beck-danger", "var(--color-red-500, #ef4444)"),
             ("--beck-info", "var(--color-violet-500, #8b5cf6)"),
-            ("--beck-neutral", $"color-mix(in srgb, {green} 30%, var(--color-base-400, #94a3b8))"),
+            ("--beck-neutral", $"color-mix(in srgb, {Green} 30%, var(--color-base-400, #94a3b8))"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {c.Mix.GroupBorder.ToString(System.Globalization.CultureInfo.InvariantCulture)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
             // The wire itself reads as a dim green trace (the mock's dark-green `#166534` connectors),
@@ -92,15 +91,14 @@ public static class TerminalStyle
             // shared by both themes — phosphor stays vivid on light and dark alike.
             ("--beck-edge-overlay", "var(--color-success-300, #86efac)"),
             ("--beck-packet", "var(--beck-accent)"),
-            ("--beck-icon-bg", $"color-mix(in srgb, {green} 12%, var(--color-base-100, #f1f5f9))"),
-            ("--beck-accent", green),
-        });
+            ("--beck-icon-bg", $"color-mix(in srgb, {Green} 12%, var(--color-base-100, #f1f5f9))"),
+            ("--beck-accent", Green),
+        ]);
 
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #0d1117)"),
             ("--beck-node-bg", "var(--color-base-900, #161b22)"),
-            ("--beck-node-border", $"color-mix(in srgb, {green} 18%, var(--color-base-700, #30363d))"),
+            ("--beck-node-border", $"color-mix(in srgb, {Green} 18%, var(--color-base-700, #30363d))"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.3), 0 4px 14px rgb(0 0 0 / 0.4)"),
             ("--beck-text", "var(--color-base-50, #f0f6fc)"),
             ("--beck-text-muted", "var(--color-base-400, #8b949e)"),
@@ -109,12 +107,12 @@ public static class TerminalStyle
             // through from the light block so the wire reads as the mock's dark-green connector on the
             // near-black console surface too (the mock is itself a dark page). --beck-edge-overlay
             // (phosphor green-300) likewise inherits — it stays bright on both themes.
-            ("--beck-icon-bg", $"color-mix(in srgb, {green} 10%, var(--color-base-800, #21262d))"),
-        });
+            ("--beck-icon-bg", $"color-mix(in srgb, {Green} 10%, var(--color-base-800, #21262d))"),
+        ]);
 
         // Squared-off corners throughout — the "console window" read (StyleArtwork territory would
         // add real chrome; this stays a data-only radius change).
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             CardRadius = 0,
             ClassRadius = 0,
@@ -150,7 +148,7 @@ public static class TerminalStyle
         // The mock's scanlines + blinking cursor stay LOCKED OUT (design brief): the identity is carried by
         // mono type, square packets, hard-step trails/packet, brackets, chevrons, and this stepped phosphor
         // pulse — no scan/blink keyframes.
-        StyleEdges edges = c.Edges with
+        var edges = c.Edges with
         {
             Arrow = EdgeArrow.Chevron,
             MarkerColor = "var(--beck-accent)",
@@ -163,7 +161,7 @@ public static class TerminalStyle
             OverlayPeriod = 1.6,
         };
 
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             // Block/square travelling packets (the "packet emitter" seam: CssCompiler.Markup swaps
             // <circle> for a centred <rect> when a hop resolves to this shape).

@@ -14,8 +14,12 @@ internal readonly record struct Lane(int Index, int Count)
     /// <summary>This lane's signed offset from the gap's midpoint, spread over <paramref name="usable"/> px.</summary>
     public double Offset(double usable)
     {
-        if (Count < 2) return 0;
-        double step = Math.Min(MaxStep, usable / (Count - 1));
+        if (Count < 2)
+        {
+            return 0;
+        }
+
+        var step = Math.Min(MaxStep, usable / (Count - 1));
         return (Index - (Count - 1) / 2.0) * step;
     }
 
@@ -57,7 +61,7 @@ internal static class OrthogonalRouter
 
     private static Point Anchor(Rect rect, Side side)
     {
-        Point c = Center(rect);
+        var c = Center(rect);
         return side switch
         {
             Side.Top => new Point(c.X, rect.Y),
@@ -74,11 +78,17 @@ internal static class OrthogonalRouter
         if (primaryHorizontal)
         {
             if (Math.Abs(dx) > SameRankEps)
+            {
                 return dx >= 0 ? (Side.Right, Side.Left) : (Side.Left, Side.Right);
+            }
+
             return dy >= 0 ? (Side.Bottom, Side.Top) : (Side.Top, Side.Bottom);
         }
         if (Math.Abs(dy) > SameRankEps)
+        {
             return dy >= 0 ? (Side.Bottom, Side.Top) : (Side.Top, Side.Bottom);
+        }
+
         return dx >= 0 ? (Side.Right, Side.Left) : (Side.Left, Side.Right);
     }
 
@@ -86,7 +96,7 @@ internal static class OrthogonalRouter
         Rect from, Rect to, Direction dir, EdgeCurve curve, IReadOnlyList<Rect> obstacles,
         Side? explicitFrom, Side? explicitTo, Size? bounds = null)
     {
-        bool primaryHorizontal = dir is Direction.LR or Direction.RL;
+        var primaryHorizontal = dir is Direction.Lr or Direction.Rl;
         var auto = AutoSides(from, to, primaryHorizontal);
         if (curve == EdgeCurve.StepRound && explicitFrom is null && explicitTo is null
             && Geometry.AgainstFlow(from, to, dir))
@@ -106,18 +116,25 @@ internal static class OrthogonalRouter
                 // the lane travels along its own rank, and a sibling card sitting between the node
                 // and the near gutter would be sliced straight through. Near face first, so a clear
                 // route keeps the historical side.
-                Side near = primaryHorizontal ? Side.Top : Side.Left;
-                Side far = primaryHorizontal ? Side.Bottom : Side.Right;
-                foreach (Side face in new[] { near, far })
+                var near = primaryHorizontal ? Side.Top : Side.Left;
+                var far = primaryHorizontal ? Side.Bottom : Side.Right;
+                foreach (var face in new[] { near, far })
+                {
                     if (!PolylineHits(SameFaceLoop(Anchor(from, face), Anchor(to, face), face, obstacles, bounds), obstacles))
+                    {
                         return (face, face);
+                    }
+                }
 
                 // Neither gutter escapes — a sibling blocks this node's rank on both sides. Keep the
                 // opposite faces instead: the anchors leave into the inter-rank gaps, which are empty
                 // by construction, and the lane detour threads a free column between them. Only if
                 // that fails too do we settle for the near gutter and its bruised card.
                 if (LaneDetour(a, b, IsVertical(auto.FromSide), obstacles, bounds) is not null)
+                {
                     return auto;
+                }
+
                 return (near, near);
             }
         }
@@ -128,17 +145,29 @@ internal static class OrthogonalRouter
     {
         double x1 = rect.X + inset, y1 = rect.Y + inset;
         double x2 = rect.X + rect.W - inset, y2 = rect.Y + rect.H - inset;
-        if (x2 <= x1 || y2 <= y1) return false;
+        if (x2 <= x1 || y2 <= y1)
+        {
+            return false;
+        }
+
         if (Math.Abs(a.Y - b.Y) < 0.5)
         {
-            double y = a.Y;
-            if (y <= y1 || y >= y2) return false;
+            var y = a.Y;
+            if (y <= y1 || y >= y2)
+            {
+                return false;
+            }
+
             return Math.Max(a.X, b.X) > x1 && Math.Min(a.X, b.X) < x2;
         }
         if (Math.Abs(a.X - b.X) < 0.5)
         {
-            double x = a.X;
-            if (x <= x1 || x >= x2) return false;
+            var x = a.X;
+            if (x <= x1 || x >= x2)
+            {
+                return false;
+            }
+
             return Math.Max(a.Y, b.Y) > y1 && Math.Min(a.Y, b.Y) < y2;
         }
         return Math.Max(a.X, b.X) > x1 && Math.Min(a.X, b.X) < x2 && Math.Max(a.Y, b.Y) > y1 && Math.Min(a.Y, b.Y) < y2;
@@ -146,32 +175,47 @@ internal static class OrthogonalRouter
 
     private static bool PolylineHits(IReadOnlyList<Point> points, IReadOnlyList<Rect> obstacles)
     {
-        for (int i = 0; i < points.Count - 1; i++)
-            foreach (var o in obstacles) if (SegHitsRect(points[i], points[i + 1], o)) return true;
+        for (var i = 0; i < points.Count - 1; i++)
+        {
+            foreach (var o in obstacles)
+            {
+                if (SegHitsRect(points[i], points[i + 1], o))
+                {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
     /// <summary>Distance from an axis-aligned segment to a rect; 0 when they touch or overlap.</summary>
     private static double SegRectDist(Point a, Point b, Rect r)
     {
-        double dx = Math.Max(0, Math.Max(r.X - Math.Max(a.X, b.X), Math.Min(a.X, b.X) - (r.X + r.W)));
-        double dy = Math.Max(0, Math.Max(r.Y - Math.Max(a.Y, b.Y), Math.Min(a.Y, b.Y) - (r.Y + r.H)));
+        var dx = Math.Max(0, Math.Max(r.X - Math.Max(a.X, b.X), Math.Min(a.X, b.X) - (r.X + r.W)));
+        var dy = Math.Max(0, Math.Max(r.Y - Math.Max(a.Y, b.Y), Math.Min(a.Y, b.Y) - (r.Y + r.H)));
         return Math.Sqrt(dx * dx + dy * dy);
     }
 
     /// <summary>How close this polyline comes to any obstacle — the room it leaves, not just whether it fits.</summary>
     private static double PolylineClearance(IReadOnlyList<Point> points, IReadOnlyList<Rect> obstacles)
     {
-        double min = double.PositiveInfinity;
-        for (int i = 0; i < points.Count - 1; i++)
-            foreach (var o in obstacles) min = Math.Min(min, SegRectDist(points[i], points[i + 1], o));
+        var min = double.PositiveInfinity;
+        for (var i = 0; i < points.Count - 1; i++)
+        {
+            foreach (var o in obstacles)
+            {
+                min = Math.Min(min, SegRectDist(points[i], points[i + 1], o));
+            }
+        }
+
         return min;
     }
 
     private static double ClampLane(double value, double? extent)
     {
-        double lo = LaneMargin;
-        double hi = extent is double e ? Math.Max(lo, e - LaneMargin) : double.PositiveInfinity;
+        var lo = LaneMargin;
+        var hi = extent is { } e ? Math.Max(lo, e - LaneMargin) : double.PositiveInfinity;
         return Math.Min(Math.Max(value, lo), hi);
     }
 
@@ -185,7 +229,11 @@ internal static class OrthogonalRouter
     private static bool PreferLow(double lowLane, double highLane, double obsLow, double obsHigh, double travelMid)
     {
         double lowClear = obsLow - lowLane, highClear = highLane - obsHigh;
-        if (Math.Abs(lowClear - highClear) > 1) return lowClear > highClear;
+        if (Math.Abs(lowClear - highClear) > 1)
+        {
+            return lowClear > highClear;
+        }
+
         return travelMid <= (obsLow + obsHigh) / 2;
     }
 
@@ -213,16 +261,18 @@ internal static class OrthogonalRouter
     private static IEnumerable<double> LaneCandidates(
         IReadOnlyList<Rect> blockers, IReadOnlyList<Rect> obstacles, bool vertical, Size? bounds, double travelMid)
     {
-        double extent = vertical ? bounds?.W ?? 0 : bounds?.H ?? 0;
+        var extent = vertical ? bounds?.W ?? 0 : bounds?.H ?? 0;
         double? Extent() => bounds is null ? null : extent;
         var seen = new List<double>();
         foreach (var set in ReferenceEquals(blockers, obstacles) ? new[] { obstacles } : new[] { blockers, obstacles })
         {
-            double lo = vertical ? set.Min(o => o.X) : set.Min(o => o.Y);
-            double hi = vertical ? set.Max(o => o.X + o.W) : set.Max(o => o.Y + o.H);
+            var lo = vertical ? set.Min(o => o.X) : set.Min(o => o.Y);
+            var hi = vertical ? set.Max(o => o.X + o.W) : set.Max(o => o.Y + o.H);
             double low = ClampLane(lo - LanePad, Extent()), high = ClampLane(hi + LanePad, Extent());
-            foreach (double lane in PreferLow(low, high, lo, hi, travelMid) ? new[] { low, high } : new[] { high, low })
+            foreach (var lane in PreferLow(low, high, lo, hi, travelMid) ? new[] { low, high } : new[] { high, low })
+            {
                 if (!seen.Any(v => Math.Abs(v - lane) < 0.5)) { seen.Add(lane); yield return lane; }
+            }
         }
     }
 
@@ -235,7 +285,11 @@ internal static class OrthogonalRouter
     /// </summary>
     private static List<Point>? LaneDetour(Point a, Point b, bool vertical, IReadOnlyList<Rect> obstacles, Size? bounds)
     {
-        if (obstacles.Count == 0) return null;
+        if (obstacles.Count == 0)
+        {
+            return null;
+        }
+
         var blockers = Blocking(a, b, obstacles);
         double aC = vertical ? a.X : a.Y, bC = vertical ? b.X : b.Y;
 
@@ -243,13 +297,13 @@ internal static class OrthogonalRouter
         {
             if (vertical)
             {
-                double s = Math.Sign(b.Y - a.Y); double dirY = s != 0 ? s : 1;
+                double s = Math.Sign(b.Y - a.Y); var dirY = s != 0 ? s : 1;
                 double ch1 = a.Y + dirY * ChannelOffset, ch2 = b.Y - dirY * ChannelOffset;
-                return new List<Point> { a, new(a.X, ch1), new(lane, ch1), new(lane, ch2), new(b.X, ch2), b };
+                return [a, new(a.X, ch1), new(lane, ch1), new(lane, ch2), new(b.X, ch2), b];
             }
-            double sx = Math.Sign(b.X - a.X); double dirX = sx != 0 ? sx : 1;
+            double sx = Math.Sign(b.X - a.X); var dirX = sx != 0 ? sx : 1;
             double cx1 = a.X + dirX * ChannelOffset, cx2 = b.X - dirX * ChannelOffset;
-            return new List<Point> { a, new(cx1, a.Y), new(cx1, lane), new(cx2, lane), new(cx2, b.Y), b };
+            return [a, new(cx1, a.Y), new(cx1, lane), new(cx2, lane), new(cx2, b.Y), b];
         }
 
         // Nudge a lane that sits inside the stub zone of an anchor outward, away from that anchor,
@@ -257,27 +311,35 @@ internal static class OrthogonalRouter
         // better answer when it is safe; this is the other way out of the same zone.
         double Push(double lane)
         {
-            foreach (double c in new[] { aC, bC })
+            foreach (var c in new[] { aC, bC })
             {
-                double d = lane - c;
-                if (Math.Abs(d) < LaneSnap) lane = c + (d < 0 ? -LaneSnap : LaneSnap);
+                var d = lane - c;
+                if (Math.Abs(d) < LaneSnap)
+                {
+                    lane = c + (d < 0 ? -LaneSnap : LaneSnap);
+                }
             }
             return lane;
         }
 
-        foreach (double raw in LaneCandidates(blockers, obstacles, vertical, bounds, (aC + bC) / 2))
+        foreach (var raw in LaneCandidates(blockers, obstacles, vertical, bounds, (aC + bC) / 2))
         {
             double? snap = Math.Abs(raw - aC) < LaneSnap ? aC : Math.Abs(raw - bC) < LaneSnap ? bC : null;
-            if (snap is double s)
+            if (snap is { } s)
             {
                 var snapped = Build(s);
                 if (!PolylineHits(snapped, obstacles) && PolylineClearance(snapped, obstacles) >= LaneSnapClear)
+                {
                     return snapped;
+                }
             }
-            foreach (double lane in new[] { Push(raw), raw }.Distinct())
+            foreach (var lane in new[] { Push(raw), raw }.Distinct())
             {
                 var poly = Build(lane);
-                if (!PolylineHits(poly, obstacles)) return poly;
+                if (!PolylineHits(poly, obstacles))
+                {
+                    return poly;
+                }
             }
         }
         return null;
@@ -285,7 +347,11 @@ internal static class OrthogonalRouter
 
     private static Point ShiftAnchor(Point p, Side side, double off)
     {
-        if (off == 0) return p;
+        if (off == 0)
+        {
+            return p;
+        }
+
         return IsVertical(side) ? new Point(p.X + off, p.Y) : new Point(p.X, p.Y + off);
     }
 
@@ -295,21 +361,21 @@ internal static class OrthogonalRouter
         {
             double lo = Math.Min(a.X, b.X), hi = Math.Max(a.X, b.X);
             var spanned = obstacles.Where(o => o.X < hi && o.X + o.W > lo).ToList();
-            double laneY = ClampLane(
+            var laneY = ClampLane(
                 side == Side.Top
                     ? new[] { a.Y, b.Y }.Concat(spanned.Select(o => o.Y)).Min() - LanePad
                     : new[] { a.Y, b.Y }.Concat(spanned.Select(o => o.Y + o.H)).Max() + LanePad,
                 bounds?.H);
-            return new List<Point> { a, new(a.X, laneY), new(b.X, laneY), b };
+            return [a, new(a.X, laneY), new(b.X, laneY), b];
         }
         double loY = Math.Min(a.Y, b.Y), hiY = Math.Max(a.Y, b.Y);
         var spannedH = obstacles.Where(o => o.Y < hiY && o.Y + o.H > loY).ToList();
-        double laneX = ClampLane(
+        var laneX = ClampLane(
             side == Side.Left
                 ? new[] { a.X, b.X }.Concat(spannedH.Select(o => o.X)).Min() - LanePad
                 : new[] { a.X, b.X }.Concat(spannedH.Select(o => o.X + o.W)).Max() + LanePad,
             bounds?.W);
-        return new List<Point> { a, new(laneX, a.Y), new(laneX, b.Y), b };
+        return [a, new(laneX, a.Y), new(laneX, b.Y), b];
     }
 
     /// <summary>
@@ -329,31 +395,47 @@ internal static class OrthogonalRouter
         Rect from, Rect to, Side fromSide, Side toSide, bool fromFanned, bool toFanned,
         IReadOnlyList<Rect> obstacles, ref Point a, ref Point b)
     {
-        if (fromSide == toSide) return false;
-        bool vert = IsVertical(fromSide) && IsVertical(toSide);   // Top/Bottom faces → perp axis = X
-        bool horz = !IsVertical(fromSide) && !IsVertical(toSide); // Left/Right faces → perp axis = Y
-        if (!vert && !horz) return false;
+        if (fromSide == toSide)
+        {
+            return false;
+        }
+
+        var vert = IsVertical(fromSide) && IsVertical(toSide);   // Top/Bottom faces → perp axis = X
+        var horz = !IsVertical(fromSide) && !IsVertical(toSide); // Left/Right faces → perp axis = Y
+        if (!vert && !horz)
+        {
+            return false;
+        }
 
         double aPerp = vert ? a.X : a.Y, bPerp = vert ? b.X : b.Y;
-        double off = bPerp - aPerp;
-        if (Math.Abs(off) < 0.5) return false; // already straight
+        var off = bPerp - aPerp;
+        if (Math.Abs(off) < 0.5)
+        {
+            return false; // already straight
+        }
 
         // A lone anchor absorbs the whole kink on its own and disturbs nothing, so it gets the
         // wider budget. Two fanned anchors must split it, and every px they move is spacing lost
         // on both their faces — so they buy less straightness before we call the jog genuine.
         bool aFree = !fromFanned, bFree = !toFanned;
-        double budget = aFree || bFree ? StraightenLone : StraightenSplit;
-        if (Math.Abs(off) > budget) return false; // genuine jog — leave it stepped
+        var budget = aFree || bFree ? StraightenLone : StraightenSplit;
+        if (Math.Abs(off) > budget)
+        {
+            return false; // genuine jog — leave it stepped
+        }
 
         // Reachable band = the two faces' overlap on the perp axis, inset off the corners.
         double aLo = (vert ? from.X : from.Y) + StraightenInset, aHi = (vert ? from.X + from.W : from.Y + from.H) - StraightenInset;
         double bLo = (vert ? to.X : to.Y) + StraightenInset, bHi = (vert ? to.X + to.W : to.Y + to.H) - StraightenInset;
         double lo = Math.Max(aLo, bLo), hi = Math.Min(aHi, bHi);
-        if (hi < lo) return false; // faces don't overlap — no shared straight line exists
+        if (hi < lo)
+        {
+            return false; // faces don't overlap — no shared straight line exists
+        }
 
         // Move a lone anchor in preference to a fanned one; only when both faces are fanned (so
         // there is no free anchor to give) do we split the nudge and accept the uneven spread.
-        double target = aFree && bFree ? (aPerp + bPerp) / 2
+        var target = aFree && bFree ? (aPerp + bPerp) / 2
             : aFree ? bPerp
             : bFree ? aPerp
             : (aPerp + bPerp) / 2;
@@ -361,11 +443,18 @@ internal static class OrthogonalRouter
 
         // One anchor may absorb the whole gap when it is the only one free to move; when both move
         // they split it, so neither travels far. Either way the combined slide stays in budget.
-        if (Math.Abs(target - aPerp) + Math.Abs(target - bPerp) > budget + 0.01) return false;
+        if (Math.Abs(target - aPerp) + Math.Abs(target - bPerp) > budget + 0.01)
+        {
+            return false;
+        }
 
-        Point na = vert ? new Point(target, a.Y) : new Point(a.X, target);
-        Point nb = vert ? new Point(target, b.Y) : new Point(b.X, target);
-        if (PolylineHits(new[] { na, nb }, obstacles)) return false;
+        var na = vert ? new Point(target, a.Y) : new Point(a.X, target);
+        var nb = vert ? new Point(target, b.Y) : new Point(b.X, target);
+        if (PolylineHits([na, nb], obstacles))
+        {
+            return false;
+        }
+
         a = na; b = nb;
         return true;
     }
@@ -387,13 +476,16 @@ internal static class OrthogonalRouter
     /// </summary>
     private static double Channel(double aC, double bC, Lane fromLane, Lane toLane)
     {
-        double mid = (aC + bC) / 2;
+        var mid = (aC + bC) / 2;
         double lo = Math.Min(aC, bC) + ChannelOffset, hi = Math.Max(aC, bC) - ChannelOffset;
-        if (lo > hi) return mid;
+        if (lo > hi)
+        {
+            return mid;
+        }
         // The from-fan spreads about the mid; a to-fan spreads the opposite way, so an arriving
         // edge's long run also tucks nearest its own node.
-        double usable = hi - lo;
-        double offset = fromLane.Offset(usable) - toLane.Offset(usable);
+        var usable = hi - lo;
+        var offset = fromLane.Offset(usable) - toLane.Offset(usable);
         return Math.Clamp(mid + Math.Sign(bC - aC) * offset, lo, hi);
     }
 
@@ -401,27 +493,38 @@ internal static class OrthogonalRouter
         Point a, Point b, Side fromSide, Side toSide, Lane fromLane, Lane toLane,
         IReadOnlyList<Rect> obstacles, Size? bounds)
     {
-        if (fromSide == toSide) return SameFaceLoop(a, b, fromSide, obstacles, bounds);
+        if (fromSide == toSide)
+        {
+            return SameFaceLoop(a, b, fromSide, obstacles, bounds);
+        }
 
-        bool vert = IsVertical(fromSide) && IsVertical(toSide);
-        bool horz = !IsVertical(fromSide) && !IsVertical(toSide);
+        var vert = IsVertical(fromSide) && IsVertical(toSide);
+        var horz = !IsVertical(fromSide) && !IsVertical(toSide);
 
         if (vert)
         {
-            double channelY = Channel(a.Y, b.Y, fromLane, toLane);
+            var channelY = Channel(a.Y, b.Y, fromLane, toLane);
             var simple = new List<Point> { a, new(a.X, channelY), new(b.X, channelY), b };
-            if (!PolylineHits(simple, obstacles)) return simple;
+            if (!PolylineHits(simple, obstacles))
+            {
+                return simple;
+            }
+
             return LaneDetour(a, b, true, obstacles, bounds) ?? simple;
         }
         if (horz)
         {
-            double channelX = Channel(a.X, b.X, fromLane, toLane);
+            var channelX = Channel(a.X, b.X, fromLane, toLane);
             var simple = new List<Point> { a, new(channelX, a.Y), new(channelX, b.Y), b };
-            if (!PolylineHits(simple, obstacles)) return simple;
+            if (!PolylineHits(simple, obstacles))
+            {
+                return simple;
+            }
+
             return LaneDetour(a, b, false, obstacles, bounds) ?? simple;
         }
-        Point corner = IsVertical(fromSide) ? new Point(a.X, b.Y) : new Point(b.X, a.Y);
-        return new List<Point> { a, corner, b };
+        var corner = IsVertical(fromSide) ? new Point(a.X, b.Y) : new Point(b.X, a.Y);
+        return [a, corner, b];
     }
 
     private static string SCurve(Point a, Point b, Side fromSide)
@@ -429,19 +532,19 @@ internal static class OrthogonalRouter
         string S(double n) => Js.Str(n);
         if (IsVertical(fromSide))
         {
-            double off = (b.Y - a.Y) * 0.4;
+            var off = (b.Y - a.Y) * 0.4;
             return $"M {S(a.X)} {S(a.Y)} C {S(a.X)} {S(a.Y + off)}, {S(b.X)} {S(b.Y - off)}, {S(b.X)} {S(b.Y)}";
         }
-        double offx = (b.X - a.X) * 0.4;
+        var offx = (b.X - a.X) * 0.4;
         return $"M {S(a.X)} {S(a.Y)} C {S(a.X + offx)} {S(a.Y)}, {S(b.X - offx)} {S(b.Y)}, {S(b.X)} {S(b.Y)}";
     }
 
     public static RoutedPath RouteEdge(RouteRequest req)
     {
-        bool self = req.From == req.To;
+        var self = req.From == req.To;
         if (self)
         {
-            Rect r = req.From;
+            var r = req.From;
             List<Point> selfPoly = req.PrimaryHorizontal
                 ? new()
                 {
@@ -461,18 +564,23 @@ internal static class OrthogonalRouter
         }
 
         var auto = AutoSides(req.From, req.To, req.PrimaryHorizontal);
-        Side fromSide = req.FromSide ?? auto.FromSide;
-        Side toSide = req.ToSide ?? auto.ToSide;
-        Point a = ShiftAnchor(Anchor(req.From, fromSide), fromSide, req.FromShift);
-        Point b = ShiftAnchor(Anchor(req.To, toSide), toSide, req.ToShift);
+        var fromSide = req.FromSide ?? auto.FromSide;
+        var toSide = req.ToSide ?? auto.ToSide;
+        var a = ShiftAnchor(Anchor(req.From, fromSide), fromSide, req.FromShift);
+        var b = ShiftAnchor(Anchor(req.To, toSide), toSide, req.ToShift);
 
         if (req.Curve == EdgeCurve.Straight)
-            return new RoutedPath($"M {Js.Str(a.X)} {Js.Str(a.Y)} L {Js.Str(b.X)} {Js.Str(b.Y)}", new[] { a, b });
+        {
+            return new RoutedPath($"M {Js.Str(a.X)} {Js.Str(a.Y)} L {Js.Str(b.X)} {Js.Str(b.Y)}", [a, b]);
+        }
+
         if (req.Curve == EdgeCurve.S)
-            return new RoutedPath(SCurve(a, b, fromSide), new[] { a, b });
+        {
+            return new RoutedPath(SCurve(a, b, fromSide), [a, b]);
+        }
 
         var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromFanned, req.ToFanned, req.Obstacles, ref a, ref b)
-            ? new List<Point> { a, b }
+            ? [a, b]
             : OrthogonalPolyline(a, b, fromSide, toSide, req.FromLane, req.ToLane, req.Obstacles, req.Bounds);
         return new RoutedPath(StepRound.RoundedPath(poly, req.Radius), poly);
     }

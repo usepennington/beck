@@ -1,7 +1,6 @@
 using Beck.Animate;
 using Beck.Authoring;
 using Beck.Model;
-using Beck.Rendering.Text;
 using Beck.Svg;
 using Beck.Text;
 
@@ -147,7 +146,7 @@ public enum StyleArtwork
     /// router, the message endpoints in the sequence painter) — the router is untouched and the dots
     /// are additional sibling elements, never a split edge path. Deterministic (geometry only, no RNG);
     /// a <c>0</c> <see cref="StyleGeometry.StationRadius"/> (classic, and every non-metro style) emits
-    /// no stations — byte-identical. Metro pairs this with the <see cref="Beck.PacketGlyph.Train"/>
+    /// no stations — byte-identical. Metro pairs this with the <see cref="PacketGlyph.Train"/>
     /// packet glyph, but the two are independent seams.
     /// </summary>
     Metro,
@@ -256,8 +255,7 @@ public sealed record BeckStyle
         // Light token table — verbatim from the original styles.css:16-49. The group-border
         // entry threads mix.GroupBorder so its 45% ratio has a single source (shared with the
         // per-group box border drawn inline in SvgRenderer).
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
             ("--beck-node-border", "var(--color-base-200, #e2e8f0)"),
@@ -277,12 +275,11 @@ public sealed record BeckStyle
             ("--beck-packet", "var(--beck-primary)"),
             ("--beck-icon-bg", "var(--color-base-100, #f1f5f9)"),
             ("--beck-accent", "var(--beck-primary)"),
-        });
+        ]);
 
         // The nine dark overrides — verbatim from styles.css:54-62. A partial override that
         // works because the light block is always emitted first (Stylesheet keeps that order).
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #0d1117)"),
             ("--beck-node-bg", "var(--color-base-900, #161b22)"),
             ("--beck-node-border", "var(--color-base-700, #30363d)"),
@@ -292,7 +289,7 @@ public sealed record BeckStyle
             ("--beck-text-faint", "var(--color-base-500, #6e7681)"),
             ("--beck-edge", "var(--color-base-700, #30363d)"),
             ("--beck-icon-bg", "var(--color-base-800, #21262d)"),
-        });
+        ]);
 
         var geometry = new StyleGeometry
         {
@@ -710,7 +707,7 @@ public sealed record StyleEdges
     /// the messages departing it, so line and hops stay one hue); and a message without an explicit
     /// <c>color:</c> (<see cref="EdgeModel.ColorAuthored"/> — an authored colour always wins).</para>
     /// </summary>
-    public IReadOnlyList<string> BaseColorPalette { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> BaseColorPalette { get; init; } = [];
 
     /// <summary>
     /// The palette entry at a stable draw-order <paramref name="index"/> — the single cycle
@@ -827,7 +824,7 @@ public sealed record StyleEdges
     /// that leaves it unset — including a DrawOn/Marching overlay style like sketch) falls back to the
     /// single <c>var(--beck-edge-overlay, var(--beck-accent))</c> token — byte-identical.
     /// </summary>
-    public IReadOnlyList<string> OverlayPalette { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> OverlayPalette { get; init; } = [];
 
     /// <summary>
     /// An optional CSS <c>filter</c> applied to the overlay path only (glow's comet bloom): a
@@ -948,7 +945,7 @@ public sealed record StyleMotion
     /// a third fallback tier under the author's explicit <c>packet.shape</c>: <c>k.Shape ??
     /// style.Motion.PacketGlyph ?? Dot</c> (mapped through <see cref="PacketGlyph"/> at the schedule
     /// boundary, since a style-level default may pick a glyph no individual packet step can yet
-    /// author, e.g. <see cref="Beck.PacketGlyph.Square"/>). <c>null</c> (classic, and every style
+    /// author, e.g. <see cref="PacketGlyph.Square"/>). <c>null</c> (classic, and every style
     /// that doesn't set this) leaves the existing two-tier <c>k.Shape ?? Dot</c> resolution untouched.
     /// </summary>
     public PacketGlyph? PacketGlyph { get; init; }

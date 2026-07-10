@@ -1,7 +1,5 @@
 using System.Text.RegularExpressions;
 using Beck.Model;
-using Beck.Rendering;
-using Beck.Rendering.Text;
 using Beck.Svg;
 using Beck.Text;
 using Xunit;
@@ -39,7 +37,7 @@ public sealed class StylePhase2Tests
     private static List<string> CaptureWarnings(Action act)
     {
         var warnings = new List<string>();
-        Action<string>? prior = BeckDiagnostics.OnWarning;
+        var prior = BeckDiagnostics.OnWarning;
         BeckDiagnostics.OnWarning = warnings.Add;
         try { act(); } finally { BeckDiagnostics.OnWarning = prior; }
         return warnings;
@@ -50,7 +48,7 @@ public sealed class StylePhase2Tests
     [Fact]
     public void MetaStyle_ValidToken_LandsOnMeta()
     {
-        DiagramModel model = Validate.LoadDiagram(ArchStyled("sketch"));
+        var model = Validate.LoadDiagram(ArchStyled("sketch"));
         Assert.Equal("sketch", model.Meta.StyleName);
     }
 
@@ -67,7 +65,7 @@ public sealed class StylePhase2Tests
     [Fact]
     public void MetaStyle_Absent_IsNull()
     {
-        DiagramModel model = Validate.LoadDiagram(Arch);
+        var model = Validate.LoadDiagram(Arch);
         Assert.Null(model.Meta.StyleName);
     }
 
@@ -81,7 +79,7 @@ public sealed class StylePhase2Tests
             Style = Named("beta", "BETA"),
             Styles = new Dictionary<string, BeckStyle> { ["alpha"] = Named("alpha", "ALPHA") },
         };
-        string svg = BeckSvg.Render(ArchStyled("alpha"), options);
+        var svg = BeckSvg.Render(ArchStyled("alpha"), options);
         Assert.Contains("--beck-marker:ALPHA", svg);
         Assert.DoesNotContain("--beck-marker:BETA", svg);
     }
@@ -89,10 +87,10 @@ public sealed class StylePhase2Tests
     [Fact]
     public void Precedence_OptionsStyleBeatsDefault()
     {
-        string svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = Named("beta", "BETA") });
+        var svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = Named("beta", "BETA") });
         Assert.Contains("--beck-marker:BETA", svg);
 
-        string plain = BeckSvg.Render(Arch);
+        var plain = BeckSvg.Render(Arch);
         Assert.DoesNotContain("--beck-marker", plain);
     }
 
@@ -100,7 +98,7 @@ public sealed class StylePhase2Tests
     public void Precedence_UnknownName_WarnsAndFallsBackToOptionsStyle()
     {
         var options = new SvgRenderOptions { Style = Named("beta", "BETA") };
-        string svg = "";
+        var svg = "";
         var warnings = CaptureWarnings(() => svg = BeckSvg.Render(ArchStyled("nope"), options));
         Assert.Contains("--beck-marker:BETA", svg);
         Assert.Contains(warnings, w => w.Contains("nope"));
@@ -109,7 +107,7 @@ public sealed class StylePhase2Tests
     [Fact]
     public void Precedence_UnknownName_NoOptionsStyle_FallsBackToClassic()
     {
-        string svg = "";
+        var svg = "";
         var warnings = CaptureWarnings(() => svg = BeckSvg.Render(ArchStyled("nope"), new SvgRenderOptions()));
         Assert.DoesNotContain("--beck-marker", svg);
         Assert.Contains(warnings, w => w.Contains("nope"));
@@ -122,12 +120,12 @@ public sealed class StylePhase2Tests
     {
         // A meta.style:classic document renders byte-for-byte identically to threading Classic through
         // the seam with the pre-Phase-2 (no style segment) hash — proving classic pays no hash cost.
-        string yaml = ArchStyled("classic");
-        string full = BeckSvg.Render(yaml);
+        var yaml = ArchStyled("classic");
+        var full = BeckSvg.Render(yaml);
 
-        string hashNoStyle = BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions());
-        DiagramModel model = Validate.LoadDiagram(yaml);
-        string viaSeam = SvgRenderer.Render(model, InterMetricsMeasurer.Instance, hashNoStyle, new SvgRenderOptions(), BeckStyle.Classic);
+        var hashNoStyle = BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions());
+        var model = Validate.LoadDiagram(yaml);
+        var viaSeam = SvgRenderer.Render(model, InterMetricsMeasurer.Instance, hashNoStyle, new SvgRenderOptions(), BeckStyle.Classic);
 
         Assert.Equal(hashNoStyle, BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions(), BeckStyle.Classic));
         Assert.Equal(full, viaSeam);
@@ -137,8 +135,8 @@ public sealed class StylePhase2Tests
     public void Hash_CustomStyle_DiffersFromDefault()
     {
         // Same YAML (no meta.style) — only options.Style differs, so the suffix must shift.
-        string plain = BeckSvg.Render(Arch);
-        string custom = BeckSvg.Render(Arch, new SvgRenderOptions { Style = BeckStyle.Classic with { Name = "custom-x" } });
+        var plain = BeckSvg.Render(Arch);
+        var custom = BeckSvg.Render(Arch, new SvgRenderOptions { Style = BeckStyle.Classic with { Name = "custom-x" } });
         Assert.NotEqual(HashOf(plain), HashOf(custom));
     }
 
@@ -176,7 +174,7 @@ public sealed class StylePhase2Tests
                 .Append(("--beck-z", "@import 'http://evil'"))
                 .ToArray()),
         };
-        string svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = evil });
+        var svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = evil });
 
         Assert.DoesNotContain("RED</style>", svg);   // </ stripped → cannot close the style element
         Assert.DoesNotContain(".evil{", svg);         // { stripped → cannot open a new rule
@@ -201,13 +199,13 @@ public sealed class StylePhase2Tests
                 UnderlayColor = "red}.evil{color:red}",
                 MarkerColor = "red</style><script>x",
                 MarkerOutline = "red{@import url(//x)",
-                BaseColorPalette = new[] { "red</style>" },
-                OverlayPalette = new[] { "blue}@import url(//x)" },
+                BaseColorPalette = ["red</style>"],
+                OverlayPalette = ["blue}@import url(//x)"],
             },
         };
 
-        StyleEdges cleaned = StyleSanitizer.Ensure(evil).Edges;
-        foreach (string bad in new[] { "</", "<!", "@import", "url(", "{", "}" })
+        var cleaned = StyleSanitizer.Ensure(evil).Edges;
+        foreach (var bad in new[] { "</", "<!", "@import", "url(", "{", "}" })
         {
             Assert.DoesNotContain(bad, cleaned.BaseLinecap);
             Assert.DoesNotContain(bad, cleaned.OverlayLinecap);
@@ -220,7 +218,7 @@ public sealed class StylePhase2Tests
         }
 
         // End-to-end: nothing hostile survives into the emitted SVG (sanitiser + Attr defense).
-        string svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = evil });
+        var svg = BeckSvg.Render(Arch, new SvgRenderOptions { Style = evil });
         Assert.DoesNotContain("@import", svg);
         Assert.DoesNotContain("url(//", svg);
         Assert.DoesNotContain("<script>", svg);
@@ -239,8 +237,8 @@ public sealed class StylePhase2Tests
     [Fact]
     public void TextLengthGuard_Off_StripsGuardAttributes()
     {
-        string all = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.All });
-        string off = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.Off });
+        var all = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.All });
+        var off = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.Off });
 
         Assert.Contains("textLength=", all);
         Assert.Contains("lengthAdjust=", all);
@@ -252,8 +250,7 @@ public sealed class StylePhase2Tests
     public void TextLengthGuard_FallbackOnly_MatchesAll_UnderApproximateMeasurer()
     {
         // The default measurer is approximate, so FallbackOnly emits guards exactly like All.
-        string all = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.All });
-        string fb = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.FallbackOnly });
+        var fb = BeckSvg.Render(Arch, new SvgRenderOptions { TextLengthGuard = TextLengthGuard.FallbackOnly });
         Assert.Contains("textLength=", fb);
     }
 
@@ -271,11 +268,11 @@ public sealed class StylePhase2Tests
     [Fact]
     public void BeckStyle_WithIndependentlyBuiltRoleTable_ComparesEqual()
     {
-        BeckStyle a = BeckStyle.Classic with
+        var a = BeckStyle.Classic with
         {
             Typography = BeckStyle.Classic.Typography with { Roles = new FontRoleTable(FontRoles.Of) },
         };
-        BeckStyle b = BeckStyle.Classic with
+        var b = BeckStyle.Classic with
         {
             Typography = BeckStyle.Classic.Typography with { Roles = new FontRoleTable(FontRoles.Of) },
         };

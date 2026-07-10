@@ -1,4 +1,3 @@
-using Beck.Rendering;
 using Beck.Skia;
 using Beck.Svg;
 using Xunit;
@@ -51,14 +50,14 @@ public sealed class IconSanitizerTests
         using var measurer = new SkiaTextMeasurer(font);
         var options = new SvgRenderOptions { Measurer = measurer, Font = font };
 
-        string yaml =
+        var yaml =
             "type: architecture\n" +
             "nodes:\n" +
             "  - id: a\n" +
             "    title: A\n" +
             "    icon: \"<svg onload='alert(1)'><script>alert(1)</script></svg>\"\n";
 
-        string svg = BeckSvg.Render(yaml, options);
+        var svg = BeckSvg.Render(yaml, options);
 
         Assert.DoesNotContain("onload", svg);
         Assert.DoesNotContain("<script", svg);
@@ -72,14 +71,14 @@ public sealed class IconSanitizerTests
         using var measurer = new SkiaTextMeasurer(font);
         var options = new SvgRenderOptions { Measurer = measurer, Font = font };
 
-        string yaml =
+        var yaml =
             "type: architecture\n" +
             "nodes:\n" +
             "  - id: a\n" +
             "    title: A\n" +
             "    icon: \"<svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='9'/></svg>\"\n";
 
-        string svg = BeckSvg.Render(yaml, options);
+        var svg = BeckSvg.Render(yaml, options);
 
         // The author's vector content survives verbatim (quotes and all); the
         // renderer only tints it via the injected beck-icon class.

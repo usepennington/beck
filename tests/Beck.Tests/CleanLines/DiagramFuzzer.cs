@@ -15,40 +15,48 @@ namespace Beck.Tests.CleanLines;
 /// </summary>
 internal static class DiagramFuzzer
 {
-    private static readonly string[] Words =
-    {
+    private static readonly string[] _words =
+    [
         "Browser", "Kestrel", "Crawler", "Pipeline", "Output", "Gateway", "Cache", "Queue",
         "Worker", "Index", "Store", "Renderer", "Parser", "Router", "Sink", "Source",
         "Middleware", "Registry", "Scheduler", "Bus",
-    };
+    ];
 
-    private static readonly string[] Subtitles =
-    {
+    private static readonly string[] _subtitles =
+    [
         "dev serve", "in-process", "middleware · renderers", "discover · parse · render",
         "batched", "read-through", "", "", "",
-    };
+    ];
 
-    private static readonly string[] Directions = { "TB", "BT", "LR", "RL" };
-    private static readonly string[] Kinds = { "", "", "", "user", "db", "queue" };
+    private static readonly string[] _directions = ["TB", "BT", "LR", "RL"];
+    private static readonly string[] _kinds = ["", "", "", "user", "db", "queue"];
 
     public static string Yaml(int seed)
     {
         var rng = new Random(seed);
-        int n = 3 + rng.Next(10);                 // 3..12 nodes
-        string dir = Directions[rng.Next(Directions.Length)];
+        var n = 3 + rng.Next(10);                 // 3..12 nodes
+        var dir = _directions[rng.Next(_directions.Length)];
 
         var sb = new StringBuilder();
         sb.AppendLine("type: architecture");
         sb.AppendLine(CultureInfo.InvariantCulture, $"meta: {{ direction: {dir} }}");
         sb.AppendLine("nodes:");
-        for (int i = 0; i < n; i++)
+        for (var i = 0; i < n; i++)
         {
-            string title = string.Join(' ', Enumerable.Range(0, 1 + rng.Next(2)).Select(_ => Words[rng.Next(Words.Length)]));
-            string sub = Subtitles[rng.Next(Subtitles.Length)];
-            string kind = Kinds[rng.Next(Kinds.Length)];
+            var title = string.Join(' ', Enumerable.Range(0, 1 + rng.Next(2)).Select(_ => _words[rng.Next(_words.Length)]));
+            var sub = _subtitles[rng.Next(_subtitles.Length)];
+            var kind = _kinds[rng.Next(_kinds.Length)];
             sb.Append(CultureInfo.InvariantCulture, $"  - {{ id: n{i}, title: \"{title}\"");
-            if (sub.Length > 0) sb.Append(CultureInfo.InvariantCulture, $", subtitle: \"{sub}\"");
-            if (kind.Length > 0) sb.Append(CultureInfo.InvariantCulture, $", kind: {kind}");
+            if (sub.Length > 0)
+            {
+                sb.Append(CultureInfo.InvariantCulture, $", subtitle: \"{sub}\"");
+            }
+
+            if (kind.Length > 0)
+            {
+                sb.Append(CultureInfo.InvariantCulture, $", kind: {kind}");
+            }
+
             sb.AppendLine(" }");
         }
 
@@ -57,28 +65,42 @@ internal static class DiagramFuzzer
         // produces the rank-skipping long edges that force virtual nodes and lane detours.
         var edges = new List<(int From, int To)>();
         var seen = new HashSet<(int, int)>();
-        for (int i = 1; i < n; i++)
+        for (var i = 1; i < n; i++)
         {
-            int parents = 1 + rng.Next(Math.Min(3, i));
-            for (int p = 0; p < parents; p++)
+            var parents = 1 + rng.Next(Math.Min(3, i));
+            for (var p = 0; p < parents; p++)
             {
-                int from = rng.Next(i);
-                if (seen.Add((from, i))) edges.Add((from, i));
+                var from = rng.Next(i);
+                if (seen.Add((from, i)))
+                {
+                    edges.Add((from, i));
+                }
             }
         }
         // A back edge (against the flow) roughly a third of the time, a self loop a sixth.
         if (n >= 4 && rng.Next(3) == 0)
         {
             int to = rng.Next(n / 2), from = n / 2 + rng.Next(n - n / 2);
-            if (from != to && seen.Add((from, to))) edges.Add((from, to));
+            if (from != to && seen.Add((from, to)))
+            {
+                edges.Add((from, to));
+            }
         }
-        if (rng.Next(6) == 0) { int s = rng.Next(n); if (seen.Add((s, s))) edges.Add((s, s)); }
+        if (rng.Next(6) == 0) { var s = rng.Next(n); if (seen.Add((s, s)))
+            {
+                edges.Add((s, s));
+            }
+        }
 
         sb.AppendLine("edges:");
         foreach (var (f, t) in edges)
         {
             sb.Append(CultureInfo.InvariantCulture, $"  - {{ from: n{f}, to: n{t}");
-            if (rng.Next(4) == 0) sb.Append(CultureInfo.InvariantCulture, $", label: \"{Words[rng.Next(Words.Length)].ToLowerInvariant()}\"");
+            if (rng.Next(4) == 0)
+            {
+                sb.Append(CultureInfo.InvariantCulture, $", label: \"{_words[rng.Next(_words.Length)].ToLowerInvariant()}\"");
+            }
+
             sb.AppendLine(" }");
         }
         return sb.ToString();

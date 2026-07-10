@@ -1,5 +1,4 @@
 using System.Reflection;
-using Beck;
 using Beck.Authoring;
 using Pennington.Highlighting;
 
@@ -34,7 +33,7 @@ internal sealed record ApiClass(
 internal static class ApiCatalog
 {
     /// <summary>Declaration order here is the page order.</summary>
-    private static readonly Type[] Types =
+    private static readonly Type[] _types =
     [
         typeof(DiagramBuilder), typeof(NodeBuilder), typeof(EdgeBuilder), typeof(GroupBuilder),
         typeof(FlowBuilder), typeof(SequenceDiagramBuilder), typeof(MessageBuilder),
@@ -42,16 +41,16 @@ internal static class ApiCatalog
         typeof(ClassDiagramBuilder), typeof(ClassBuilder),
     ];
 
-    public static IReadOnlyList<ApiClass> Classes => Model.Value;
+    public static IReadOnlyList<ApiClass> Classes => _model.Value;
 
     /// <summary>One tab per diagram type: the root builder and the collaborators it opens, with
     /// method compartments — every edge a real <c>Action&lt;T&gt;</c> collaboration labelled with
     /// the methods that open it, every card linking to its section.</summary>
-    public static IReadOnlyList<(string Label, string Yaml)> OverviewTabs => Tabs.Value;
+    public static IReadOnlyList<(string Label, string Yaml)> OverviewTabs => _tabs.Value;
 
-    private static readonly Lazy<IReadOnlyList<ApiClass>> Model = new(Build);
+    private static readonly Lazy<IReadOnlyList<ApiClass>> _model = new(Build);
 
-    private static readonly (Type Root, string Label)[] Families =
+    private static readonly (Type Root, string Label)[] _families =
     [
         (typeof(DiagramBuilder), "Architecture"),
         (typeof(SequenceDiagramBuilder), "Sequence"),
@@ -59,10 +58,10 @@ internal static class ApiCatalog
         (typeof(ClassDiagramBuilder), "Class"),
     ];
 
-    private static readonly Lazy<IReadOnlyList<(string Label, string Yaml)>> Tabs = new(() =>
-        Families.Select(f => (f.Label, FamilyDiagram(f.Root))).ToArray());
+    private static readonly Lazy<IReadOnlyList<(string Label, string Yaml)>> _tabs = new(() =>
+        _families.Select(f => (f.Label, FamilyDiagram(f.Root))).ToArray());
 
-    private static readonly Lazy<TextMateHighlighter> Highlighter =
+    private static readonly Lazy<TextMateHighlighter> _highlighter =
         new(() => new TextMateHighlighter(new TextMateLanguageRegistry()));
 
     /// <summary>One "X configures Y via method" fact, mined from <c>Action&lt;T&gt;</c> parameters.</summary>
@@ -71,7 +70,7 @@ internal static class ApiCatalog
     private static IReadOnlyList<ApiClass> Build()
     {
         var usages = FindUsages();
-        return Types.Select(t => BuildClass(t, usages)).ToArray();
+        return _types.Select(t => BuildClass(t, usages)).ToArray();
     }
 
     /// <summary>One diagram family: the root card with its collaborator-opening methods, each
@@ -81,7 +80,7 @@ internal static class ApiCatalog
         var uses = FindUsages().Where(u => u.Owner == root).ToList();
         var rootId = root.Name.ToLowerInvariant();
 
-        var b = new ClassDiagramBuilder().Direction(Direction.LR).Animate(false);
+        var b = new ClassDiagramBuilder().Direction(Direction.Lr).Animate(false);
         b.Class(rootId, c => c.Name(root.Name).Accent(AccentToken.Primary)
             .Link($"/api/#{rootId}").Methods(FocalMethods(root, uses)));
 
@@ -99,7 +98,7 @@ internal static class ApiCatalog
     private static List<Usage> FindUsages()
     {
         var usages = new List<Usage>();
-        foreach (var owner in Types)
+        foreach (var owner in _types)
         {
             foreach (var method in PublicMethods(owner))
             {
@@ -108,7 +107,7 @@ internal static class ApiCatalog
                     if (p.ParameterType.IsGenericType &&
                         p.ParameterType.GetGenericTypeDefinition() == typeof(Action<>) &&
                         p.ParameterType.GetGenericArguments()[0] is { } target &&
-                        Types.Contains(target) &&
+                        _types.Contains(target) &&
                         target != owner) // FlowBuilder.Parallel(Action<FlowBuilder>) is not a collaboration
                     {
                         usages.Add(new Usage(owner, method.Name, target));
@@ -165,28 +164,56 @@ internal static class ApiCatalog
     /// The builder role a method-name group plays, in page order. Every rule is mechanical —
     /// derived from the reflected shape, never a hand-written table that could drift:
     /// <list type="bullet">
-    /// <item><see cref="Role.Create"/> — constructors and static factories returning a builder.</item>
-    /// <item><see cref="Role.Compose"/> — takes an <c>Action&lt;SomeBuilder&gt;</c> callback: declares
+    /// <item><see cref="Create"/> — constructors and static factories returning a builder.</item>
+    /// <item><see cref="Compose"/> — takes an <c>Action&lt;SomeBuilder&gt;</c> callback: declares
     ///   an element and opens its builder (the same collaborations the header diagram draws).</item>
-    /// <item><see cref="Role.Add"/> — repeatable declarations: a <c>params</c> overload, the singular
+    /// <item><see cref="Add"/> — repeatable declarations: a <c>params</c> overload, the singular
     ///   of a <c>params</c> sibling (<c>Member</c>/<c>Members</c>), or a root-builder method outside
     ///   the meta surface shared by the diagram builders (<c>Section</c>, <c>Initial</c>, <c>Inherits</c>…).</item>
-    /// <item><see cref="Role.Step"/> — FlowBuilder's timeline verbs: every call appends a step.</item>
-    /// <item><see cref="Role.Set"/> — single-value options; calling again replaces the value.</item>
-    /// <item><see cref="Role.Emit"/> — returns a non-builder: the terminal output methods.</item>
+    /// <item><see cref="Step"/> — FlowBuilder's timeline verbs: every call appends a step.</item>
+    /// <item><see cref="Set"/> — single-value options; calling again replaces the value.</item>
+    /// <item><see cref="Emit"/> — returns a non-builder: the terminal output methods.</item>
     /// </list>
     /// </summary>
     private enum Role { Create, Compose, Add, Step, Set, Emit }
 
     private static Role Classify(Type type, List<MethodBase> overloads)
     {
-        if (overloads[0] is ConstructorInfo) return Role.Create;
-        if (overloads[0] is MethodInfo { IsStatic: true } factory && Types.Contains(factory.ReturnType)) return Role.Create;
-        if (overloads.OfType<MethodInfo>().Any(m => !Types.Contains(m.ReturnType))) return Role.Emit;
-        if (overloads.SelectMany(m => m.GetParameters()).Any(p => BuilderCallbackTarget(p) is not null)) return Role.Compose;
-        if (type == typeof(FlowBuilder)) return overloads[0].Name.StartsWith("Repeat", StringComparison.Ordinal) ? Role.Set : Role.Step;
-        if (overloads.Any(HasParamsArray) || HasParamsPlural(type, overloads[0].Name)) return Role.Add;
-        if (IsRoot(type) && !SharedRootMethodNames.Value.Contains(overloads[0].Name)) return Role.Add;
+        if (overloads[0] is ConstructorInfo)
+        {
+            return Role.Create;
+        }
+
+        if (overloads[0] is MethodInfo { IsStatic: true } factory && _types.Contains(factory.ReturnType))
+        {
+            return Role.Create;
+        }
+
+        if (overloads.OfType<MethodInfo>().Any(m => !_types.Contains(m.ReturnType)))
+        {
+            return Role.Emit;
+        }
+
+        if (overloads.SelectMany(m => m.GetParameters()).Any(p => BuilderCallbackTarget(p) is not null))
+        {
+            return Role.Compose;
+        }
+
+        if (type == typeof(FlowBuilder))
+        {
+            return overloads[0].Name.StartsWith("Repeat", StringComparison.Ordinal) ? Role.Set : Role.Step;
+        }
+
+        if (overloads.Any(HasParamsArray) || HasParamsPlural(type, overloads[0].Name))
+        {
+            return Role.Add;
+        }
+
+        if (IsRoot(type) && !_sharedRootMethodNames.Value.Contains(overloads[0].Name))
+        {
+            return Role.Add;
+        }
+
         return Role.Set;
     }
 
@@ -214,7 +241,7 @@ internal static class ApiCatalog
         p.ParameterType.IsGenericType &&
         p.ParameterType.GetGenericTypeDefinition() == typeof(Action<>) &&
         p.ParameterType.GetGenericArguments()[0] is { } target &&
-        Types.Contains(target)
+        _types.Contains(target)
             ? target
             : null;
 
@@ -234,8 +261,8 @@ internal static class ApiCatalog
     /// that shared surface is exactly the document-options API (<c>Title</c>, <c>Theme</c>,
     /// <c>Animate</c>…) — anything a single root adds on top declares elements instead.
     /// </summary>
-    private static readonly Lazy<HashSet<string>> SharedRootMethodNames = new(() =>
-        Types.Where(IsRoot)
+    private static readonly Lazy<HashSet<string>> _sharedRootMethodNames = new(() =>
+        _types.Where(IsRoot)
             .SelectMany(t => PublicMethods(t).Select(m => m.Name).Distinct())
             .GroupBy(n => n)
             .Where(g => g.Count() >= 3)
@@ -263,21 +290,21 @@ internal static class ApiCatalog
     /// </summary>
     private static string MetaLine(Type type, List<Usage> usedBy)
     {
-        const string prefix = "namespace Beck <span class=\"mx-2\">·</span> ";
+        const string Prefix = "namespace Beck <span class=\"mx-2\">·</span> ";
         var origin = usedBy.Count == 0 ? "assembly Beck.dll" : ConfiguredVia(usedBy);
 
         var chains = PublicMethods(type).OfType<MethodInfo>()
-            .Where(m => Types.Contains(m.ReturnType))
+            .Where(m => _types.Contains(m.ReturnType))
             .All(m => m.ReturnType == type);
         var chain = chains
             ? $" <span class=\"mx-2\">·</span> methods chain → <span class=\"font-mono\">{type.Name}</span>"
             : "";
-        return prefix + origin + chain;
+        return Prefix + origin + chain;
     }
 
     private static string ConfiguredVia(List<Usage> usedBy)
     {
-        var owner = usedBy.Select(u => u.Owner).OrderBy(t => Array.IndexOf(Types, t)).First();
+        var owner = usedBy.Select(u => u.Owner).OrderBy(t => Array.IndexOf(_types, t)).First();
         var methods = usedBy.Where(u => u.Owner == owner).Select(u => u.Method).Distinct().ToList();
         var via = $"{owner.Name}.{methods[0]}" + string.Concat(methods.Skip(1).Select(m => $" / .{m}"));
         return $"configured via <span class=\"font-mono\">{via}</span>";
@@ -301,7 +328,11 @@ internal static class ApiCatalog
         if (uses.Count > 0)
         {
             var names = uses.Select(u => u.Method).Distinct().Select(n => $"{n}(…)").ToList();
-            if (type.GetMethod("ToFence") != null) names.Add("ToFence()");
+            if (type.GetMethod("ToFence") != null)
+            {
+                names.Add("ToFence()");
+            }
+
             return names.Take(5).ToArray();
         }
         return PublicMethods(type).Select(m => m.Name).Distinct().Take(6).Select(n => $"{n}(…)").ToArray();
@@ -310,5 +341,5 @@ internal static class ApiCatalog
     private static string EdgeLabel(IGrouping<Type, Usage> group) =>
         string.Join(" / ", group.Select(u => u.Method).Distinct().Select(m => $"{m}()"));
 
-    private static string HighlightCSharp(string code) => Highlighter.Value.Highlight(code, "csharp");
+    private static string HighlightCSharp(string code) => _highlighter.Value.Highlight(code, "csharp");
 }

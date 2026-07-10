@@ -1,4 +1,3 @@
-using Beck;
 using Beck.Authoring;
 
 namespace Beck.Docs.Samples;
@@ -13,7 +12,7 @@ public static class AuthoringSamples
     /// <summary>An API gateway fronting grouped services, with an async event bus.</summary>
     public static string Microservices() =>
         new DiagramBuilder("Web Platform")
-            .Direction(Direction.TB)
+            .Direction(Direction.Tb)
             .Node("web", n => n.Title("Web App").Kind(NodeKind.User))
             .Node("gw", n => n.Title("API Gateway").Kind(NodeKind.Gateway))
             .Node("auth", "Auth Service")
@@ -31,7 +30,7 @@ public static class AuthoringSamples
     /// <summary>The simplest request path — emitted as a fenced <c>```beck</c> block.</summary>
     public static string RequestPath() =>
         new DiagramBuilder("Request Path")
-            .Direction(Direction.LR)
+            .Direction(Direction.Lr)
             .Node("client", n => n.Title("Browser").Kind(NodeKind.User))
             .Node("api", "API Server")
             .Node("db", n => n.Title("Postgres").Kind(NodeKind.Db))
@@ -55,7 +54,7 @@ public static class AuthoringSamples
     /// <summary>A publish lifecycle — the state-diagram builder.</summary>
     public static string PublishLifecycle() =>
         new StateDiagramBuilder("Publish Lifecycle")
-            .Direction(Direction.LR)
+            .Direction(Direction.Lr)
             .State("review", "In Review", AccentToken.Warn)
             .State("published", "Published", AccentToken.Success)
             .Initial("draft")
@@ -88,7 +87,7 @@ public static class AuthoringSamples
     /// <summary>A cache-aside read path with a scripted animation flow.</summary>
     public static string ReadPath() =>
         new DiagramBuilder("Read Path")
-            .Direction(Direction.LR)
+            .Direction(Direction.Lr)
             .Node("client", n => n.Title("Client").Kind(NodeKind.User))
             .Node("api", "API")
             .Node("cache", n => n.Title("Redis").Kind(NodeKind.Cache))

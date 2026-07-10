@@ -18,10 +18,13 @@ public static class ContentHash
     /// </summary>
     public static string Of(string content)
     {
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         var sb = new StringBuilder(8);
-        for (int i = 0; i < 4; i++)
+        for (var i = 0; i < 4; i++)
+        {
             sb.Append(hash[i].ToString("x2", System.Globalization.CultureInfo.InvariantCulture));
+        }
+
         return sb.ToString();
     }
 }

@@ -1,8 +1,6 @@
 using Beck.Model;
-using Beck.Rendering;
 using Beck.Svg;
 using Xunit;
-using BeckStyle = Beck.BeckStyle;
 
 namespace Beck.Tests;
 
@@ -17,36 +15,36 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class StyleByteIdentityTests
 {
-    private static readonly string CorpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
+    private static readonly string _corpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
 
     public static IEnumerable<object[]> Corpus() =>
-        Directory.EnumerateFiles(CorpusDir, "*.yaml").Select(f => new object[] { Path.GetFileName(f) });
+        Directory.EnumerateFiles(_corpusDir, "*.yaml").Select(f => new object[] { Path.GetFileName(f) });
 
-    private static readonly SvgRenderOptions[] Variants =
-    {
+    private static readonly SvgRenderOptions[] _variants =
+    [
         new(),
         new() { Animation = AnimationMode.Static },
         new() { Animation = AnimationMode.Scrub },
         new() { Theme = ThemeMode.Dark },
         new() { Theme = ThemeMode.Light },
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(Corpus))]
     public void DefaultPath_EqualsExplicitClassic(string file)
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, file));
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, file));
 
-        foreach (SvgRenderOptions options in Variants)
+        foreach (var options in _variants)
         {
-            string viaDefault = BeckSvg.Render(yaml, options);
+            var viaDefault = BeckSvg.Render(yaml, options);
 
             // Re-render through the internal seam with an explicit Classic (and a with-copy of it),
             // reproducing exactly what RenderWithInfo does around the style-resolution point.
-            string hash = BeckSvg.ResolveIdSuffix(yaml, options);
-            DiagramModel model = Validate.LoadDiagram(yaml);
-            string viaClassic = SvgRenderer.Render(model, options.Measurer, hash, options, BeckStyle.Classic);
-            string viaCopy = SvgRenderer.Render(model, options.Measurer, hash, options, BeckStyle.Classic with { });
+            var hash = BeckSvg.ResolveIdSuffix(yaml, options);
+            var model = Validate.LoadDiagram(yaml);
+            var viaClassic = SvgRenderer.Render(model, options.Measurer, hash, options, BeckStyle.Classic);
+            var viaCopy = SvgRenderer.Render(model, options.Measurer, hash, options, BeckStyle.Classic with { });
 
             Assert.Equal(viaDefault, viaClassic);
             Assert.Equal(viaDefault, viaCopy);

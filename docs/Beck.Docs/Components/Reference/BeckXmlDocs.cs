@@ -3,7 +3,6 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
-using Beck;
 using Beck.Authoring;
 
 namespace Beck.Docs.Components.Reference;
@@ -17,7 +16,7 @@ namespace Beck.Docs.Components.Reference;
 /// </summary>
 internal static class BeckXmlDocs
 {
-    private static readonly Lazy<IReadOnlyDictionary<string, XElement>> Members = new(Load);
+    private static readonly Lazy<IReadOnlyDictionary<string, XElement>> _members = new(Load);
 
     /// <summary>Plain-text summary for an enum value, or empty when none is documented.</summary>
     public static string ForEnumValue(Type enumType, string name) =>
@@ -37,7 +36,7 @@ internal static class BeckXmlDocs
     /// </summary>
     public static string MemberDocHtml(MethodBase method)
     {
-        if (!Members.Value.TryGetValue(DocId(method), out var member))
+        if (!_members.Value.TryGetValue(DocId(method), out var member))
         {
             Debug.WriteLine($"BeckXmlDocs: no doc entry for {DocId(method)}");
             return string.Empty;
@@ -57,14 +56,32 @@ internal static class BeckXmlDocs
     /// <summary>Raw, dedented C# from a type's <c>&lt;example&gt;&lt;code&gt;</c> block, or null.</summary>
     public static string? ExampleCode(Type type)
     {
-        if (!Members.Value.TryGetValue($"T:{type.FullName}", out var member)) return null;
+        if (!_members.Value.TryGetValue($"T:{type.FullName}", out var member))
+        {
+            return null;
+        }
+
         var code = member.Element("example")?.Element("code")?.Value;
-        if (string.IsNullOrWhiteSpace(code)) return null;
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return null;
+        }
 
         var lines = code.Replace("\r\n", "\n").Split('\n').ToList();
-        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0])) lines.RemoveAt(0);
-        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1])) lines.RemoveAt(lines.Count - 1);
-        if (lines.Count == 0) return null;
+        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
+        {
+            lines.RemoveAt(0);
+        }
+
+        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
+        {
+            lines.RemoveAt(lines.Count - 1);
+        }
+
+        if (lines.Count == 0)
+        {
+            return null;
+        }
 
         var indent = lines.Where(l => !string.IsNullOrWhiteSpace(l))
                           .Min(l => l.Length - l.TrimStart().Length);
@@ -82,13 +99,21 @@ internal static class BeckXmlDocs
         var name = method.IsConstructor ? "#ctor" : method.Name;
         var id = $"M:{method.DeclaringType!.FullName}.{name}";
         var parameters = method.GetParameters();
-        if (parameters.Length == 0) return id;
+        if (parameters.Length == 0)
+        {
+            return id;
+        }
+
         return id + "(" + string.Join(",", parameters.Select(p => EncodeType(p.ParameterType))) + ")";
     }
 
     private static string EncodeType(Type t)
     {
-        if (t.IsArray) return EncodeType(t.GetElementType()!) + "[]";
+        if (t.IsArray)
+        {
+            return EncodeType(t.GetElementType()!) + "[]";
+        }
+
         if (t.IsGenericType)
         {
             var definition = t.GetGenericTypeDefinition().FullName!;
@@ -102,7 +127,7 @@ internal static class BeckXmlDocs
     // ---- rich inline rendering -------------------------------------------------------------
 
     /// <summary>The 12 documented builder types, keyed by name — cref targets become anchor links.</summary>
-    private static readonly HashSet<string> LinkableTypes = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> _linkableTypes = new(StringComparer.Ordinal)
     {
         nameof(DiagramBuilder), nameof(NodeBuilder), nameof(EdgeBuilder), nameof(GroupBuilder),
         nameof(FlowBuilder), nameof(SequenceDiagramBuilder), nameof(MessageBuilder),
@@ -113,7 +138,11 @@ internal static class BeckXmlDocs
     /// <summary>Render a doc element's inline content (text, c, see, paramref) to HTML.</summary>
     private static string RenderInline(XElement? element)
     {
-        if (element is null) return string.Empty;
+        if (element is null)
+        {
+            return string.Empty;
+        }
+
         var sb = new StringBuilder();
         foreach (var node in element.Nodes())
         {
@@ -148,8 +177,12 @@ internal static class BeckXmlDocs
     private static string RenderCref(string? cref)
     {
         var name = CrefShortName(cref);
-        if (name.Length == 0) return string.Empty;
-        if (cref!.StartsWith("T:", StringComparison.Ordinal) && LinkableTypes.Contains(name))
+        if (name.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        if (cref!.StartsWith("T:", StringComparison.Ordinal) && _linkableTypes.Contains(name))
         {
             return $"<a class=\"font-mono underline decoration-dotted underline-offset-2\" " +
                    $"href=\"/api/#{name.ToLowerInvariant()}\">{WebUtility.HtmlEncode(name)}</a>";
@@ -160,10 +193,18 @@ internal static class BeckXmlDocs
     /// <summary>The readable tail of a cref: <c>T:Beck.NodeKind</c> → <c>NodeKind</c>, <c>M:Beck.FlowBuilder.Narrate(…)</c> → <c>FlowBuilder.Narrate</c>.</summary>
     private static string CrefShortName(string? cref)
     {
-        if (string.IsNullOrEmpty(cref)) return string.Empty;
+        if (string.IsNullOrEmpty(cref))
+        {
+            return string.Empty;
+        }
+
         var name = cref.Length > 2 && cref[1] == ':' ? cref[2..] : cref;
         var paren = name.IndexOf('(');
-        if (paren >= 0) name = name[..paren];
+        if (paren >= 0)
+        {
+            name = name[..paren];
+        }
+
         var parts = name.Split('.');
         // Members keep their declaring type for context; types stand alone.
         var keep = cref.StartsWith("T:", StringComparison.Ordinal) ? 1 : 2;
@@ -171,7 +212,7 @@ internal static class BeckXmlDocs
     }
 
     private static XElement? Summary(string key) =>
-        Members.Value.TryGetValue(key, out var member) ? member.Element("summary") : null;
+        _members.Value.TryGetValue(key, out var member) ? member.Element("summary") : null;
 
     private static IReadOnlyDictionary<string, XElement> Load()
     {
@@ -213,7 +254,11 @@ internal static class BeckXmlDocs
         {
             if (char.IsWhiteSpace(ch))
             {
-                if (!lastWasSpace) sb.Append(' ');
+                if (!lastWasSpace)
+                {
+                    sb.Append(' ');
+                }
+
                 lastWasSpace = true;
             }
             else

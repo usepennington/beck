@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Beck.Rendering;
 using Xunit;
 
 namespace Beck.Tests;
@@ -13,11 +12,11 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class MetroArtworkTests
 {
-    private static readonly string CorpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
+    private static readonly string _corpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
 
     // Classic + the transit seams: station dots at edge anchors, train-capsule packets, and
     // width-sane markers for thick lines.
-    private static readonly BeckStyle Transit = BeckStyle.Classic with
+    private static readonly BeckStyle _transit = BeckStyle.Classic with
     {
         Name = "custom-transit",
         Artwork = StyleArtwork.Metro,
@@ -28,19 +27,19 @@ public sealed class MetroArtworkTests
 
     // The BASE edge path only (class "beck-edge beck-edge--<kind>") — deliberately NOT any sibling
     // "beck-edge-overlay" path, which also starts with "beck-edge" and would double the count.
-    private static readonly Regex EdgePath = new("<path class=\"beck-edge beck-edge--[^\"]*\"", RegexOptions.Compiled);
-    private static readonly Regex Station = new("class=\"beck-station\"", RegexOptions.Compiled);
+    private static readonly Regex _edgePath = new("<path class=\"beck-edge beck-edge--[^\"]*\"", RegexOptions.Compiled);
+    private static readonly Regex _station = new("class=\"beck-station\"", RegexOptions.Compiled);
 
     // Every architecture edge is one continuous <path class="beck-edge ..."> and drops exactly two
     // station dots (one at each anchor endpoint), so the station count is 2× the edge-path count.
     [Fact]
     public void TransitArtwork_DropsTwoStationsPerEdge()
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = Transit });
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
+        var svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = _transit });
 
-        int edges = EdgePath.Matches(svg).Count;
-        int stations = Station.Matches(svg).Count;
+        var edges = _edgePath.Matches(svg).Count;
+        var stations = _station.Matches(svg).Count;
         Assert.True(edges > 0, "expected at least one edge in arch-kitchen");
         Assert.Equal(2 * edges, stations);
     }
@@ -49,8 +48,8 @@ public sealed class MetroArtworkTests
     [Fact]
     public void Classic_EmitsNoStations()
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
+        var svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.DoesNotContain("beck-station", svg);
     }
 
@@ -59,8 +58,8 @@ public sealed class MetroArtworkTests
     [Fact]
     public void TrainPacket_RotatesWithPath()
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = Transit });
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
+        var svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = _transit });
 
         // The capsule is a rounded <rect class="beck-packet ..."> riding offset-path with auto rotation.
         // (Packet *labels* legitimately stay offset-rotate:0deg upright, so we don't assert its absence.)
@@ -74,8 +73,8 @@ public sealed class MetroArtworkTests
     [Fact]
     public void MarkerScaleToWidth_SanesThickLineArrowheads()
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = Transit });
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
+        var svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = _transit });
         Assert.Contains("markerUnits=\"userSpaceOnUse\"", svg);
 
         // 6 (classic arrow base) · √EdgeStroke — grown with the line yet nowhere near the 6·w blob a

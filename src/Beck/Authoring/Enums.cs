@@ -4,13 +4,13 @@ namespace Beck.Authoring;
 public enum Direction
 {
     /// <summary>Top to bottom (default).</summary>
-    TB,
+    Tb,
     /// <summary>Bottom to top.</summary>
-    BT,
+    Bt,
     /// <summary>Left to right.</summary>
-    LR,
+    Lr,
     /// <summary>Right to left.</summary>
-    RL,
+    Rl,
 }
 
 /// <summary>Node archetype; drives the default icon and accent color.</summary>

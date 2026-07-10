@@ -35,14 +35,13 @@ public static class BrutalistStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
+        var c = BeckStyle.Classic;
 
         // High-contrast tokens: near-black hard borders/edges over the host ramp (inverted in dark so
         // borders read near-white on black). Every entry keeps the three-tier
         // var(--beck-X, var(--color-Y, literal)) indirection, so a host --color-* / --beck-* override
         // still wins; the literals are only the last resort. Accent/semantics stay classic.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
             ("--beck-node-border", "var(--color-base-900, #0f172a)"),
@@ -75,12 +74,11 @@ public static class BrutalistStyle
             // faint grey-navy shadow on a near-white surface (visual-jury tuning). Still token-driven:
             // a host --color-base-950 (or --beck-shadow) override wins; #0a0a0a is only the last resort.
             ("--beck-shadow", "var(--color-base-950, #0a0a0a)"),
-        });
+        ]);
 
         // Dark overrides only (layered over the light block, which is always emitted first): borders and
         // edges flip to a near-white ramp for the same stark contrast on a black surface.
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #0d1117)"),
             ("--beck-node-bg", "var(--color-base-900, #161b22)"),
             ("--beck-node-border", "var(--color-base-100, #f1f5f9)"),
@@ -93,14 +91,14 @@ public static class BrutalistStyle
             ("--beck-icon-bg", "var(--color-base-800, #21262d)"),
             // Inverted on black: the sticker shadow flips to the near-white border ink.
             ("--beck-shadow", "var(--color-base-100, #f1f5f9)"),
-        });
+        ]);
 
         // Squared corners + thick borders (the neo-brutalist chassis). NodeStroke drives both the render
         // insets and the measured border budget (StyleGeometry re-derives both), so a thicker stroke
         // stays self-consistent between the measured and drawn box. The signature "sticker" lift is a
         // solid blur-free StyleArtwork.Brutalist offset rect (ShadowOffset below), token-coloured via
         // --beck-shadow — not a CSS drop-shadow filter — so no resolved colour touches shape CSS.
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             CardRadius = 0,
             ClassRadius = 0,
@@ -135,7 +133,7 @@ public static class BrutalistStyle
         // the real heavy uppercase run; SvgRenderer emits font-weight=800 and the uppercased string, so
         // the drawn text matches the measured box (no textLength squeeze). Subtitles/status/members stay
         // classic (still Archivo-measured via MetricsFont below), so the hierarchy reads.
-        StyleTypography typography = c.Typography with
+        var typography = c.Typography with
         {
             SansFamily = "'Archivo', system-ui, -apple-system, sans-serif",
             MetricsFont = MetricsFont.Archivo,
@@ -152,7 +150,7 @@ public static class BrutalistStyle
         // in discrete steps rather than gliding, and its trail reveals in the same hard cuts. Only the
         // flow effect steps — nothing animates at rest. Card pulse/highlight keep their shared timing
         // (the "pop" is a flow-triggered arrival cue, not resting jitter).
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             PacketSteps = 6,
             TrailSteps = 6,
@@ -180,7 +178,7 @@ public static class BrutalistStyle
         //    so the outline matches the connector (white on dark, near-black on light) in both themes.
         // The mock's `pop steps(1)` shadow jump stays LOCKED OUT — the offset shadow is baked-static via
         // StyleArtwork.Brutalist, so nothing animates at rest but the compiled edge pulse.
-        StyleEdges edges = StyleEdges.Classic with
+        var edges = StyleEdges.Classic with
         {
             BaseLinecap = "butt",
             Overlay = EdgeOverlay.Comet,
@@ -189,7 +187,7 @@ public static class BrutalistStyle
             CometDash = 6,
             OverlaySteps = 8,
             OverlayPeriod = 1.8,
-            OverlayPalette = new[] { "var(--beck-pulse-1)", "var(--beck-pulse-2)" },
+            OverlayPalette = ["var(--beck-pulse-1)", "var(--beck-pulse-2)"],
             MarkerScaleToWidth = true,
             MarkerColor = "var(--beck-pulse-1)",
             MarkerOutline = "var(--beck-edge)",

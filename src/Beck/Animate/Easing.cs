@@ -24,7 +24,7 @@ internal static class Easing
     public static readonly Ease Power2Out = new("power2.out", t => 1 - Math.Pow(1 - t, 3));
     public static readonly Ease Power2InOut = new("power2.inOut", t => t < 0.5 ? 4 * t * t * t : 1 - Math.Pow(-2 * t + 2, 3) / 2);
     public static readonly Ease ExpoInOut = new("expo.inOut", t =>
-        t == 0 ? 0 : t == 1 ? 1 : t < 0.5 ? Math.Pow(2, 20 * t - 10) / 2 : (2 - Math.Pow(2, -20 * t + 10)) / 2);
+        t == 0 ? 0 : Math.Abs(t - 1) < 0.001 ? 1 : t < 0.5 ? Math.Pow(2, 20 * t - 10) / 2 : (2 - Math.Pow(2, -20 * t + 10)) / 2);
     public static readonly Ease SineInOut = new("sine.inOut", t => -(Math.Cos(Math.PI * t) - 1) / 2);
     public static readonly Ease Steps12 = new("steps(12)", t => Math.Floor(t * 12) / 12);
     public static readonly Ease BounceOut = new("bounce.out", BounceOutFn);
@@ -32,18 +32,18 @@ internal static class Easing
     /// <summary>Overshoot ease (<c>back.out(overshoot)</c>): s = 1.70158·overshoot.</summary>
     public static Ease BackOut(double overshoot)
     {
-        double s = 1.70158 * overshoot;
-        return new($"back.out({overshoot})", t => { double u = t - 1; return u * u * ((s + 1) * u + s) + 1; });
+        var s = 1.70158 * overshoot;
+        return new($"back.out({overshoot})", t => { var u = t - 1; return u * u * ((s + 1) * u + s) + 1; });
     }
 
     /// <summary>Oscillating ease (<c>elastic.out(amplitude, period)</c>).</summary>
     public static Ease ElasticOut(double amplitude, double period)
     {
-        double a = Math.Max(amplitude, 1);
-        double p = period;
-        double s = p / (2 * Math.PI) * Math.Asin(1 / a);
-        return new($"elastic.out({amplitude},{period})", t =>
-            t == 0 ? 0 : t == 1 ? 1 : a * Math.Pow(2, -10 * t) * Math.Sin((t - s) * (2 * Math.PI) / p) + 1);
+        var a = Math.Max(amplitude, 1);
+        var p = period;
+        var s = p / (2 * Math.PI) * Math.Asin(1 / a);
+        return new Ease($"elastic.out({amplitude},{period})", t =>
+            t == 0 ? 0 : Math.Abs(t - 1) < 0.001 ? 1 : a * Math.Pow(2, -10 * t) * Math.Sin((t - s) * (2 * Math.PI) / p) + 1);
     }
 
     /// <summary>A <c>steps(n)</c> ease with an arbitrary step count (mirrors <see cref="Steps12"/>,
@@ -53,11 +53,15 @@ internal static class Easing
 
     private static double BounceOutFn(double t)
     {
-        const double n1 = 7.5625, d1 = 2.75;
-        if (t < 1 / d1) return n1 * t * t;
-        if (t < 2 / d1) { t -= 1.5 / d1; return n1 * t * t + 0.75; }
-        if (t < 2.5 / d1) { t -= 2.25 / d1; return n1 * t * t + 0.9375; }
-        t -= 2.625 / d1; return n1 * t * t + 0.984375;
+        const double N1 = 7.5625, D1 = 2.75;
+        if (t < 1 / D1)
+        {
+            return N1 * t * t;
+        }
+
+        if (t < 2 / D1) { t -= 1.5 / D1; return N1 * t * t + 0.75; }
+        if (t < 2.5 / D1) { t -= 2.25 / D1; return N1 * t * t + 0.9375; }
+        t -= 2.625 / D1; return N1 * t * t + 0.984375;
     }
 
     /// <summary>The packet ease token → concrete ease (timeline.ts PACKET_EASE map).</summary>
@@ -77,33 +81,45 @@ internal static class Easing
     /// <summary>The CSS timing function for an ease.</summary>
     public static string ToCss(Ease e)
     {
-        if (e.IsLinear) return "linear";
-        if (e.IsSteps) return $"steps({e.Steps})";
+        if (e.IsLinear)
+        {
+            return "linear";
+        }
+
+        if (e.IsSteps)
+        {
+            return $"steps({e.Steps})";
+        }
+
         return Sample(e.Fn);
     }
 
     private static string Sample(Func<double, double> fn)
     {
         var pts = new List<(double T, double V)>();
-        for (int k = 0; k < 16; k++) { double t = k / 15.0; pts.Add((t, fn(t))); }
+        for (var k = 0; k < 16; k++) { var t = k / 15.0; pts.Add((t, fn(t))); }
 
-        bool inserted = true;
+        var inserted = true;
         while (inserted && pts.Count < 48)
         {
             inserted = false;
-            for (int i = 0; i < pts.Count - 1 && pts.Count < 48; i++)
+            for (var i = 0; i < pts.Count - 1 && pts.Count < 48; i++)
             {
-                double tm = (pts[i].T + pts[i + 1].T) / 2;
-                double vlin = (pts[i].V + pts[i + 1].V) / 2;
-                double vm = fn(tm);
+                var tm = (pts[i].T + pts[i + 1].T) / 2;
+                var vlin = (pts[i].V + pts[i + 1].V) / 2;
+                var vm = fn(tm);
                 if (Math.Abs(vm - vlin) > 0.005) { pts.Insert(i + 1, (tm, vm)); i++; inserted = true; }
             }
         }
 
         var sb = new StringBuilder("linear(");
-        for (int i = 0; i < pts.Count; i++)
+        for (var i = 0; i < pts.Count; i++)
         {
-            if (i > 0) sb.Append(", ");
+            if (i > 0)
+            {
+                sb.Append(", ");
+            }
+
             sb.Append(Fmt(pts[i].V, 4));
             sb.Append(' ').Append(Fmt(pts[i].T * 100, 2)).Append('%');
         }
@@ -112,7 +128,7 @@ internal static class Easing
 
     private static string Fmt(double n, int dp)
     {
-        double r = Math.Round(n, dp);
+        var r = Math.Round(n, dp);
         return r.ToString("0.####", CultureInfo.InvariantCulture);
     }
 }

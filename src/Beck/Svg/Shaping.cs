@@ -25,10 +25,18 @@ internal static class Shaping
     /// </summary>
     public static string EdgePath(BeckStyle style, string originalD, IReadOnlyList<Point> pts, string seed)
     {
-        double amp = style.Edges.BowAmplitude;
-        if (amp <= 0) return originalD;
+        var amp = style.Edges.BowAmplitude;
+        if (amp <= 0)
+        {
+            return originalD;
+        }
+
         var simple = Simplify(pts);
-        if (simple.Count < 2) return originalD;
+        if (simple.Count < 2)
+        {
+            return originalD;
+        }
+
         return Bow(simple, amp, seed);
     }
 
@@ -43,14 +51,14 @@ internal static class Shaping
         var rng = new Rng(seed);
         var sb = new StringBuilder();
         sb.Append('M').Append(F((pts[0].X, pts[0].Y)));
-        for (int i = 1; i < pts.Count; i++)
+        for (var i = 1; i < pts.Count; i++)
         {
             Point a = pts[i - 1], b = pts[i];
             double dx = b.X - a.X, dy = b.Y - a.Y;
-            double len = Math.Sqrt(dx * dx + dy * dy);
+            var len = Math.Sqrt(dx * dx + dy * dy);
             if (len < 1e-6) { sb.Append('L').Append(F((b.X, b.Y))); continue; }
             double nx = -dy / len, ny = dx / len;                 // unit perpendicular
-            double bow = (rng.Next() - 0.5) * 2 * amp;            // signed, hash-seeded
+            var bow = (rng.Next() - 0.5) * 2 * amp;            // signed, hash-seeded
             double mx = (a.X + b.X) / 2 + nx * bow, my = (a.Y + b.Y) / 2 + ny * bow;
             sb.Append('Q').Append(F((mx, my))).Append(' ').Append(F((b.X, b.Y)));
         }
@@ -60,7 +68,7 @@ internal static class Shaping
     /// <summary>A straight two-point run bowed once (sketch's wobbly lifelines + class separators): the
     /// endpoints are preserved exactly, one sideways bow between them.</summary>
     public static string BowLine(double x1, double y1, double x2, double y2, double amp, string seed) =>
-        Bow(new[] { new Point(x1, y1), new Point(x2, y2) }, amp, seed);
+        Bow([new Point(x1, y1), new Point(x2, y2)], amp, seed);
 
     /// <summary>A deterministic phase fraction in [0,1) for an overlay element, from the content hash +
     /// its edge index — the baked per-edge comet offset (no <c>animation-delay</c>).</summary>
@@ -74,19 +82,29 @@ internal static class Shaping
     internal static List<Point> Simplify(IReadOnlyList<Point> pts)
     {
         var dedup = new List<Point>();
-        foreach (Point p in pts)
+        foreach (var p in pts)
         {
             if (dedup.Count == 0) { dedup.Add(p); continue; }
-            Point prev = dedup[^1];
-            if (Math.Abs(prev.X - p.X) > 0.5 || Math.Abs(prev.Y - p.Y) > 0.5) dedup.Add(p);
+            var prev = dedup[^1];
+            if (Math.Abs(prev.X - p.X) > 0.5 || Math.Abs(prev.Y - p.Y) > 0.5)
+            {
+                dedup.Add(p);
+            }
         }
-        if (dedup.Count <= 2) return dedup;
+        if (dedup.Count <= 2)
+        {
+            return dedup;
+        }
+
         var outp = new List<Point> { dedup[0] };
-        for (int i = 1; i < dedup.Count - 1; i++)
+        for (var i = 1; i < dedup.Count - 1; i++)
         {
             Point a = dedup[i - 1], c = dedup[i], d = dedup[i + 1];
-            double cross = (c.X - a.X) * (d.Y - a.Y) - (c.Y - a.Y) * (d.X - a.X);
-            if (Math.Abs(cross) >= 0.01) outp.Add(c);
+            var cross = (c.X - a.X) * (d.Y - a.Y) - (c.Y - a.Y) * (d.X - a.X);
+            if (Math.Abs(cross) >= 0.01)
+            {
+                outp.Add(c);
+            }
         }
         outp.Add(dedup[^1]);
         return outp;
@@ -97,15 +115,15 @@ internal static class Shaping
 /// A tiny deterministic PRNG seeded from a string (FNV-1a → xorshift32), shared by <see cref="Shaping"/>
 /// (edge bows, overlay phase) and <see cref="Artwork"/> (node/circle wobble): the same seed produces the
 /// same jitter sequence forever, so every style-shaping decision is reproducible from the diagram's
-/// content hash and never touches <see cref="System.Random"/> or the clock.
+/// content hash and never touches <see cref="Random"/> or the clock.
 /// </summary>
 internal sealed class Rng
 {
     private uint _s;
     public Rng(string seed)
     {
-        uint hsh = 2166136261;
-        foreach (char c in seed) { hsh ^= c; hsh *= 16777619; }
+        var hsh = 2166136261;
+        foreach (var c in seed) { hsh ^= c; hsh *= 16777619; }
         _s = hsh == 0 ? 1u : hsh;
     }
     public double Next()

@@ -1,5 +1,3 @@
-using Beck.Rendering;
-using Beck.Rendering.Text;
 using Beck.Skia;
 using Beck.Text;
 using Xunit;
@@ -30,7 +28,7 @@ public class ManagedMeasurerTests
     {
         // The whole point: BeckSvg.Render(yaml) with no options must work out of the box —
         // the default measurer is no longer a throwing stub.
-        string svg = BeckSvg.Render(Yaml);
+        var svg = BeckSvg.Render(Yaml);
 
         Assert.Contains("<svg", svg);
         Assert.Contains("Checkout API", svg);
@@ -50,8 +48,8 @@ public class ManagedMeasurerTests
     public void ManagedMetrics_TrackSkia(FontRole role, string text)
     {
         using var skia = new SkiaTextMeasurer(TestFonts.Spec());
-        TextMetrics exact = skia.Measure(text, role);
-        TextMetrics managed = InterMetricsMeasurer.Instance.Measure(text, role);
+        var exact = skia.Measure(text, role);
+        var managed = InterMetricsMeasurer.Instance.Measure(text, role);
 
         // Width: a per-glyph sum ignores kerning, so allow a small band. Ascent/descent come from
         // the same font metrics, so they should match tightly.
@@ -65,14 +63,19 @@ public class ManagedMeasurerTests
     [Fact]
     public void RenderSampleHtml()
     {
-        string? outPath = Environment.GetEnvironmentVariable("BECK_RENDER_SAMPLE");
-        if (string.IsNullOrEmpty(outPath)) return;
-
-        string managed = BeckSvg.Render(Yaml, new SvgRenderOptions { Animation = AnimationMode.Static });
-        using var skia = new SkiaTextMeasurer(TestFonts.Spec());
-        string exact = BeckSvg.Render(Yaml, new SvgRenderOptions
+        var outPath = Environment.GetEnvironmentVariable("BECK_RENDER_SAMPLE");
+        if (string.IsNullOrEmpty(outPath))
         {
-            Measurer = skia, Font = TestFonts.Spec(), Animation = AnimationMode.Static,
+            return;
+        }
+
+        var managed = BeckSvg.Render(Yaml, new SvgRenderOptions { Animation = AnimationMode.Static });
+        using var skia = new SkiaTextMeasurer(TestFonts.Spec());
+        var exact = BeckSvg.Render(Yaml, new SvgRenderOptions
+        {
+            Measurer = skia,
+            Font = TestFonts.Spec(),
+            Animation = AnimationMode.Static,
         });
 
         File.WriteAllText(outPath,

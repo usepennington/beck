@@ -1,5 +1,3 @@
-using Beck.Rendering;
-using Beck.Rendering.Text;
 using Beck.Text;
 using HarfBuzzSharp;
 using SkiaSharp;
@@ -46,12 +44,12 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     /// specs shape the transformed string, so a style that uppercases a role widens its measured box.</summary>
     public TextMetrics Measure(string text, FontRoleSpec spec)
     {
-        FontRoleSpec s = spec;
-        string t = s.Uppercase ? text.ToUpperInvariant() : text;
+        var s = spec;
+        var t = s.Uppercase ? text.ToUpperInvariant() : text;
 
         lock (_gate)
         {
-            Loaded f = Load(s.Mono, s.Weight);
+            var f = Load(s.Mono, s.Weight);
 
             double width = 0;
             if (t.Length > 0)
@@ -61,14 +59,21 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
                 buffer.GuessSegmentProperties();
                 f.HbFont.Shape(buffer);
                 long advance = 0;
-                foreach (GlyphPosition p in buffer.GlyphPositions) advance += p.XAdvance;
+                foreach (var p in buffer.GlyphPositions)
+                {
+                    advance += p.XAdvance;
+                }
+
                 width = advance * s.SizePx / f.UnitsPerEm;
                 // CSS letter-spacing adds a gap after every character (Chrome keeps the trailing gap).
-                if (s.LetterSpacingEm != 0) width += t.Length * s.LetterSpacingEm * s.SizePx;
+                if (s.LetterSpacingEm != 0)
+                {
+                    width += t.Length * s.LetterSpacingEm * s.SizePx;
+                }
             }
 
             using var font = new SKFont(f.Typeface, (float)s.SizePx);
-            font.GetFontMetrics(out SKFontMetrics m);
+            font.GetFontMetrics(out var m);
             return new TextMetrics(width, -m.Ascent, m.Descent);
         }
     }
@@ -76,20 +81,25 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private Loaded Load(bool mono, int weight)
     {
         var key = (mono, weight);
-        if (_fonts.TryGetValue(key, out Loaded? cached)) return cached;
+        if (_fonts.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
 
-        IReadOnlyDictionary<int, string>? files = mono ? _spec.MonoFiles : _spec.Files;
+        var files = mono ? _spec.MonoFiles : _spec.Files;
         if (files is null || files.Count == 0)
+        {
             throw new InvalidOperationException(
                 $"BeckFontSpec provides no {(mono ? "monospace " : "")}font files for weight {weight}.");
+        }
 
-        string path = files[NearestWeight(files.Keys, weight)];
-        SKTypeface typeface = SKTypeface.FromFile(path)
-            ?? throw new InvalidOperationException($"Could not load font file '{path}'.");
+        var path = files[NearestWeight(files.Keys, weight)];
+        var typeface = SKTypeface.FromFile(path)
+                       ?? throw new InvalidOperationException($"Could not load font file '{path}'.");
 
         var blob = Blob.FromFile(path);
         var face = new Face(blob, 0);
-        int upem = face.UnitsPerEm;
+        var upem = face.UnitsPerEm;
         var hbFont = new Font(face);
         hbFont.SetFunctionsOpenType();
         hbFont.SetScale(upem, upem);
@@ -102,9 +112,9 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private static int NearestWeight(IEnumerable<int> available, int want)
     {
         int best = -1, bestDistance = int.MaxValue;
-        foreach (int w in available)
+        foreach (var w in available)
         {
-            int d = Math.Abs(w - want);
+            var d = Math.Abs(w - want);
             if (d < bestDistance) { bestDistance = d; best = w; }
         }
         return best;
@@ -113,7 +123,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     /// <summary>Releases the cached typefaces and HarfBuzz resources.</summary>
     public void Dispose()
     {
-        foreach (Loaded f in _fonts.Values)
+        foreach (var f in _fonts.Values)
         {
             f.HbFont.Dispose();
             f.Face.Dispose();

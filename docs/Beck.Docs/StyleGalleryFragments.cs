@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Text;
-using Beck.Rendering;
 using Pennington.Artifacts;
 using Pennington.Pipeline;
 using Pennington.Routing;
@@ -27,14 +26,14 @@ public sealed class StyleGalleryFragments : IArtifactContentService
     /// <summary>The shared example sources, in gallery order, with their animation treatment.
     /// Only the architecture flow animates — one live choreography per style is enough to show
     /// the pulse character without turning the whole gallery into a wall of motion.</summary>
-    private static readonly (string File, AnimationMode Animation)[] Examples =
+    private static readonly (string File, AnimationMode Animation)[] _examples =
     [
         ("wwwroot/examples/styles/architecture.beck.yaml", AnimationMode.Full),
         ("wwwroot/examples/styles/sequence.beck.yaml", AnimationMode.Static),
         ("wwwroot/examples/styles/class.beck.yaml", AnimationMode.Static),
     ];
 
-    private static readonly IReadOnlyList<string> StyleNames = [.. BeckStyles.ByName.Keys];
+    private static readonly IReadOnlyList<string> _styleNames = [.. BeckStyles.ByName.Keys];
 
     public static string FragmentPath(string style) => $"/fragments/styles/{style}.html";
 
@@ -43,12 +42,12 @@ public sealed class StyleGalleryFragments : IArtifactContentService
     public StyleGalleryFragments(BeckDiagramRenderer renderer) => _renderer = renderer;
 
     public ImmutableList<ArtifactClaim> Claims { get; } =
-        [.. StyleNames.Select(s => new ArtifactClaim(
+        [.. _styleNames.Select(s => new ArtifactClaim(
             $"style-gallery-{s}", new ExactClaim(new UrlPath(FragmentPath(s))), $"{s} style gallery fragment"))];
 
     public Task<ArtifactContent?> ResolveAsync(string relativePath, CancellationToken cancellationToken)
     {
-        string style = Path.GetFileNameWithoutExtension(relativePath);
+        var style = Path.GetFileNameWithoutExtension(relativePath);
         if (!relativePath.EndsWith(".html", StringComparison.OrdinalIgnoreCase) ||
             !BeckStyles.ByName.ContainsKey(style))
         {
@@ -56,11 +55,11 @@ public sealed class StyleGalleryFragments : IArtifactContentService
         }
 
         var html = new StringBuilder();
-        foreach (var (file, animation) in Examples)
+        foreach (var (file, animation) in _examples)
         {
-            string yaml = BeckSvgPreprocessor.ApplyStyle(
+            var yaml = BeckSvgPreprocessor.ApplyStyle(
                 File.ReadAllText(Path.GetFullPath(file)), style, $"fragment:{style}");
-            string svg = _renderer.Render(yaml, animation).Svg;
+            var svg = _renderer.Render(yaml, animation).Svg;
             html.Append($"<div class=\"beck-embed\">{svg}{BeckSvgPreprocessor.ZoomButton}</div>");
         }
         return Task.FromResult<ArtifactContent?>(
@@ -70,7 +69,7 @@ public sealed class StyleGalleryFragments : IArtifactContentService
     public async IAsyncEnumerable<DiscoveredItem> DiscoverAsync()
     {
         await Task.CompletedTask;
-        foreach (string style in StyleNames)
+        foreach (var style in _styleNames)
         {
             yield return new DiscoveredItem(
                 new ContentRoute

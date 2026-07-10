@@ -36,32 +36,35 @@ public static class BeckSchema
     /// <summary>Edge side pins (<c>fromSide</c>/<c>toSide</c>).</summary>
     public static IReadOnlyList<string> Sides => Model.Tokens.Side.Tokens;
     /// <summary>Boolean values.</summary>
-    public static IReadOnlyList<string> Bool { get; } = new[] { "true", "false" };
+    public static IReadOnlyList<string> Bool { get; } = ["true", "false"];
     /// <summary>Built-in <c>meta.style</c> names (sourced from the engine registry, never drifts).</summary>
     public static IReadOnlyList<string> StyleNames { get; } = BeckStyles.All.Select(s => s.Name).ToArray();
     /// <summary>Named icon keys (an <c>icon:</c> may also be raw inline <c>&lt;svg&gt;</c>).</summary>
     public static IReadOnlyList<string> Icons { get; } = Svg.Icons.Registry.Keys.ToArray();
     /// <summary>Flow step discriminators (the key that opens each flow entry).</summary>
-    public static IReadOnlyList<string> FlowSteps { get; } = new[]
-    {
+    public static IReadOnlyList<string> FlowSteps { get; } =
+    [
         "packet", "burst", "status", "highlight", "pulse", "activate", "stream",
         "working", "idle", "fail", "narrate", "phase", "wait", "reset", "parallel",
-    };
+    ];
 
     // ---- per-section key lists (curated against Model/Schema.cs) -------------
     /// <summary>Top-level document keys.</summary>
-    public static IReadOnlyList<string> TopKeys { get; } = new[] { "type", "meta", "nodes", "edges", "groups", "flow" };
+    public static IReadOnlyList<string> TopKeys { get; } = ["type", "meta", "nodes", "edges", "groups", "flow"];
     /// <summary><c>meta:</c> keys.</summary>
-    public static IReadOnlyList<string> MetaKeys { get; } = new[] { "title", "subtitle", "style", "direction", "theme", "animate", "loop", "fit", "spacing", "narrate" };
+    public static IReadOnlyList<string> MetaKeys { get; } = ["title", "subtitle", "style", "direction", "theme", "animate", "loop", "fit", "spacing", "narrate",
+    ];
     /// <summary>Node entry keys.</summary>
-    public static IReadOnlyList<string> NodeKeys { get; } = new[] { "id", "title", "subtitle", "icon", "kind", "variant", "status", "accent", "href", "target", "surface", "textColor", "width", "rank", "order", "group", "stereotype", "fields", "methods" };
+    public static IReadOnlyList<string> NodeKeys { get; } = ["id", "title", "subtitle", "icon", "kind", "variant", "status", "accent", "href", "target", "surface", "textColor", "width", "rank", "order", "group", "stereotype", "fields", "methods",
+    ];
     /// <summary>Edge entry keys.</summary>
-    public static IReadOnlyList<string> EdgeKeys { get; } = new[] { "from", "to", "label", "style", "curve", "kind", "color", "arrow", "fromSide", "toSide" };
+    public static IReadOnlyList<string> EdgeKeys { get; } = ["from", "to", "label", "style", "curve", "kind", "color", "arrow", "fromSide", "toSide",
+    ];
     /// <summary>Group entry keys.</summary>
-    public static IReadOnlyList<string> GroupKeys { get; } = new[] { "id", "label", "members", "accent" };
+    public static IReadOnlyList<string> GroupKeys { get; } = ["id", "label", "members", "accent"];
 
     /// <summary>Fields whose <em>value</em> is a declared node/group id — completed from the document.</summary>
-    public static IReadOnlyList<string> IdValuedFields { get; } = new[] { "from", "to", "via", "members", "node", "group" };
+    public static IReadOnlyList<string> IdValuedFields { get; } = ["from", "to", "via", "members", "node", "group"];
 
     /// <summary>
     /// The value vocabulary for a given field, or <c>null</c> when the field takes free text
@@ -143,12 +146,22 @@ public static class BeckSchema
         ["sequence"] = "Participants exchanging messages over time.",
         ["state"] = "States and transitions.",
         ["class"] = "Classes with compartments and UML relations.",
-        ["service"] = "A generic service box.", ["db"] = "A database (cylinder).", ["queue"] = "A message queue.",
-        ["cache"] = "A cache store.", ["gateway"] = "An API gateway / entry point.", ["external"] = "A third-party / external system.",
-        ["user"] = "A person or client.", ["ghost"] = "A faded placeholder node.",
-        ["data"] = "Solid data edge (default).", ["control"] = "A control-flow edge.", ["async"] = "A dashed asynchronous edge.",
+        ["service"] = "A generic service box.",
+        ["db"] = "A database (cylinder).",
+        ["queue"] = "A message queue.",
+        ["cache"] = "A cache store.",
+        ["gateway"] = "An API gateway / entry point.",
+        ["external"] = "A third-party / external system.",
+        ["user"] = "A person or client.",
+        ["ghost"] = "A faded placeholder node.",
+        ["data"] = "Solid data edge (default).",
+        ["control"] = "A control-flow edge.",
+        ["async"] = "A dashed asynchronous edge.",
         ["dependency"] = "A dashed dependency edge.",
-        ["TB"] = "Top → bottom.", ["BT"] = "Bottom → top.", ["LR"] = "Left → right.", ["RL"] = "Right → left.",
+        ["TB"] = "Top → bottom.",
+        ["BT"] = "Bottom → top.",
+        ["LR"] = "Left → right.",
+        ["RL"] = "Right → left.",
         ["classic"] = "The default Beck look (unchanged when no `meta.style` is set).",
         // built-in visual styles (meta.style) — sourced as names from BeckStyles.All
         ["minimal"] = "Sober flat look: hairline borders, no shadows, a single travelling dot; rings off.",

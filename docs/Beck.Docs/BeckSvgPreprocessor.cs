@@ -1,6 +1,4 @@
 using System.Net;
-using Beck;
-using Beck.Rendering;
 using Pennington.Markdown.Extensions;
 using YamlDotNet.RepresentationModel;
 
@@ -57,7 +55,10 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     public CodeBlockPreprocessResult? TryProcess(string code, string languageId)
     {
         var fence = ParseInfo(languageId);
-        if (!fence.IsBeck) return null; // defer every other fence to the next preprocessor
+        if (!fence.IsBeck)
+        {
+            return null; // defer every other fence to the next preprocessor
+        }
 
         // A `beck:symbol` fence body may name several files; each is its own document and
         // must render (and fail) independently — one malformed file must not drop the rest.
@@ -85,8 +86,12 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     {
         try
         {
-            if (fence.StyleName is { } style) yaml = ApplyStyle(yaml, style, languageId);
-            string svg = _renderer.Render(yaml, fence.Animation).Svg;
+            if (fence.StyleName is { } style)
+            {
+                yaml = ApplyStyle(yaml, style, languageId);
+            }
+
+            var svg = _renderer.Render(yaml, fence.Animation).Svg;
             return $"<div class=\"beck-embed\">{svg}{ZoomButton}</div>";
         }
         catch (Exception ex)
@@ -133,17 +138,28 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
 
         var stream = new YamlStream();
         stream.Load(new StringReader(yaml));
-        if (stream.Documents.Count == 0) return yaml;
+        if (stream.Documents.Count == 0)
+        {
+            return yaml;
+        }
 
         foreach (var doc in stream.Documents)
         {
-            if (doc.RootNode is not YamlMappingNode root) continue;
+            if (doc.RootNode is not YamlMappingNode root)
+            {
+                continue;
+            }
+
             var metaKey = new YamlScalarNode("meta");
             if (root.Children.TryGetValue(metaKey, out var node) && node is YamlMappingNode meta)
+            {
                 meta.Children[new YamlScalarNode("style")] = new YamlScalarNode(styleName);
+            }
             else
+            {
                 root.Children[metaKey] = new YamlMappingNode(
                     new YamlScalarNode("style"), new YamlScalarNode(styleName));
+            }
         }
 
         using var writer = new StringWriter();
@@ -168,7 +184,9 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
             .Where(p => p.Length > 0)
             .ToList();
         if (paths.Count == 0)
+        {
             throw new InvalidOperationException("beck:symbol fence has no file path in its body.");
+        }
 
         return paths.Select(p => File.ReadAllText(Path.GetFullPath(p))).ToList();
     }
@@ -176,7 +194,7 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     /// <summary>Drops a <c>" &gt; member"</c> tail from a source reference, leaving the file path.</summary>
     private static string StripSelector(string line)
     {
-        int cut = line.IndexOf(" > ", StringComparison.Ordinal);
+        var cut = line.IndexOf(" > ", StringComparison.Ordinal);
         return (cut < 0 ? line : line[..cut]).Trim();
     }
 
@@ -191,37 +209,63 @@ internal sealed class BeckSvgPreprocessor : ICodeBlockPreprocessor
     /// </summary>
     private static FenceInfo ParseInfo(string languageId)
     {
-        ReadOnlySpan<char> s = languageId.AsSpan().Trim();
-        int ws = s.IndexOfAny(' ', '\t');
-        if (ws >= 0) s = s[..ws];
+        var s = languageId.AsSpan().Trim();
+        var ws = s.IndexOfAny(' ', '\t');
+        if (ws >= 0)
+        {
+            s = s[..ws];
+        }
 
         var segments = s.ToString()
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length == 0) return FenceInfo.NotBeck;
+        if (segments.Length == 0)
+        {
+            return FenceInfo.NotBeck;
+        }
 
         // The head segment is `beck` or `beck:<modifier>`; split off the colon modifier.
-        ReadOnlySpan<char> head = segments[0].AsSpan();
-        int colon = head.IndexOf(':');
-        ReadOnlySpan<char> baseLang = colon >= 0 ? head[..colon] : head;
+        var head = segments[0].AsSpan();
+        var colon = head.IndexOf(':');
+        var baseLang = colon >= 0 ? head[..colon] : head;
         if (!baseLang.Equals("beck", StringComparison.OrdinalIgnoreCase))
+        {
             return FenceInfo.NotBeck;
+        }
 
         // Flags = the colon modifier (if any) followed by every comma segment. Parsing them
         // through one path keeps `beck:symbol`, `beck:symbol,static`, and `beck,style=x` uniform.
-        bool fileEmbed = false;
+        var fileEmbed = false;
         var animation = AnimationMode.Full;
         string? styleName = null;
 
-        if (colon >= 0) Apply(head[(colon + 1)..].ToString());
-        for (int i = 1; i < segments.Length; i++) Apply(segments[i]);
+        if (colon >= 0)
+        {
+            Apply(head[(colon + 1)..].ToString());
+        }
+
+        for (var i = 1; i < segments.Length; i++)
+        {
+            Apply(segments[i]);
+        }
 
         void Apply(string flag)
         {
-            if (flag.Equals("symbol", StringComparison.OrdinalIgnoreCase)) fileEmbed = true;
-            else if (flag.Equals("static", StringComparison.OrdinalIgnoreCase)) animation = AnimationMode.Static;
-            else if (flag.Equals("scrub", StringComparison.OrdinalIgnoreCase)) animation = AnimationMode.Scrub;
+            if (flag.Equals("symbol", StringComparison.OrdinalIgnoreCase))
+            {
+                fileEmbed = true;
+            }
+            else if (flag.Equals("static", StringComparison.OrdinalIgnoreCase))
+            {
+                animation = AnimationMode.Static;
+            }
+            else if (flag.Equals("scrub", StringComparison.OrdinalIgnoreCase))
+            {
+                animation = AnimationMode.Scrub;
+            }
             else if (flag.StartsWith("style=", StringComparison.OrdinalIgnoreCase))
+            {
                 styleName = flag["style=".Length..].Trim();
+            }
             // unknown flags are ignored, matching the tree-sitter flag parser
         }
 

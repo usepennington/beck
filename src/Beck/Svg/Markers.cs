@@ -34,29 +34,32 @@ internal sealed class Markers
         // The dedupe key carries the presentation + size discriminants so distinct styles never share a
         // marker — but at classic values (filled, scale 1, strokeWidth units) they collapse to the exact
         // historical "{shape}|{color}" behaviour, so dedupe order → _seq → ids stay byte-identical.
-        string disc = edges.Arrow switch
+        var disc = edges.Arrow switch
         {
             EdgeArrow.OpenV => "|v",
             EdgeArrow.Chevron => "|c",
             _ => "",
         };
-        string sizeDisc = edges.MarkerScaleToWidth
+        var sizeDisc = edges.MarkerScaleToWidth
             ? "|w" + SvgWriter.Num(edgeWidth) + "x" + SvgWriter.Num(edges.MarkerScale)
-            : edges.MarkerScale != 1.0 ? "|x" + SvgWriter.Num(edges.MarkerScale) : "";
+            : Math.Abs(edges.MarkerScale - 1.0) > 0.001 ? "|x" + SvgWriter.Num(edges.MarkerScale) : "";
         // The contrast outline (brutalist's outlined arrowhead) applies to the plain FILLED arrow only —
         // closed UML ends keep their bodies. Resolved ONCE here: this single value drives the dedupe key,
         // the overflow attribute, and the outlined polygon in Body, so the three can't drift apart (a
         // stale key would collide defs; a stale overflow would clip the outline stroke).
-        string? outline = edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow ? edges.MarkerOutline : null;
+        var outline = edges.Arrow == EdgeArrow.Filled && shape == MarkerShape.Arrow ? edges.MarkerOutline : null;
         // The outline colour discriminates the key, so a distinct outline never shares a def with a
         // flat-filled one; unset (classic) contributes nothing.
-        string outlineDisc = outline is { } oc ? "|o" + oc : "";
-        string key = $"{shape}|{color}{disc}{sizeDisc}{outlineDisc}";
-        if (_byKey.TryGetValue(key, out string? hit)) return hit;
+        var outlineDisc = outline is { } oc ? "|o" + oc : "";
+        var key = $"{shape}|{color}{disc}{sizeDisc}{outlineDisc}";
+        if (_byKey.TryGetValue(key, out var hit))
+        {
+            return hit;
+        }
 
-        string id = $"beck-arrow-{_seq++}-{_hash}";
+        var id = $"beck-arrow-{_seq++}-{_hash}";
         var (body, viewBox, refX, w, h) = Body(shape, color, edges, outline);
-        string refY = viewBox.Split(' ')[3] == "12" ? "6" : "5";
+        var refY = viewBox.Split(' ')[3] == "12" ? "6" : "5";
         // Marker size + units. Classic (no width-scaling, scale 1) emits the historical markerWidth/
         // markerHeight and NO markerUnits attribute (SVG default = strokeWidth) — byte-identical. A
         // scaling style either multiplies those strokeWidth-unit dims (MarkerScale) or switches to an
@@ -66,7 +69,7 @@ internal sealed class Markers
         double mw, mh;
         if (edges.MarkerScaleToWidth)
         {
-            double f = edges.MarkerScale * Math.Sqrt(Math.Max(edgeWidth, 1));
+            var f = edges.MarkerScale * Math.Sqrt(Math.Max(edgeWidth, 1));
             (mw, mh) = (w * f, h * f);
             units = " markerUnits=\"userSpaceOnUse\"";
         }
@@ -77,7 +80,7 @@ internal sealed class Markers
         }
         // An outlined arrowhead (brutalist) draws overflow="visible" so the contrast stroke isn't clipped
         // by the marker viewport; every other marker (classic included) omits the attribute — byte-identical.
-        string overflow = outline != null ? " overflow=\"visible\"" : "";
+        var overflow = outline != null ? " overflow=\"visible\"" : "";
         _defs.Append($"<marker id=\"{id}\" viewBox=\"{viewBox}\" refX=\"{SvgWriter.Num(refX)}\" refY=\"{refY}\"{units}{overflow} ")
              .Append($"markerWidth=\"{SvgWriter.Num(mw)}\" markerHeight=\"{SvgWriter.Num(mh)}\" orient=\"auto-start-reverse\">")
              .Append(body).Append("</marker>");
@@ -87,34 +90,41 @@ internal sealed class Markers
 
     private static (string Body, string ViewBox, double RefX, double W, double H) Body(MarkerShape shape, string color, StyleEdges edges, string? outline)
     {
-        string c = SvgWriter.Attr(color);
+        var c = SvgWriter.Attr(color);
         // OpenV (sketch): the plain filled arrowhead becomes TWO round-capped strokes running back from
         // the tip — a hand-drawn open V — as two separate <line> elements. Closed UML ends keep their
         // bodies (the inheritance triangle / composition diamond stay solid, per the sketch brief).
         if (edges.Arrow == EdgeArrow.OpenV && shape == MarkerShape.Arrow)
+        {
             return (
                 $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"{c}\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>"
                 + $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"{c}\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>",
                 "0 0 12 10", 10, 8, 8);
+        }
         // Chevron (terminal): the plain arrowheads (the filled Arrow and the open ArrowOpen) become a mono
         // `>` — TWO hard butt-capped strokes running back from the tip. Butt caps (vs. OpenV's round) give
         // the crisp console read; the closed UML ends (Triangle/Diamond) fall through and keep their bodies,
         // so a class inheritance triangle stays closed exactly as in the mock. orient="auto-start-reverse"
         // (on every marker) makes a reply's reversed path draw the same glyph as `<` — no separate def.
         if (edges.Arrow == EdgeArrow.Chevron && shape is MarkerShape.Arrow or MarkerShape.ArrowOpen)
+        {
             return (
                 $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"{c}\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>"
                 + $"<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"8.5\" stroke=\"{c}\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>",
                 "0 0 12 10", 10, 8, 8);
+        }
         // Outlined filled arrowhead (brutalist): the classic filled polygon gains a contrasting outline
         // stroke (the mock's lime fill + white 1.5 stroke). Same points/viewBox/refX/size as the classic
         // filled arrow, so placement is unchanged; the marker is drawn overflow="visible" (see Ensure) so
         // the 1.5 stroke isn't clipped. `outline` was resolved by Ensure (filled plain arrow only) so this
         // branch, the dedupe key, and the overflow attribute share one predicate.
         if (outline is { })
+        {
             return (
                 $"<polygon points=\"0,1 10,5 0,9\" fill=\"{c}\" stroke=\"{SvgWriter.Attr(outline)}\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>",
                 "0 0 10 10", 8, 6, 6);
+        }
+
         return shape switch
         {
             MarkerShape.ArrowOpen => (

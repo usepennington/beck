@@ -35,7 +35,7 @@ public sealed class ClassDiagramBuilder
     public ClassDiagramBuilder() { }
 
     /// <summary>Create a class diagram with a title.</summary>
-    public ClassDiagramBuilder(string title) => _meta.Title = title;
+    public ClassDiagramBuilder(string title) => _meta._title = title;
 
     /// <summary>
     /// Reflect CLR types into cards and infer the relations among them — base
@@ -47,50 +47,74 @@ public sealed class ClassDiagramBuilder
     public static ClassDiagramBuilder FromTypes(params Type[] types) => new ClassDiagramBuilder().AddTypes(types);
 
     /// <summary>Set the diagram title.</summary>
-    public ClassDiagramBuilder Title(string title) { _meta.Title = title; return this; }
+    public ClassDiagramBuilder Title(string title) { _meta._title = title; return this; }
 
     /// <summary>Set the diagram subtitle.</summary>
-    public ClassDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
+    public ClassDiagramBuilder Subtitle(string subtitle) { _meta._subtitle = subtitle; return this; }
 
     /// <summary>Set the visual style by its <c>meta.style</c> token (e.g. <c>"classic"</c>).</summary>
-    public ClassDiagramBuilder Style(string name) { _meta.Style = name; return this; }
+    public ClassDiagramBuilder Style(string name) { _meta._style = name; return this; }
 
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
-    public ClassDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
+    public ClassDiagramBuilder Style(BeckStyle style) { _meta._style = style.Name; return this; }
 
-    /// <summary>Set the layout direction — <see cref="Authoring.Direction.TB"/> (default) reads the hierarchy top-down.</summary>
-    public ClassDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
+    /// <summary>Set the layout direction — <see cref="Authoring.Direction.Tb"/> (default) reads the hierarchy top-down.</summary>
+    public ClassDiagramBuilder Direction(Direction direction) { _meta._direction = direction; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
-    public ClassDiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
+    public ClassDiagramBuilder Theme(ThemeMode theme) { _meta._theme = theme; return this; }
 
     /// <summary>Enable or disable the flow animation.</summary>
-    public ClassDiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
+    public ClassDiagramBuilder Animate(bool animate) { _meta._animate = animate; return this; }
 
     /// <summary>Loop the flow (default) or play it through once.</summary>
-    public ClassDiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
+    public ClassDiagramBuilder Loop(bool loop) { _meta._loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container.</summary>
-    public ClassDiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
+    public ClassDiagramBuilder Fit(FitMode fit) { _meta._fit = fit; return this; }
 
     /// <summary>Toggle + tune the narration caption (drive it with explicit
     /// <see cref="FlowBuilder.Narrate"/> steps); the knobs pace each caption's
     /// on-screen time by its length.</summary>
     public ClassDiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
     {
-        _meta.Narrate = enabled;
-        if (wpm is { } w) _meta.NarrateWpm = w;
-        if (min is { } m) _meta.NarrateMin = m;
-        if (pad is { } p) _meta.NarratePad = p;
+        _meta._narrate = enabled;
+        if (wpm is { } w)
+        {
+            _meta._narrateWpm = w;
+        }
+
+        if (min is { } m)
+        {
+            _meta._narrateMin = m;
+        }
+
+        if (pad is { } p)
+        {
+            _meta._narratePad = p;
+        }
+
         return this;
     }
 
     /// <summary>Tune layout spacing: rank gap (along the hierarchy), node gap (across), and corner radius (px).</summary>
     public ClassDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
-        if (rank is { } r) _meta.SpacingRank = r;
-        if (node is { } n) _meta.SpacingNode = n;
-        if (cornerRadius is { } c) _meta.SpacingCornerRadius = c;
+        if (rank is { } r)
+        {
+            _meta._spacingRank = r;
+        }
+
+        if (node is { } n)
+        {
+            _meta._spacingNode = n;
+        }
+
+        if (cornerRadius is { } c)
+        {
+            _meta._spacingCornerRadius = c;
+        }
+
         return this;
     }
 
@@ -152,9 +176,21 @@ public sealed class ClassDiagramBuilder
             ("to", YamlWriter.Scalar(to)),
             ("kind", Tokens.Of(kind)),
         };
-        if (label != null) pairs.Add(("label", YamlWriter.Scalar(label)));
-        if (fromCard != null) pairs.Add(("fromCard", YamlWriter.Scalar(fromCard)));
-        if (toCard != null) pairs.Add(("toCard", YamlWriter.Scalar(toCard)));
+        if (label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(label)));
+        }
+
+        if (fromCard != null)
+        {
+            pairs.Add(("fromCard", YamlWriter.Scalar(fromCard)));
+        }
+
+        if (toCard != null)
+        {
+            pairs.Add(("toCard", YamlWriter.Scalar(toCard)));
+        }
+
         _relations.Add(YamlWriter.FlowMap(pairs));
         _relationEndpoints.Add((from, to));
         return this;
@@ -183,7 +219,11 @@ public sealed class ClassDiagramBuilder
         var set = new Dictionary<Type, string>();
         foreach (var t in types)
         {
-            if (set.ContainsKey(t)) continue;
+            if (set.ContainsKey(t))
+            {
+                continue;
+            }
+
             var id = ReflectionModel.IdFor(t, set.Values);
             set.Add(t, id);
         }
@@ -192,22 +232,46 @@ public sealed class ClassDiagramBuilder
         {
             var c = new ClassBuilder(id).Name(ReflectionModel.FriendlyName(type));
             var stereo = ReflectionModel.Stereotype(type);
-            if (stereo != null) c.Stereotype(stereo);
-            foreach (var f in ReflectionModel.Fields(type)) c.Field(f);
-            foreach (var m in ReflectionModel.Methods(type)) c.Method(m);
+            if (stereo != null)
+            {
+                c.Stereotype(stereo);
+            }
+
+            foreach (var f in ReflectionModel.Fields(type))
+            {
+                c.Field(f);
+            }
+
+            foreach (var m in ReflectionModel.Methods(type))
+            {
+                c.Method(m);
+            }
+
             _classes.Add(c);
         }
 
         foreach (var (type, id) in set)
         {
             if (type.BaseType != null && set.TryGetValue(type.BaseType, out var parentId))
+            {
                 Inherits(id, parentId);
+            }
+
             foreach (var iface in ReflectionModel.DirectInterfaces(type))
+            {
                 if (set.TryGetValue(iface, out var ifaceId))
+                {
                     Implements(id, ifaceId);
+                }
+            }
+
             foreach (var (target, name, many) in ReflectionModel.Associations(type))
+            {
                 if (set.TryGetValue(target, out var targetId) && target != type)
+                {
                     Association(id, targetId, label: name, toCard: many ? "*" : null);
+                }
+            }
         }
         return this;
     }
@@ -217,31 +281,53 @@ public sealed class ClassDiagramBuilder
     public string ToYaml()
     {
         if (_classes.Count == 0)
+        {
             throw new InvalidOperationException("A class diagram needs at least one Class().");
+        }
+
         var ids = new HashSet<string>(_classes.Select(c => c.Id), StringComparer.Ordinal);
-        foreach (var g in _groups) ids.Add(g.Id);
+        foreach (var g in _groups)
+        {
+            ids.Add(g.Id);
+        }
+
         foreach (var (from, to) in _relationEndpoints)
         {
             if (!ids.Contains(from))
+            {
                 throw new InvalidOperationException($"Relation references unknown class '{from}' — declare it with Class() first.");
+            }
+
             if (!ids.Contains(to))
+            {
                 throw new InvalidOperationException($"Relation references unknown class '{to}' — declare it with Class() first.");
+            }
         }
 
         var sb = new StringBuilder();
         sb.Append("type: class\n");
         _meta.AppendYaml(sb);
         sb.Append("classes:\n");
-        foreach (var c in _classes) sb.Append("  - ").Append(c.ToFlow()).Append('\n');
+        foreach (var c in _classes)
+        {
+            sb.Append("  - ").Append(c.ToFlow()).Append('\n');
+        }
+
         if (_groups.Count > 0)
         {
             sb.Append("groups:\n");
-            foreach (var g in _groups) sb.Append("  - ").Append(g.ToFlow()).Append('\n');
+            foreach (var g in _groups)
+            {
+                sb.Append("  - ").Append(g.ToFlow()).Append('\n');
+            }
         }
         if (_relations.Count > 0)
         {
             sb.Append("relations:\n");
-            foreach (var r in _relations) sb.Append("  - ").Append(r).Append('\n');
+            foreach (var r in _relations)
+            {
+                sb.Append("  - ").Append(r).Append('\n');
+            }
         }
         _flow?.AppendYaml(sb);
         return sb.ToString();
@@ -320,17 +406,61 @@ public sealed class ClassBuilder
     internal string ToFlow()
     {
         var pairs = new List<(string, string)> { ("id", YamlWriter.Scalar(_id)) };
-        if (_name != null) pairs.Add(("name", YamlWriter.Scalar(_name)));
-        if (_stereotype != null) pairs.Add(("stereotype", YamlWriter.Scalar(_stereotype)));
-        if (_accent != null) pairs.Add(("accent", YamlWriter.Scalar(_accent)));
-        if (_fields.Count > 0) pairs.Add(("fields", YamlWriter.FlowSeq(_fields.Select(YamlWriter.Scalar))));
-        if (_methods.Count > 0) pairs.Add(("methods", YamlWriter.FlowSeq(_methods.Select(YamlWriter.Scalar))));
-        if (_href != null) pairs.Add(("href", YamlWriter.Scalar(_href)));
-        if (_target != null) pairs.Add(("target", YamlWriter.Scalar(_target)));
-        if (_group != null) pairs.Add(("group", YamlWriter.Scalar(_group)));
-        if (_width is { } w) pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
-        if (_rank is { } r) pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
-        if (_order is { } o) pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));
+        if (_name != null)
+        {
+            pairs.Add(("name", YamlWriter.Scalar(_name)));
+        }
+
+        if (_stereotype != null)
+        {
+            pairs.Add(("stereotype", YamlWriter.Scalar(_stereotype)));
+        }
+
+        if (_accent != null)
+        {
+            pairs.Add(("accent", YamlWriter.Scalar(_accent)));
+        }
+
+        if (_fields.Count > 0)
+        {
+            pairs.Add(("fields", YamlWriter.FlowSeq(_fields.Select(YamlWriter.Scalar))));
+        }
+
+        if (_methods.Count > 0)
+        {
+            pairs.Add(("methods", YamlWriter.FlowSeq(_methods.Select(YamlWriter.Scalar))));
+        }
+
+        if (_href != null)
+        {
+            pairs.Add(("href", YamlWriter.Scalar(_href)));
+        }
+
+        if (_target != null)
+        {
+            pairs.Add(("target", YamlWriter.Scalar(_target)));
+        }
+
+        if (_group != null)
+        {
+            pairs.Add(("group", YamlWriter.Scalar(_group)));
+        }
+
+        if (_width is { } w)
+        {
+            pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_rank is { } r)
+        {
+            pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_order is { } o)
+        {
+            pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }
@@ -345,19 +475,47 @@ internal static class ReflectionModel
         var baseName = BareName(t);
         var id = char.ToLowerInvariant(baseName[0]) + baseName.Substring(1);
         var existing = new HashSet<string>(taken, StringComparer.Ordinal);
-        if (!existing.Contains(id)) return id;
+        if (!existing.Contains(id))
+        {
+            return id;
+        }
+
         var n = 2;
-        while (existing.Contains(id + n.ToString(CultureInfo.InvariantCulture))) n++;
+        while (existing.Contains(id + n.ToString(CultureInfo.InvariantCulture)))
+        {
+            n++;
+        }
+
         return id + n.ToString(CultureInfo.InvariantCulture);
     }
 
     public static string? Stereotype(Type t)
     {
-        if (t.IsInterface) return "interface";
-        if (t.IsEnum) return "enum";
-        if (IsRecord(t)) return t.IsValueType ? "record struct" : "record";
-        if (t.IsValueType) return "struct";
-        if (t.IsAbstract) return "abstract";
+        if (t.IsInterface)
+        {
+            return "interface";
+        }
+
+        if (t.IsEnum)
+        {
+            return "enum";
+        }
+
+        if (IsRecord(t))
+        {
+            return t.IsValueType ? "record struct" : "record";
+        }
+
+        if (t.IsValueType)
+        {
+            return "struct";
+        }
+
+        if (t.IsAbstract)
+        {
+            return "abstract";
+        }
+
         return null;
     }
 
@@ -366,34 +524,64 @@ internal static class ReflectionModel
         if (t.IsEnum)
         {
             var names = Enum.GetNames(t);
-            foreach (var n in names.Take(MaxEnumMembers)) yield return n;
-            if (names.Length > MaxEnumMembers) yield return $"… {names.Length - MaxEnumMembers} more";
+            foreach (var n in names.Take(MaxEnumMembers))
+            {
+                yield return n;
+            }
+
+            if (names.Length > MaxEnumMembers)
+            {
+                yield return $"… {names.Length - MaxEnumMembers} more";
+            }
+
             yield break;
         }
-        const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-        foreach (var p in t.GetProperties(flags))
+        const BindingFlags Flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+        foreach (var p in t.GetProperties(Flags))
         {
-            if (p.GetIndexParameters().Length > 0) continue;
-            if (IsRecord(t) && p.Name == "EqualityContract") continue;
+            if (p.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
+            if (IsRecord(t) && p.Name == "EqualityContract")
+            {
+                continue;
+            }
+
             yield return $"{p.Name}: {FriendlyName(p.PropertyType)}";
         }
-        foreach (var f in t.GetFields(flags))
+        foreach (var f in t.GetFields(Flags))
+        {
             yield return $"{f.Name}: {FriendlyName(f.FieldType)}";
+        }
     }
 
-    private static readonly HashSet<string> SkippedMethods = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> _skippedMethods = new(StringComparer.Ordinal)
     {
         "Equals", "GetHashCode", "ToString", "GetType", "Deconstruct", "PrintMembers", "CompareTo",
     };
 
     public static IEnumerable<string> Methods(Type t)
     {
-        if (t.IsEnum) yield break;
-        const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-        foreach (var m in t.GetMethods(flags))
+        if (t.IsEnum)
         {
-            if (m.IsSpecialName || SkippedMethods.Contains(m.Name)) continue;
-            if (m.Name.StartsWith("<", StringComparison.Ordinal)) continue; // compiler-generated (e.g. record Clone)
+            yield break;
+        }
+
+        const BindingFlags Flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+        foreach (var m in t.GetMethods(Flags))
+        {
+            if (m.IsSpecialName || _skippedMethods.Contains(m.Name))
+            {
+                continue;
+            }
+
+            if (m.Name.StartsWith("<", StringComparison.Ordinal))
+            {
+                continue; // compiler-generated (e.g. record Clone)
+            }
+
             var args = string.Join(", ", m.GetParameters().Select(p => p.Name));
             yield return $"{m.Name}({args})";
         }
@@ -405,33 +593,68 @@ internal static class ReflectionModel
         var all = t.GetInterfaces();
         var inherited = new HashSet<Type>(t.BaseType?.GetInterfaces() ?? Type.EmptyTypes);
         foreach (var i in all)
+        {
             foreach (var ii in i.GetInterfaces())
+            {
                 inherited.Add(ii);
+            }
+        }
+
         return all.Where((i) => !inherited.Contains(i));
     }
 
     /// <summary>Property-type references: (target type, property name, is-collection).</summary>
     public static IEnumerable<(Type Target, string Name, bool Many)> Associations(Type t)
     {
-        if (t.IsEnum) yield break;
-        const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-        foreach (var p in t.GetProperties(flags))
+        if (t.IsEnum)
         {
-            if (p.GetIndexParameters().Length > 0) continue;
+            yield break;
+        }
+
+        const BindingFlags Flags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+        foreach (var p in t.GetProperties(Flags))
+        {
+            if (p.GetIndexParameters().Length > 0)
+            {
+                continue;
+            }
+
             var pt = Nullable.GetUnderlyingType(p.PropertyType) ?? p.PropertyType;
             var element = ElementType(pt);
-            if (element != null) yield return (element, p.Name, true);
-            else yield return (pt, p.Name, false);
+            if (element != null)
+            {
+                yield return (element, p.Name, true);
+            }
+            else
+            {
+                yield return (pt, p.Name, false);
+            }
         }
     }
 
     /// <summary>The element type of a collection-ish type, or null for scalars (string is a scalar).</summary>
     private static Type? ElementType(Type t)
     {
-        if (t == typeof(string)) return null;
-        if (t.IsArray) return t.GetElementType();
-        if (!typeof(IEnumerable).IsAssignableFrom(t)) return null;
-        if (t.IsGenericType && t.GetGenericArguments().Length == 1) return t.GetGenericArguments()[0];
+        if (t == typeof(string))
+        {
+            return null;
+        }
+
+        if (t.IsArray)
+        {
+            return t.GetElementType();
+        }
+
+        if (!typeof(IEnumerable).IsAssignableFrom(t))
+        {
+            return null;
+        }
+
+        if (t.IsGenericType && t.GetGenericArguments().Length == 1)
+        {
+            return t.GetGenericArguments()[0];
+        }
+
         var ienum = t.GetInterfaces().FirstOrDefault((i) => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
         return ienum?.GetGenericArguments()[0];
     }
@@ -445,7 +668,7 @@ internal static class ReflectionModel
         return tick >= 0 ? name.Substring(0, tick) : name;
     }
 
-    private static readonly Dictionary<Type, string> Primitives = new()
+    private static readonly Dictionary<Type, string> _primitives = new()
     {
         [typeof(void)] = "void",
         [typeof(bool)] = "bool",
@@ -466,10 +689,22 @@ internal static class ReflectionModel
     /// <summary>C#-style type name: <c>List&lt;OrderLine&gt;</c>, <c>int?</c>, <c>Money</c>.</summary>
     public static string FriendlyName(Type t)
     {
-        if (Primitives.TryGetValue(t, out var prim)) return prim;
+        if (_primitives.TryGetValue(t, out var prim))
+        {
+            return prim;
+        }
+
         var nullable = Nullable.GetUnderlyingType(t);
-        if (nullable != null) return FriendlyName(nullable) + "?";
-        if (t.IsArray) return FriendlyName(t.GetElementType()!) + "[]";
+        if (nullable != null)
+        {
+            return FriendlyName(nullable) + "?";
+        }
+
+        if (t.IsArray)
+        {
+            return FriendlyName(t.GetElementType()!) + "[]";
+        }
+
         if (t.IsGenericType)
         {
             var args = string.Join(", ", t.GetGenericArguments().Select(FriendlyName));

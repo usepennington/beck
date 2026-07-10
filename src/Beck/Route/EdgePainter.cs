@@ -27,9 +27,9 @@ internal static class EdgePainter
 
     public static List<RoutedEdge> RouteEdges(DiagramModel model, LayoutResult layout)
     {
-        double radius = model.Meta.Spacing.CornerRadius;
-        Direction dir = model.Meta.Direction;
-        bool primaryHorizontal = dir is Direction.LR or Direction.RL;
+        var radius = model.Meta.Spacing.CornerRadius;
+        var dir = model.Meta.Direction;
+        var primaryHorizontal = dir is Direction.Lr or Direction.Rl;
         var groupById = model.Groups.ToDictionary(g => g.Id);
 
         Rect? RectOf(string id) =>
@@ -40,13 +40,23 @@ internal static class EdgePainter
         List<string> MemberNodeIds(string id)
         {
             var outp = new List<string>();
-            if (!groupById.ContainsKey(id)) return outp;
+            if (!groupById.ContainsKey(id))
+            {
+                return outp;
+            }
+
             void Walk(string gid)
             {
                 foreach (var m in groupById.TryGetValue(gid, out var grp) ? grp.Members : new List<string>())
                 {
-                    if (layout.Nodes.ContainsKey(m)) outp.Add(m);
-                    else if (groupById.ContainsKey(m)) Walk(m);
+                    if (layout.Nodes.ContainsKey(m))
+                    {
+                        outp.Add(m);
+                    }
+                    else if (groupById.ContainsKey(m))
+                    {
+                        Walk(m);
+                    }
                 }
             }
             Walk(id);
@@ -54,17 +64,33 @@ internal static class EdgePainter
         }
 
         var prep = new EdgePrep?[model.Edges.Count];
-        for (int i = 0; i < model.Edges.Count; i++)
+        for (var i = 0; i < model.Edges.Count; i++)
         {
-            EdgeModel edge = model.Edges[i];
+            var edge = model.Edges[i];
             Rect? from = RectOf(edge.From), to = RectOf(edge.To);
             if (from is null || to is null) { prep[i] = null; continue; }
 
             var excludeIds = new HashSet<string>();
-            if (layout.Nodes.ContainsKey(edge.From)) excludeIds.Add(edge.From);
-            if (layout.Nodes.ContainsKey(edge.To)) excludeIds.Add(edge.To);
-            foreach (var m in MemberNodeIds(edge.From)) excludeIds.Add(m);
-            foreach (var m in MemberNodeIds(edge.To)) excludeIds.Add(m);
+            if (layout.Nodes.ContainsKey(edge.From))
+            {
+                excludeIds.Add(edge.From);
+            }
+
+            if (layout.Nodes.ContainsKey(edge.To))
+            {
+                excludeIds.Add(edge.To);
+            }
+
+            foreach (var m in MemberNodeIds(edge.From))
+            {
+                excludeIds.Add(m);
+            }
+
+            foreach (var m in MemberNodeIds(edge.To))
+            {
+                excludeIds.Add(m);
+            }
+
             var obstacles = layout.Nodes.Where(kv => !excludeIds.Contains(kv.Key)).Select(kv => kv.Value).ToList();
 
             var (fs, ts) = OrthogonalRouter.SidesFor(
@@ -82,13 +108,17 @@ internal static class EdgePainter
         var shifts = AnchorShifts(model.Edges, prep, pointNodes);
 
         var outEdges = new List<RoutedEdge>();
-        for (int i = 0; i < model.Edges.Count; i++)
+        for (var i = 0; i < model.Edges.Count; i++)
         {
-            EdgePrep? p = prep[i];
-            if (p is null) continue;
-            EdgeModel edge = model.Edges[i];
+            var p = prep[i];
+            if (p is null)
+            {
+                continue;
+            }
+
+            var edge = model.Edges[i];
             var (from, to) = shifts[i];
-            RoutedPath routed = OrthogonalRouter.RouteEdge(new RouteRequest(
+            var routed = OrthogonalRouter.RouteEdge(new RouteRequest(
                 p.From, p.To, p.FromSide, p.ToSide, edge.Curve, p.Obstacles, radius, primaryHorizontal,
                 new Size(layout.Width, layout.Height), from.Shift, to.Shift,
                 from.Fanned, to.Fanned, from.Lane, to.Lane));
@@ -112,15 +142,27 @@ internal static class EdgePainter
         void Add(string nodeId, Side side, int idx, bool isFrom)
         {
             var key = (nodeId, side);
-            if (!groups.TryGetValue(key, out var g)) groups[key] = g = new();
+            if (!groups.TryGetValue(key, out var g))
+            {
+                groups[key] = g = new();
+            }
+
             g.Add((idx, isFrom));
         }
-        for (int i = 0; i < edges.Count; i++)
+        for (var i = 0; i < edges.Count; i++)
         {
-            EdgeModel e = edges[i];
-            if (e.From == e.To) continue;
-            EdgePrep? p = prep[i];
-            if (p is null) continue;
+            var e = edges[i];
+            if (e.From == e.To)
+            {
+                continue;
+            }
+
+            var p = prep[i];
+            if (p is null)
+            {
+                continue;
+            }
+
             Add(e.From, p.FromSide, i, true);
             Add(e.To, p.ToSide, i, false);
         }
@@ -130,43 +172,57 @@ internal static class EdgePainter
 
         foreach (var (key, refs) in groups)
         {
-            if (refs.Count < 2 || pointNodes.Contains(key.Node)) continue;
-            Side side = key.Side;
-            Rect rect = FaceRect(refs[0]);
-            bool alongY = side is Side.Left or Side.Right;
-            double faceLen = alongY ? rect.H : rect.W;
-            double faceCenter = alongY ? rect.Y + rect.H / 2 : rect.X + rect.W / 2;
-            double step = Math.Min(20, faceLen * 0.7 / (refs.Count - 1));
+            if (refs.Count < 2 || pointNodes.Contains(key.Node))
+            {
+                continue;
+            }
+
+            var side = key.Side;
+            var rect = FaceRect(refs[0]);
+            var alongY = side is Side.Left or Side.Right;
+            var faceLen = alongY ? rect.H : rect.W;
+            var faceCenter = alongY ? rect.Y + rect.H / 2 : rect.X + rect.W / 2;
+            var step = Math.Min(20, faceLen * 0.7 / (refs.Count - 1));
             double FarCenter((int Idx, bool IsFrom) r)
             {
-                Rect other = FarRect(r);
+                var other = FarRect(r);
                 return alongY ? other.Y + other.H / 2 : other.X + other.W / 2;
             }
 
             // Order by far endpoint; ties (same far node) by edge id — direction-stable.
             var sorted = refs.OrderBy(x => x, Comparer<(int Idx, bool IsFrom)>.Create((r1, r2) =>
             {
-                double d = FarCenter(r1) - FarCenter(r2);
-                if (Math.Abs(d) > 0.5) return d < 0 ? -1 : 1;
+                var d = FarCenter(r1) - FarCenter(r2);
+                if (Math.Abs(d) > 0.5)
+                {
+                    return d < 0 ? -1 : 1;
+                }
+
                 return string.CompareOrdinal(edges[r1.Idx].Id, edges[r2.Idx].Id) < 0 ? -1 : 1;
             })).ToList();
 
-            const double alignEps = 4;
-            double half = faceLen * 0.7 / 2;
-            double @base = (sorted.Count - 1) / 2.0;
+            const double AlignEps = 4;
+            var half = faceLen * 0.7 / 2;
+            var @base = (sorted.Count - 1) / 2.0;
             int alignIdx = -1, alignCount = 0;
-            double bestDist = alignEps;
-            for (int i = 0; i < sorted.Count; i++)
+            var bestDist = AlignEps;
+            for (var i = 0; i < sorted.Count; i++)
             {
-                double d = Math.Abs(FarCenter(sorted[i]) - faceCenter);
-                if (d > alignEps) continue;
+                var d = Math.Abs(FarCenter(sorted[i]) - faceCenter);
+                if (d > AlignEps)
+                {
+                    continue;
+                }
+
                 alignCount++;
                 if (d <= bestDist) { bestDist = d; alignIdx = i; }
             }
             if (alignCount == 1 && alignIdx >= 0
                 && -alignIdx * step >= -half - 0.01
                 && (sorted.Count - 1 - alignIdx) * step <= half + 0.01)
+            {
                 @base = alignIdx;
+            }
 
             // Turn lanes, ranked by bend magnitude: the edge whose far endpoint sits furthest off
             // this face's centre has the longest run to make, so it turns first (lane 0, nearest
@@ -178,13 +234,22 @@ internal static class EdgePainter
                 .ThenBy(r => edges[r.Idx].Id, StringComparer.Ordinal)
                 .ToList();
             var laneOf = new Dictionary<(int, bool), Lane>();
-            for (int i = 0; i < byBend.Count; i++) laneOf[byBend[i]] = new Lane(i, byBend.Count);
+            for (var i = 0; i < byBend.Count; i++)
+            {
+                laneOf[byBend[i]] = new Lane(i, byBend.Count);
+            }
 
-            for (int i = 0; i < sorted.Count; i++)
+            for (var i = 0; i < sorted.Count; i++)
             {
                 var plan = new AnchorPlan((i - @base) * step, Fanned: true, laneOf[sorted[i]]);
-                if (sorted[i].IsFrom) shifts[sorted[i].Idx].From = plan;
-                else shifts[sorted[i].Idx].To = plan;
+                if (sorted[i].IsFrom)
+                {
+                    shifts[sorted[i].Idx].From = plan;
+                }
+                else
+                {
+                    shifts[sorted[i].Idx].To = plan;
+                }
             }
         }
         return shifts;

@@ -1,5 +1,4 @@
 using Beck.Animate;
-using Beck.Rendering;
 using Beck.Svg;
 using Xunit;
 
@@ -27,7 +26,7 @@ public sealed class PathLengthTests
     [Fact]
     public void GluedQuadratic_MeasuresNonZeroLengthAboveChord()
     {
-        double len = PathLength.Of("M0 0Q5 5 10 0");
+        var len = PathLength.Of("M0 0Q5 5 10 0");
         Assert.True(len > 10, $"expected a bowed length above the 10px chord, got {len}");
     }
 
@@ -37,11 +36,11 @@ public sealed class PathLengthTests
     public void BowedPath_FromShaping_MeasuresPositiveLength()
     {
         // A single straight run of length 100 bowed sideways by amplitude 8.
-        string d = Shaping.BowLine(0, 0, 100, 0, 8, "seed-1");
+        var d = Shaping.BowLine(0, 0, 100, 0, 8, "seed-1");
         Assert.StartsWith("M", d);
         Assert.Contains("Q", d);
 
-        double len = PathLength.Of(d);
+        var len = PathLength.Of(d);
         Assert.True(len > 100, $"a bowed run must be longer than its 100px chord, got {len}");
         Assert.True(len < 130, $"a low-amplitude bow must stay near the chord, got {len}");
 
@@ -55,9 +54,9 @@ public sealed class PathLengthTests
     [Fact]
     public void BowedStyle_EdgePaths_AllMeasureNonZero()
     {
-        string yaml = File.ReadAllText(
+        var yaml = File.ReadAllText(
             Path.Combine(AppContext.BaseDirectory, "Corpus", "arch-kitchen.yaml"));
-        string svg = BeckSvg.Render(yaml, new SvgRenderOptions
+        var svg = BeckSvg.Render(yaml, new SvgRenderOptions
         {
             Style = BeckStyle.Classic with { Edges = StyleEdges.Classic with { BowAmplitude = 6 } },
         });
@@ -68,7 +67,9 @@ public sealed class PathLengthTests
             .ToList();
 
         Assert.NotEmpty(edgeD);
-        foreach (string d in edgeD)
+        foreach (var d in edgeD)
+        {
             Assert.True(PathLength.Of(d) > 0, $"bowed edge measured 0: {d}");
+        }
     }
 }

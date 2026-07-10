@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Beck.Rendering;
 using Xunit;
 
 namespace Beck.Tests.CleanLines;
@@ -36,33 +35,38 @@ public sealed class LabelPlacementTests
           - { from: half, to: open, label: probe fails }
         """;
 
-    private static readonly Regex LabelRe = new(
+    private static readonly Regex _labelRe = new(
         """<text class="beck-edge-label"[^>]*\sy="(?<y>[-\d.]+)"[^>]*>(?<text>[^<]*)</text>""",
         RegexOptions.Compiled);
 
     private static double LabelY(string svg, string text)
     {
-        foreach (Match m in LabelRe.Matches(svg))
+        foreach (Match m in _labelRe.Matches(svg))
+        {
             if (m.Groups["text"].Value == text)
+            {
                 return double.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture);
+            }
+        }
+
         throw new Xunit.Sdk.XunitException($"no edge label '{text}' in the rendered SVG");
     }
 
     [Fact]
     public void ParallelTransition_LabelClearsTheOppositeRung()
     {
-        string svg = BeckSvg.Render(CircuitBreaker, new SvgRenderOptions { Animation = AnimationMode.Static });
+        var svg = BeckSvg.Render(CircuitBreaker, new SvgRenderOptions { Animation = AnimationMode.Static });
 
         // open→half runs at y=91.5; half→open runs back at y=71.5. "cooldown elapsed" belongs to the
         // lower rung, so it must sit below it — not in the 20px slot between them, on top of the
         // "probe fails" rung.
-        double cooldown = LabelY(svg, "cooldown elapsed");
+        var cooldown = LabelY(svg, "cooldown elapsed");
         Assert.True(cooldown > 91.5,
             $"'cooldown elapsed' sits at y={cooldown}, above its own rung (91.5) and across the "
             + "half→open rung at 71.5; it should be placed below.");
 
         // Its counterpart labels the upper rung and correctly sits above it.
-        double probeFails = LabelY(svg, "probe fails");
+        var probeFails = LabelY(svg, "probe fails");
         Assert.True(probeFails < 71.5, $"'probe fails' sits at y={probeFails}, expected above its rung (71.5)");
 
         // The two labels end up on opposite sides of the pair, not stacked in the gap between them.

@@ -11,18 +11,24 @@ internal static class SequenceBuilder
 {
     public static DiagramModel Build(IReadOnlyDictionary<string, object?> root)
     {
-        DiagramMeta meta = Validate.BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.Sequence);
+        var meta = Validate.BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.Sequence);
 
         var rawParts = AsArray(root.GetValueOrDefault("participants"), "participants");
         if (rawParts.Count == 0)
+        {
             throw new BeckYamlException("A sequence diagram needs at least one participant under `participants`");
+        }
 
         var nodes = new List<NodeModel>();
         var ids = new HashSet<string>();
         foreach (var rp in rawParts)
         {
-            NodeModel n = Validate.BuildNode(AsObject(rp, "participant"));
-            if (!ids.Add(n.Id)) throw new BeckYamlException($"Duplicate participant id \"{n.Id}\"");
+            var n = Validate.BuildNode(AsObject(rp, "participant"));
+            if (!ids.Add(n.Id))
+            {
+                throw new BeckYamlException($"Duplicate participant id \"{n.Id}\"");
+            }
+
             nodes.Add(n);
         }
 
@@ -32,26 +38,34 @@ internal static class SequenceBuilder
         foreach (var rm in AsArray(root.GetValueOrDefault("messages"), "messages"))
         {
             var m = AsObject(rm, "message");
-            if (m.ContainsKey("section"))
+            if (m.TryGetValue("section", out var value))
             {
                 sections.Add(new SectionMark(
-                    Label: AsString(m["section"], "message section"),
+                    Label: AsString(value, "message section"),
                     At: edges.Count,
                     Accent: OptColor(m.GetValueOrDefault("accent")) ?? "var(--beck-neutral)"));
                 continue;
             }
-            string from = AsString(m.GetValueOrDefault("from"), "message.from");
-            string to = AsString(m.GetValueOrDefault("to"), "message.to");
-            if (!ids.Contains(from)) throw new BeckYamlException($"Message references unknown participant \"{from}\"");
-            if (!ids.Contains(to)) throw new BeckYamlException($"Message references unknown participant \"{to}\"");
-            bool reply = m.GetValueOrDefault("reply") is bool rb && rb;
-            EdgeKind kind = OneOf(m.GetValueOrDefault("kind"), Tokens.EdgeKind, "message.kind",
+            var from = AsString(m.GetValueOrDefault("from"), "message.from");
+            var to = AsString(m.GetValueOrDefault("to"), "message.to");
+            if (!ids.Contains(from))
+            {
+                throw new BeckYamlException($"Message references unknown participant \"{from}\"");
+            }
+
+            if (!ids.Contains(to))
+            {
+                throw new BeckYamlException($"Message references unknown participant \"{to}\"");
+            }
+
+            var reply = m.GetValueOrDefault("reply") is bool rb && rb;
+            var kind = OneOf(m.GetValueOrDefault("kind"), Tokens.EdgeKind, "message.kind",
                 reply ? EdgeKind.Control : EdgeKind.Data);
             // Replies and async sends read as "lighter": dashed line, open arrowhead.
-            bool dashed = reply || kind == EdgeKind.Async;
+            var dashed = reply || kind == EdgeKind.Async;
             // A message is tinted by the participant doing the work.
-            string worker = reply ? from : to;
-            string? authoredColor = OptColor(m.GetValueOrDefault("color"));
+            var worker = reply ? from : to;
+            var authoredColor = OptColor(m.GetValueOrDefault("color"));
             edges.Add(new EdgeModel
             {
                 Id = $"msg{edges.Count}",
@@ -72,12 +86,18 @@ internal static class SequenceBuilder
                 Activate = TriBool(m.GetValueOrDefault("activate"), "message.activate"),
             });
         }
-        if (edges.Count == 0) throw new BeckYamlException("A sequence diagram needs at least one entry under `messages`");
+        if (edges.Count == 0)
+        {
+            throw new BeckYamlException("A sequence diagram needs at least one entry under `messages`");
+        }
 
-        FlowModel flow = root.GetValueOrDefault("flow") != null
+        var flow = root.GetValueOrDefault("flow") != null
             ? Validate.BuildFlow(AsObject(root["flow"], "flow"), ids, new HashSet<string>())
             : DeriveSequenceFlow(edges, sections, meta.Loop);
-        if (!meta.Loop) flow.Repeat = 0;
+        if (!meta.Loop)
+        {
+            flow.Repeat = 0;
+        }
 
         return new DiagramModel { Meta = meta, Nodes = nodes, Groups = [], Edges = edges, Flow = flow, Sections = sections };
     }
@@ -87,11 +107,22 @@ internal static class SequenceBuilder
         IReadOnlyList<EdgeModel> edges, IReadOnlyList<SectionMark> sections, bool loop)
     {
         var steps = new List<FlowStep>();
-        for (int i = 0; i < edges.Count; i++)
+        for (var i = 0; i < edges.Count; i++)
         {
-            EdgeModel e = edges[i];
-            foreach (var s in sections) if (s.At == i) steps.Add(new PhaseStep { Label = s.Label });
-            if (!string.IsNullOrEmpty(e.Note)) steps.Add(new NarrateStep { Text = e.Note });
+            var e = edges[i];
+            foreach (var s in sections)
+            {
+                if (s.At == i)
+                {
+                    steps.Add(new PhaseStep { Label = s.Label });
+                }
+            }
+
+            if (!string.IsNullOrEmpty(e.Note))
+            {
+                steps.Add(new NarrateStep { Text = e.Note });
+            }
+
             steps.Add(new PacketStep
             {
                 From = e.From,
@@ -102,7 +133,14 @@ internal static class SequenceBuilder
             });
         }
         // Trailing sections (after the last message) still get their phase beat.
-        foreach (var s in sections) if (s.At >= edges.Count) steps.Add(new PhaseStep { Label = s.Label });
+        foreach (var s in sections)
+        {
+            if (s.At >= edges.Count)
+            {
+                steps.Add(new PhaseStep { Label = s.Label });
+            }
+        }
+
         if (loop)
         {
             steps.Add(new WaitStep { Seconds = 1.2 });

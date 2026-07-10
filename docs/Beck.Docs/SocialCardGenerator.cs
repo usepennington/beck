@@ -56,28 +56,40 @@ internal static class SocialCardGenerator
                 [
                     fonts.Files[400],
                     fonts.Files[700],
-                    fonts.MonoFiles[500],
+                    fonts.MonoFiles?[500] ?? fonts.Files[500]
                 ],
             })
             .At(Anchor.MiddleLeft, s => s
                 .MaxWidth(600)
                 .Text("BECK", new TextStyle
                 {
-                    FontFamily = fonts.MonoFamily, Size = 22, Weight = 500,
-                    Color = "#34d399", LetterSpacing = 4,
+                    FontFamily = fonts.MonoFamily,
+                    Size = 22,
+                    Weight = 500,
+                    Color = "#34d399",
+                    LetterSpacing = 4,
                 })
                 .Spacer(10)
                 .Text(headline, new TextStyle
                 {
-                    FontFamily = fonts.Family, Size = 62, Weight = 700,
-                    Color = "#f8fafc", LineHeight = 1.08f, MaxLines = 3, ShrinkToFit = true,
+                    FontFamily = fonts.Family,
+                    Size = 62,
+                    Weight = 700,
+                    Color = "#f8fafc",
+                    LineHeight = 1.08f,
+                    MaxLines = 3,
+                    ShrinkToFit = true,
                 })
                 .Spacer(8)
                 .Text(description, new TextStyle
                 {
-                    FontFamily = fonts.Family, Size = 27, Weight = 400,
-                    Color = "#94a3b8", LineHeight = 1.35f, MaxLines = 3,
+                    FontFamily = fonts.Family,
+                    Size = 27,
+                    Weight = 400,
+                    Color = "#94a3b8",
+                    LineHeight = 1.35f,
+                    MaxLines = 3,
                 }))
-            .ToBytes(ImageFormat.Png);
+            .ToBytes();
     }
 }

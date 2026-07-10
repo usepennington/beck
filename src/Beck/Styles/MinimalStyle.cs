@@ -23,7 +23,7 @@ public static class MinimalStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
+        var c = BeckStyle.Classic;
 
         // A slightly more visible neutral border than classic's, since minimal drops the card
         // drop-shadow that classic uses to imply depth — the hairline border alone must read as
@@ -35,8 +35,7 @@ public static class MinimalStyle
         // sober rather than as lightly-detuned classic. Only the last-resort literal changes — every
         // token keeps its var(--color-X, literal) chain, so a host that defines --color-* / --beck-*
         // still wins at full saturation. The indirection stays sacred; only the default detunes.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
             ("--beck-node-border", "var(--color-base-300, #cbd5e1)"),
@@ -56,10 +55,9 @@ public static class MinimalStyle
             ("--beck-packet", "var(--beck-primary)"),
             ("--beck-icon-bg", "var(--color-base-100, #f1f5f9)"),
             ("--beck-accent", "var(--beck-primary)"),
-        });
+        ]);
 
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #0d1117)"),
             ("--beck-node-bg", "var(--color-base-900, #161b22)"),
             ("--beck-node-border", "var(--color-base-600, #484f58)"),
@@ -69,9 +67,9 @@ public static class MinimalStyle
             ("--beck-text-faint", "var(--color-base-500, #6e7681)"),
             ("--beck-edge", "var(--color-base-700, #30363d)"),
             ("--beck-icon-bg", "var(--color-base-800, #21262d)"),
-        });
+        ]);
 
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             // flatter, tighter corner radii — "no design" reads as squarer, not rounded-card chic.
             CardRadius = 6,
@@ -99,7 +97,7 @@ public static class MinimalStyle
             NarrationShadow = "none",
         };
 
-        StyleMix mix = c.Mix with
+        var mix = c.Mix with
         {
             // activation bars lose their glow (color-mix against 0% accent = fully transparent).
             ActivationGlow = 0,
@@ -113,7 +111,7 @@ public static class MinimalStyle
         // fallback keeps minimal's one-accent restraint (no dedicated indigo token, no bloom — GlowEnabled
         // stays false below). The long period (mock spans ~3-4s per view) keeps the commute unhurried,
         // consistent with "quietest option; motion is one small traveling dot per edge".
-        StyleEdges edges = StyleEdges.Classic with
+        var edges = StyleEdges.Classic with
         {
             Overlay = EdgeOverlay.Comet,
             CometDash = 1,
@@ -125,7 +123,7 @@ public static class MinimalStyle
             Lifeline = LifelineShape.FaintSolid,
         };
 
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             OverlayStroke = 1,
             RingStroke = 1,

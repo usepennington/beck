@@ -23,11 +23,11 @@ public sealed class EmbeddedMetricsMeasurer : ITextMeasurer
 
     // One immutable shared instance per built-in font table (the tables are immutable and the
     // measurer is stateless), so repeated renders don't rebuild the SansExtra dictionary.
-    private static readonly EmbeddedMetricsMeasurer[] Cache =
+    private static readonly EmbeddedMetricsMeasurer[] _cache =
         Enum.GetValues<MetricsFont>().Select(f => new EmbeddedMetricsMeasurer(MetricsTables.For(f))).ToArray();
 
     /// <summary>The shared measurer for a built-in <see cref="MetricsFont"/> table.</summary>
-    public static EmbeddedMetricsMeasurer For(MetricsFont font) => Cache[(int)font];
+    public static EmbeddedMetricsMeasurer For(MetricsFont font) => _cache[(int)font];
 
     /// <inheritdoc />
     public TextMetrics Measure(string text, FontRole role) => Measure(text, FontRoles.Of(role));
@@ -40,32 +40,41 @@ public sealed class EmbeddedMetricsMeasurer : ITextMeasurer
     /// transformed string, so a style that uppercases a role widens its measured box.</summary>
     public TextMetrics Measure(string text, FontRoleSpec spec)
     {
-        FontRoleSpec s = spec;
-        string t = s.Uppercase ? text.ToUpperInvariant() : text;
-        double size = s.SizePx;
+        var s = spec;
+        var t = s.Uppercase ? text.ToUpperInvariant() : text;
+        var size = s.SizePx;
 
         // Monospace: every glyph shares one advance-per-em.
         if (s.Mono)
         {
-            int mi = NearestIndex(_t.MonoWeights, s.Weight);
-            double width = t.Length * _t.MonoAdvance[mi] * size;
+            var mi = NearestIndex(_t.MonoWeights, s.Weight);
+            var width = t.Length * _t.MonoAdvance[mi] * size;
             width = ApplyLetterSpacing(width, t.Length, s, size);
             return new TextMetrics(width, _t.MonoAscent[mi] * size, _t.MonoDescent[mi] * size);
         }
 
-        int wi = NearestIndex(_t.SansWeights, s.Weight);
-        double[] ascii = _t.SansAscii[wi];
-        double fallback = _t.SansFallback[wi];
+        var wi = NearestIndex(_t.SansWeights, s.Weight);
+        var ascii = _t.SansAscii[wi];
+        var fallback = _t.SansFallback[wi];
 
         double sum = 0;
-        foreach (char c in t)
+        foreach (var c in t)
         {
-            if (c is >= (char)32 and <= (char)126) sum += ascii[c - 32];
-            else if (_t.SansExtra.TryGetValue(c, out double[]? row)) sum += row[wi];
-            else sum += fallback;
+            if (c is >= (char)32 and <= (char)126)
+            {
+                sum += ascii[c - 32];
+            }
+            else if (_t.SansExtra.TryGetValue(c, out var row))
+            {
+                sum += row[wi];
+            }
+            else
+            {
+                sum += fallback;
+            }
         }
 
-        double w = ApplyLetterSpacing(sum * size, t.Length, s, size);
+        var w = ApplyLetterSpacing(sum * size, t.Length, s, size);
         return new TextMetrics(w, _t.SansAscent[wi] * size, _t.SansDescent[wi] * size);
     }
 
@@ -77,9 +86,9 @@ public sealed class EmbeddedMetricsMeasurer : ITextMeasurer
     private static int NearestIndex(int[] weights, int want)
     {
         int best = 0, bestDistance = int.MaxValue;
-        for (int i = 0; i < weights.Length; i++)
+        for (var i = 0; i < weights.Length; i++)
         {
-            int d = Math.Abs(weights[i] - want);
+            var d = Math.Abs(weights[i] - want);
             if (d < bestDistance) { bestDistance = d; best = i; }
         }
         return best;

@@ -1,8 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Beck;
 using Beck.Authoring;
 using BlazorMonaco;
 using BlazorMonaco.Editor;
@@ -21,12 +17,12 @@ internal static class BeckCompletions
 {
     // `<field>: <partial>` at the caret — captures the field name and the value fragment
     // typed so far (so the replace range covers exactly the fragment).
-    private static readonly Regex ValueContext = new(@"(?:^|[\s{,])([A-Za-z_][\w-]*)\s*:\s*([\w-]*)$", RegexOptions.Compiled);
-    private static readonly Regex InsideBrace = new(@"\{[^}]*$", RegexOptions.Compiled);
-    private static readonly Regex SectionHeader = new(@"^(meta|nodes|edges|groups|flow)\s*:", RegexOptions.Compiled);
+    private static readonly Regex _valueContext = new(@"(?:^|[\s{,])([A-Za-z_][\w-]*)\s*:\s*([\w-]*)$", RegexOptions.Compiled);
+    private static readonly Regex _insideBrace = new(@"\{[^}]*$", RegexOptions.Compiled);
+    private static readonly Regex _sectionHeader = new(@"^(meta|nodes|edges|groups|flow)\s*:", RegexOptions.Compiled);
     // Every `id:` value in the document — node and group ids are both valid edge endpoints
     // and group members, and `id:` is the field for both.
-    private static readonly Regex IdDecl = new(@"(?:^|[\s{,])id\s*:\s*([A-Za-z0-9_-]+)", RegexOptions.Compiled);
+    private static readonly Regex _idDecl = new(@"(?:^|[\s{,])id\s*:\s*([A-Za-z0-9_-]+)", RegexOptions.Compiled);
 
     private static IJSRuntime? _js;
     private static bool _registered;
@@ -35,13 +31,17 @@ internal static class BeckCompletions
     public static async Task RegisterAsync(IJSRuntime js)
     {
         _js = js;
-        if (_registered) return;
+        if (_registered)
+        {
+            return;
+        }
+
         _registered = true;
 
         await BlazorMonaco.Languages.Global.RegisterCompletionItemProvider(js,
             "yaml",
             new CompletionItemProvider(
-                new List<string> { ":", " ", "-", "{", "[", "," },
+                [":", " ", "-", "{", "[", ","],
                 ProvideCompletionsAsync));
 
         await BlazorMonaco.Languages.Global.RegisterHoverProviderAsync(js, "yaml", ProvideHoverAsync);
@@ -50,27 +50,33 @@ internal static class BeckCompletions
     // ---- completion ---------------------------------------------------------
     private static async Task<CompletionList> ProvideCompletionsAsync(string modelUri, Position position, CompletionContext _)
     {
-        var empty = new CompletionList { Suggestions = new List<CompletionItem>() };
+        var empty = new CompletionList { Suggestions = [] };
         var model = await BlazorMonaco.Editor.Global.GetModel(_js!, modelUri);
-        if (model is null) return empty;
+        if (model is null)
+        {
+            return empty;
+        }
 
         // Pass an explicit EOL preference — Monaco's getValue rejects a null one.
-        string text = await model.GetValue(EndOfLinePreference.TextDefined, false);
-        string[] lines = text.Replace("\r\n", "\n").Split('\n');
-        int lineIdx = position.LineNumber - 1;
-        if (lineIdx < 0 || lineIdx >= lines.Length) return empty;
+        var text = await model.GetValue(EndOfLinePreference.TextDefined, false);
+        var lines = text.Replace("\r\n", "\n").Split('\n');
+        var lineIdx = position.LineNumber - 1;
+        if (lineIdx < 0 || lineIdx >= lines.Length)
+        {
+            return empty;
+        }
 
-        string line = lines[lineIdx];
-        int col = position.Column; // 1-based; the char before the caret is line[col-2]
-        string pre = line[..Math.Min(col - 1, line.Length)];
-        string? section = SectionAt(lines, lineIdx);
+        var line = lines[lineIdx];
+        var col = position.Column; // 1-based; the char before the caret is line[col-2]
+        var pre = line[..Math.Min(col - 1, line.Length)];
+        var section = SectionAt(lines, lineIdx);
 
         // ---- value context: `<field>: <partial>` ----
-        var vm = ValueContext.Match(pre);
+        var vm = _valueContext.Match(pre);
         if (vm.Success)
         {
-            string field = vm.Groups[1].Value;
-            string partial = vm.Groups[2].Value;
+            var field = vm.Groups[1].Value;
+            var partial = vm.Groups[2].Value;
             var vrange = new BlazorMonaco.Range
             {
                 StartLineNumber = position.LineNumber,
@@ -80,7 +86,9 @@ internal static class BeckCompletions
             };
 
             if (BeckSchema.IdValuedFields.Contains(field))
+            {
                 return new CompletionList { Suggestions = Items(DeclaredIds(text), CompletionItemKind.Value, vrange, "id") };
+            }
 
             var values = BeckSchema.ValuesFor(field, section);
             if (values is not null)
@@ -92,7 +100,7 @@ internal static class BeckCompletions
         }
 
         // ---- key context ----
-        (int start, int end) = WordUntil(line, col);
+        (var start, var end) = WordUntil(line, col);
         var krange = new BlazorMonaco.Range
         {
             StartLineNumber = position.LineNumber,
@@ -100,10 +108,10 @@ internal static class BeckCompletions
             StartColumn = start,
             EndColumn = end,
         };
-        bool insideBrace = InsideBrace.IsMatch(pre);
-        int indent = pre.Length - pre.TrimStart().Length;
+        var insideBrace = _insideBrace.IsMatch(pre);
+        var indent = pre.Length - pre.TrimStart().Length;
 
-        IReadOnlyList<string> keys =
+        var keys =
             insideBrace ? (section == "edges" ? BeckSchema.EdgeKeys : section == "groups" ? BeckSchema.GroupKeys : BeckSchema.NodeKeys)
             : indent == 0 ? BeckSchema.TopKeys
             : section == "meta" ? BeckSchema.MetaKeys
@@ -122,7 +130,10 @@ internal static class BeckCompletions
                 RangeAsObject = krange,
             };
             if (BeckSchema.Docs.TryGetValue(k, out var doc))
+            {
                 it.DocumentationAsObject = new MarkdownString { Value = doc };
+            }
+
             return it;
         }).ToList();
         return new CompletionList { Suggestions = suggestions };
@@ -140,7 +151,10 @@ internal static class BeckCompletions
                 RangeAsObject = range,
             };
             if (BeckSchema.Docs.TryGetValue(v, out var doc))
+            {
                 it.DocumentationAsObject = new MarkdownString { Value = doc };
+            }
+
             return it;
         }).ToList();
 
@@ -148,14 +162,20 @@ internal static class BeckCompletions
     private static async Task<Hover?> ProvideHoverAsync(string modelUri, Position position, HoverContext _)
     {
         var model = await BlazorMonaco.Editor.Global.GetModel(_js!, modelUri);
-        if (model is null) return null;
+        if (model is null)
+        {
+            return null;
+        }
 
         var word = await model.GetWordAtPosition(position);
-        if (word is null || !BeckSchema.Docs.TryGetValue(word.Word, out var doc)) return null;
+        if (word is null || !BeckSchema.Docs.TryGetValue(word.Word, out var doc))
+        {
+            return null;
+        }
 
         return new Hover
         {
-            Contents = new[] { new MarkdownString { Value = $"**{word.Word}** — {doc}" } },
+            Contents = [new MarkdownString { Value = $"**{word.Word}** — {doc}" }],
             Range = new BlazorMonaco.Range
             {
                 StartLineNumber = position.LineNumber,
@@ -170,10 +190,13 @@ internal static class BeckCompletions
     // Nearest top-level section header at or above `lineIdx` (block + flow styles).
     private static string? SectionAt(string[] lines, int lineIdx)
     {
-        for (int i = lineIdx; i >= 0; i--)
+        for (var i = lineIdx; i >= 0; i--)
         {
-            var m = SectionHeader.Match(lines[i]);
-            if (m.Success) return m.Groups[1].Value;
+            var m = _sectionHeader.Match(lines[i]);
+            if (m.Success)
+            {
+                return m.Groups[1].Value;
+            }
         }
         return null;
     }
@@ -182,10 +205,13 @@ internal static class BeckCompletions
     {
         var ids = new List<string>();
         var seen = new HashSet<string>();
-        foreach (Match m in IdDecl.Matches(text))
+        foreach (Match m in _idDecl.Matches(text))
         {
             var id = m.Groups[1].Value;
-            if (seen.Add(id)) ids.Add(id);
+            if (seen.Add(id))
+            {
+                ids.Add(id);
+            }
         }
         return ids;
     }
@@ -194,9 +220,13 @@ internal static class BeckCompletions
     // 1-based [start, end) columns; when no word is being typed both equal the caret column.
     private static (int Start, int End) WordUntil(string line, int col)
     {
-        int caret = col - 1; // 0-based index of the char after the caret
-        int start = caret;
-        while (start > 0 && IsWordChar(line[start - 1])) start--;
+        var caret = col - 1; // 0-based index of the char after the caret
+        var start = caret;
+        while (start > 0 && IsWordChar(line[start - 1]))
+        {
+            start--;
+        }
+
         return (start + 1, col);
     }
 

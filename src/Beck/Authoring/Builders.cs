@@ -79,21 +79,81 @@ public sealed class NodeBuilder
     internal string ToFlow()
     {
         var pairs = new List<(string, string)> { ("id", YamlWriter.Scalar(_id)) };
-        if (_title != null) pairs.Add(("title", YamlWriter.Scalar(_title)));
-        if (_subtitle != null) pairs.Add(("subtitle", YamlWriter.Scalar(_subtitle)));
-        if (_kind is { } k) pairs.Add(("kind", Tokens.Of(k)));
-        if (_variant is { } v) pairs.Add(("variant", Tokens.Of(v)));
-        if (_icon != null) pairs.Add(("icon", YamlWriter.Scalar(_icon)));
-        if (_status != null) pairs.Add(("status", YamlWriter.Scalar(_status)));
-        if (_accent != null) pairs.Add(("accent", YamlWriter.Scalar(_accent)));
-        if (_href != null) pairs.Add(("href", YamlWriter.Scalar(_href)));
-        if (_target != null) pairs.Add(("target", YamlWriter.Scalar(_target)));
-        if (_surface != null) pairs.Add(("surface", YamlWriter.Scalar(_surface)));
-        if (_textColor != null) pairs.Add(("textColor", YamlWriter.Scalar(_textColor)));
-        if (_width is { } w) pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
-        if (_rank is { } r) pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
-        if (_order is { } o) pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));
-        if (_group != null) pairs.Add(("group", YamlWriter.Scalar(_group)));
+        if (_title != null)
+        {
+            pairs.Add(("title", YamlWriter.Scalar(_title)));
+        }
+
+        if (_subtitle != null)
+        {
+            pairs.Add(("subtitle", YamlWriter.Scalar(_subtitle)));
+        }
+
+        if (_kind is { } k)
+        {
+            pairs.Add(("kind", Tokens.Of(k)));
+        }
+
+        if (_variant is { } v)
+        {
+            pairs.Add(("variant", Tokens.Of(v)));
+        }
+
+        if (_icon != null)
+        {
+            pairs.Add(("icon", YamlWriter.Scalar(_icon)));
+        }
+
+        if (_status != null)
+        {
+            pairs.Add(("status", YamlWriter.Scalar(_status)));
+        }
+
+        if (_accent != null)
+        {
+            pairs.Add(("accent", YamlWriter.Scalar(_accent)));
+        }
+
+        if (_href != null)
+        {
+            pairs.Add(("href", YamlWriter.Scalar(_href)));
+        }
+
+        if (_target != null)
+        {
+            pairs.Add(("target", YamlWriter.Scalar(_target)));
+        }
+
+        if (_surface != null)
+        {
+            pairs.Add(("surface", YamlWriter.Scalar(_surface)));
+        }
+
+        if (_textColor != null)
+        {
+            pairs.Add(("textColor", YamlWriter.Scalar(_textColor)));
+        }
+
+        if (_width is { } w)
+        {
+            pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_rank is { } r)
+        {
+            pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_order is { } o)
+        {
+            pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_group != null)
+        {
+            pairs.Add(("group", YamlWriter.Scalar(_group)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }
@@ -132,9 +192,17 @@ public sealed class GroupBuilder
     internal string ToFlow()
     {
         var pairs = new List<(string, string)> { ("id", YamlWriter.Scalar(_id)) };
-        if (_label != null) pairs.Add(("label", YamlWriter.Scalar(_label)));
+        if (_label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(_label)));
+        }
+
         pairs.Add(("members", YamlWriter.FlowSeq(_members.Select(YamlWriter.Scalar))));
-        if (_accent != null) pairs.Add(("accent", YamlWriter.Scalar(_accent)));
+        if (_accent != null)
+        {
+            pairs.Add(("accent", YamlWriter.Scalar(_accent)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }
@@ -210,15 +278,51 @@ public sealed class EdgeBuilder
             ("from", YamlWriter.Scalar(_from)),
             ("to", YamlWriter.Scalar(_to)),
         };
-        if (_label != null) pairs.Add(("label", YamlWriter.Scalar(_label)));
-        if (_style is { } s) pairs.Add(("style", Tokens.Of(s)));
-        if (_curve is { } c) pairs.Add(("curve", Tokens.Of(c)));
-        if (_kind is { } k) pairs.Add(("kind", Tokens.Of(k)));
-        if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
-        if (_arrow != null) pairs.Add(("arrow", _arrow));
-        if (_note != null) pairs.Add(("note", YamlWriter.Scalar(_note)));
-        if (_fromSide is { } fs) pairs.Add(("fromSide", Tokens.Of(fs)));
-        if (_toSide is { } ts) pairs.Add(("toSide", Tokens.Of(ts)));
+        if (_label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(_label)));
+        }
+
+        if (_style is { } s)
+        {
+            pairs.Add(("style", Tokens.Of(s)));
+        }
+
+        if (_curve is { } c)
+        {
+            pairs.Add(("curve", Tokens.Of(c)));
+        }
+
+        if (_kind is { } k)
+        {
+            pairs.Add(("kind", Tokens.Of(k)));
+        }
+
+        if (_color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(_color)));
+        }
+
+        if (_arrow != null)
+        {
+            pairs.Add(("arrow", _arrow));
+        }
+
+        if (_note != null)
+        {
+            pairs.Add(("note", YamlWriter.Scalar(_note)));
+        }
+
+        if (_fromSide is { } fs)
+        {
+            pairs.Add(("fromSide", Tokens.Of(fs)));
+        }
+
+        if (_toSide is { } ts)
+        {
+            pairs.Add(("toSide", Tokens.Of(ts)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }

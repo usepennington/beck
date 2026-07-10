@@ -1,7 +1,4 @@
-using Beck.Layout;
 using Beck.Model;
-using Beck.Rendering;
-using Beck.Rendering.Text;
 using Beck.Text;
 using Xunit;
 
@@ -16,8 +13,8 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class CardFlowStatusSizingTests
 {
-    private static readonly ITextMeasurer M = InterMetricsMeasurer.Instance;
-    private static readonly StyleGeometry Geo = BeckStyle.Classic.Geometry;
+    private static readonly ITextMeasurer _m = InterMetricsMeasurer.Instance;
+    private static readonly StyleGeometry _geo = BeckStyle.Classic.Geometry;
 
     private static NodeModel Node(string title, string? status = null) =>
         Validate.LoadDiagram(
@@ -27,18 +24,18 @@ public sealed class CardFlowStatusSizingTests
     [Fact]
     public void WidePill_GrowsCardWidth_ToPillPlusChipPadding()
     {
-        NodeModel node = Node("API");
-        const string pill = "PROCESSING PAYMENT GATEWAY RETRY";
-        Size plain = CardSizer.Measure(node, M, Geo);
-        Size sized = CardSizer.Measure(node, M, Geo, flowStatuses: new[] { pill });
+        var node = Node("API");
+        const string Pill = "PROCESSING PAYMENT GATEWAY RETRY";
+        var plain = CardSizer.Measure(node, _m, _geo);
+        var sized = CardSizer.Measure(node, _m, _geo, flowStatuses: [Pill]);
 
         Assert.True(sized.W > plain.W, $"wide pill must grow the card ({plain.W} → {sized.W})");
         // The exact box-model term: natural = ceil(widest of title/subtitle/pill+16) + chrome,
         // clamped to [CardMinW, CardMaxW] — with a short title the pill row wins. Chrome (pad +
         // border + icon block) is witnessed via CardTextAvail so the default kind icon is included.
-        double pillW = M.Measure(pill, FontRole.Status, BeckStyle.Classic.Typography.Roles.Of(FontRole.Status)).Width + 16;
-        double chrome = plain.W - CardSizer.CardTextAvail(node, M, Geo);
-        Assert.Equal(Math.Clamp(Math.Ceiling(pillW) + chrome, Geo.CardMinW, Geo.CardMaxW), sized.W);
+        var pillW = _m.Measure(Pill, FontRole.Status, BeckStyle.Classic.Typography.Roles.Of(FontRole.Status)).Width + 16;
+        var chrome = plain.W - CardSizer.CardTextAvail(node, _m, _geo);
+        Assert.Equal(Math.Clamp(Math.Ceiling(pillW) + chrome, _geo.CardMinW, _geo.CardMaxW), sized.W);
     }
 
     [Fact]
@@ -47,8 +44,8 @@ public sealed class CardFlowStatusSizingTests
         // The reserved status row must be exactly the one an authored `status:` gets — a flow that
         // swaps a pill into a status-less card yields the same box as authoring that pill up front.
         Assert.Equal(
-            CardSizer.Measure(Node("API", status: "ok"), M, Geo),
-            CardSizer.Measure(Node("API"), M, Geo, flowStatuses: new[] { "ok" }));
+            CardSizer.Measure(Node("API", status: "ok"), _m, _geo),
+            CardSizer.Measure(Node("API"), _m, _geo, flowStatuses: ["ok"]));
     }
 
     [Fact]
@@ -56,10 +53,10 @@ public sealed class CardFlowStatusSizingTests
     {
         // A node with an authored `status:` already carries the status row; a flow pill narrower
         // than the title must leave the box byte-identical.
-        NodeModel node = Node("A Fairly Long Gateway Title", status: "Ready");
+        var node = Node("A Fairly Long Gateway Title", status: "Ready");
         Assert.Equal(
-            CardSizer.Measure(node, M, Geo),
-            CardSizer.Measure(node, M, Geo, flowStatuses: new[] { "ok" }));
+            CardSizer.Measure(node, _m, _geo),
+            CardSizer.Measure(node, _m, _geo, flowStatuses: ["ok"]));
     }
 
     [Fact]
@@ -67,11 +64,11 @@ public sealed class CardFlowStatusSizingTests
     {
         // The painter wraps text into CardTextAvail; it must move in lockstep with Measure's width
         // (same chrome), or drawn text would wrap differently than the box was sized for.
-        NodeModel node = Node("API");
-        const string pill = "PROCESSING PAYMENT GATEWAY RETRY";
-        double plainChrome = CardSizer.Measure(node, M, Geo).W - CardSizer.CardTextAvail(node, M, Geo);
-        double sizedChrome = CardSizer.Measure(node, M, Geo, flowStatuses: new[] { pill }).W
-            - CardSizer.CardTextAvail(node, M, Geo, flowStatuses: new[] { pill });
+        var node = Node("API");
+        const string Pill = "PROCESSING PAYMENT GATEWAY RETRY";
+        var plainChrome = CardSizer.Measure(node, _m, _geo).W - CardSizer.CardTextAvail(node, _m, _geo);
+        var sizedChrome = CardSizer.Measure(node, _m, _geo, flowStatuses: [Pill]).W
+            - CardSizer.CardTextAvail(node, _m, _geo, flowStatuses: [Pill]);
         Assert.Equal(plainChrome, sizedChrome);
     }
 }

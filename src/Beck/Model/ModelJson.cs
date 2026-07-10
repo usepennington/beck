@@ -32,9 +32,21 @@ internal static class ModelJson
     private static Dictionary<string, object?> Meta(DiagramMeta m)
     {
         var o = new Dictionary<string, object?> { ["type"] = Tokens.DiagramType.Wire(m.Type) };
-        if (m.Title != null) o["title"] = m.Title;
-        if (m.Subtitle != null) o["subtitle"] = m.Subtitle;
-        if (m.StyleName != null) o["style"] = m.StyleName;
+        if (m.Title != null)
+        {
+            o["title"] = m.Title;
+        }
+
+        if (m.Subtitle != null)
+        {
+            o["subtitle"] = m.Subtitle;
+        }
+
+        if (m.StyleName != null)
+        {
+            o["style"] = m.StyleName;
+        }
+
         o["direction"] = Tokens.Direction.Wire(m.Direction);
         o["theme"] = Tokens.Theme.Wire(m.Theme);
         o["animate"] = m.Animate;
@@ -59,22 +71,70 @@ internal static class ModelJson
     private static Dictionary<string, object?> Node(NodeModel n)
     {
         var o = new Dictionary<string, object?> { ["id"] = n.Id, ["title"] = n.Title };
-        if (n.Subtitle != null) o["subtitle"] = n.Subtitle;
-        if (n.Icon != null) o["icon"] = n.Icon;
+        if (n.Subtitle != null)
+        {
+            o["subtitle"] = n.Subtitle;
+        }
+
+        if (n.Icon != null)
+        {
+            o["icon"] = n.Icon;
+        }
+
         o["kind"] = Tokens.NodeKind.Wire(n.Kind);
         o["variant"] = Tokens.NodeVariant.Wire(n.Variant);
-        if (n.Status != null) o["status"] = n.Status;
+        if (n.Status != null)
+        {
+            o["status"] = n.Status;
+        }
+
         o["accent"] = n.Accent;
-        if (n.Href != null) o["href"] = n.Href;
-        if (n.Target != null) o["target"] = n.Target;
-        if (n.Surface != null) o["surface"] = n.Surface;
-        if (n.TextColor != null) o["textColor"] = n.TextColor;
-        if (n.Width != null) o["width"] = n.Width.Value;
-        if (n.Rank != null) o["rank"] = n.Rank.Value;
-        if (n.Order != null) o["order"] = n.Order.Value;
-        if (n.Group != null) o["group"] = n.Group;
+        if (n.Href != null)
+        {
+            o["href"] = n.Href;
+        }
+
+        if (n.Target != null)
+        {
+            o["target"] = n.Target;
+        }
+
+        if (n.Surface != null)
+        {
+            o["surface"] = n.Surface;
+        }
+
+        if (n.TextColor != null)
+        {
+            o["textColor"] = n.TextColor;
+        }
+
+        if (n.Width != null)
+        {
+            o["width"] = n.Width.Value;
+        }
+
+        if (n.Rank != null)
+        {
+            o["rank"] = n.Rank.Value;
+        }
+
+        if (n.Order != null)
+        {
+            o["order"] = n.Order.Value;
+        }
+
+        if (n.Group != null)
+        {
+            o["group"] = n.Group;
+        }
+
         o["shape"] = Tokens.NodeShape.Wire(n.Shape);
-        if (n.Stereotype != null) o["stereotype"] = n.Stereotype;
+        if (n.Stereotype != null)
+        {
+            o["stereotype"] = n.Stereotype;
+        }
+
         o["fields"] = n.Fields.ToList<object?>();
         o["methods"] = n.Methods.ToList<object?>();
         return o;
@@ -91,21 +151,57 @@ internal static class ModelJson
     private static Dictionary<string, object?> Edge(EdgeModel e)
     {
         var o = new Dictionary<string, object?> { ["id"] = e.Id, ["from"] = e.From, ["to"] = e.To };
-        if (e.Label != null) o["label"] = e.Label;
+        if (e.Label != null)
+        {
+            o["label"] = e.Label;
+        }
+
         o["style"] = Tokens.EdgeStyle.Wire(e.Style);
         o["curve"] = Tokens.EdgeCurve.Wire(e.Curve);
         o["kind"] = Tokens.EdgeKind.Wire(e.Kind);
         o["color"] = e.Color;
         o["arrow"] = Tokens.ArrowEnds.Wire(e.Arrow);
-        if (e.Note != null) o["note"] = e.Note;
-        if (e.FromSide != null) o["fromSide"] = Tokens.Side.Wire(e.FromSide.Value);
-        if (e.ToSide != null) o["toSide"] = Tokens.Side.Wire(e.ToSide.Value);
-        if (e.MarkerStart != null) o["markerStart"] = Tokens.MarkerShape.Wire(e.MarkerStart.Value);
-        if (e.MarkerEnd != null) o["markerEnd"] = Tokens.MarkerShape.Wire(e.MarkerEnd.Value);
-        if (e.FromLabel != null) o["fromLabel"] = e.FromLabel;
-        if (e.ToLabel != null) o["toLabel"] = e.ToLabel;
+        if (e.Note != null)
+        {
+            o["note"] = e.Note;
+        }
+
+        if (e.FromSide != null)
+        {
+            o["fromSide"] = Tokens.Side.Wire(e.FromSide.Value);
+        }
+
+        if (e.ToSide != null)
+        {
+            o["toSide"] = Tokens.Side.Wire(e.ToSide.Value);
+        }
+
+        if (e.MarkerStart != null)
+        {
+            o["markerStart"] = Tokens.MarkerShape.Wire(e.MarkerStart.Value);
+        }
+
+        if (e.MarkerEnd != null)
+        {
+            o["markerEnd"] = Tokens.MarkerShape.Wire(e.MarkerEnd.Value);
+        }
+
+        if (e.FromLabel != null)
+        {
+            o["fromLabel"] = e.FromLabel;
+        }
+
+        if (e.ToLabel != null)
+        {
+            o["toLabel"] = e.ToLabel;
+        }
+
         o["reply"] = e.Reply;
-        if (e.Activate != null) o["activate"] = e.Activate.Value;
+        if (e.Activate != null)
+        {
+            o["activate"] = e.Activate.Value;
+        }
+
         return o;
     }
 
@@ -126,12 +222,35 @@ internal static class ModelJson
 
     private static void AddKnobs(Dictionary<string, object?> o, PacketKnobs k)
     {
-        if (k.Shape != null) o["shape"] = Tokens.PacketShape.Wire(k.Shape.Value);
-        if (k.Size != null) o["size"] = k.Size.Value;
-        if (k.Speed != null) o["speed"] = k.Speed.Value;
-        if (k.Glow != null) o["glow"] = k.Glow.Value;
-        if (k.Impact != null) o["impact"] = k.Impact.Value;
-        if (k.Ease != null) o["ease"] = Tokens.PacketEase.Wire(k.Ease.Value);
+        if (k.Shape != null)
+        {
+            o["shape"] = Tokens.PacketShape.Wire(k.Shape.Value);
+        }
+
+        if (k.Size != null)
+        {
+            o["size"] = k.Size.Value;
+        }
+
+        if (k.Speed != null)
+        {
+            o["speed"] = k.Speed.Value;
+        }
+
+        if (k.Glow != null)
+        {
+            o["glow"] = k.Glow.Value;
+        }
+
+        if (k.Impact != null)
+        {
+            o["impact"] = k.Impact.Value;
+        }
+
+        if (k.Ease != null)
+        {
+            o["ease"] = Tokens.PacketEase.Wire(k.Ease.Value);
+        }
     }
 
     private static Dictionary<string, object?> Step(FlowStep s)
@@ -142,61 +261,129 @@ internal static class ModelJson
             case PacketStep p:
                 o["from"] = p.From;
                 o["to"] = p.To;
-                if (p.Via != null) o["via"] = p.Via.ToList<object?>();
-                if (p.Edge != null) o["edge"] = p.Edge;
-                if (p.Color != null) o["color"] = p.Color;
-                if (p.Label != null) o["label"] = p.Label;
+                if (p.Via != null)
+                {
+                    o["via"] = p.Via.ToList<object?>();
+                }
+
+                if (p.Edge != null)
+                {
+                    o["edge"] = p.Edge;
+                }
+
+                if (p.Color != null)
+                {
+                    o["color"] = p.Color;
+                }
+
+                if (p.Label != null)
+                {
+                    o["label"] = p.Label;
+                }
+
                 AddKnobs(o, p.Knobs);
                 break;
             case BurstStep b:
                 o["from"] = b.From;
                 o["to"] = b.ToList != null ? b.ToList.ToList<object?>() : b.To;
-                if (b.Via != null) o["via"] = b.Via.ToList<object?>();
+                if (b.Via != null)
+                {
+                    o["via"] = b.Via.ToList<object?>();
+                }
+
                 o["count"] = (double)b.Count;
                 o["stagger"] = b.Stagger;
-                if (b.Color != null) o["color"] = b.Color;
-                if (b.Label != null) o["label"] = b.Label;
+                if (b.Color != null)
+                {
+                    o["color"] = b.Color;
+                }
+
+                if (b.Label != null)
+                {
+                    o["label"] = b.Label;
+                }
+
                 AddKnobs(o, b.Knobs);
                 break;
             case StatusStep st:
                 o["node"] = st.Node;
                 o["text"] = st.Text;
-                if (st.Color != null) o["color"] = st.Color;
+                if (st.Color != null)
+                {
+                    o["color"] = st.Color;
+                }
+
                 break;
             case HighlightStep h:
                 o["node"] = h.Node;
-                if (h.Color != null) o["color"] = h.Color;
+                if (h.Color != null)
+                {
+                    o["color"] = h.Color;
+                }
+
                 break;
             case PulseStep pu:
                 o["node"] = pu.Node;
-                if (pu.Color != null) o["color"] = pu.Color;
+                if (pu.Color != null)
+                {
+                    o["color"] = pu.Color;
+                }
+
                 break;
             case ActivateStep a:
                 o["from"] = a.From;
                 o["to"] = a.To;
-                if (a.Color != null) o["color"] = a.Color;
+                if (a.Color != null)
+                {
+                    o["color"] = a.Color;
+                }
+
                 break;
             case StreamStep sr:
                 o["from"] = sr.From;
                 o["to"] = sr.To;
-                if (sr.Color != null) o["color"] = sr.Color;
+                if (sr.Color != null)
+                {
+                    o["color"] = sr.Color;
+                }
+
                 break;
             case WorkingStep w:
                 o["node"] = w.Node;
-                if (w.Color != null) o["color"] = w.Color;
+                if (w.Color != null)
+                {
+                    o["color"] = w.Color;
+                }
+
                 break;
             case IdleStep idle:
                 o["node"] = idle.Node;
                 break;
             case FailStep f:
                 o["node"] = f.Node;
-                if (f.Text != null) o["text"] = f.Text;
-                if (f.Color != null) o["color"] = f.Color;
+                if (f.Text != null)
+                {
+                    o["text"] = f.Text;
+                }
+
+                if (f.Color != null)
+                {
+                    o["color"] = f.Color;
+                }
+
                 break;
             case NarrateStep nar:
                 o["text"] = nar.Text;
-                if (nar.Hold != null) o["hold"] = nar.Hold.Value;
-                if (nar.Color != null) o["color"] = nar.Color;
+                if (nar.Hold != null)
+                {
+                    o["hold"] = nar.Hold.Value;
+                }
+
+                if (nar.Color != null)
+                {
+                    o["color"] = nar.Color;
+                }
+
                 break;
             case PhaseStep ph:
                 o["label"] = ph.Label;
@@ -233,10 +420,14 @@ internal static class ModelJson
                 break;
             case IReadOnlyDictionary<string, object?> obj:
                 sb.Append('{');
-                bool firstK = true;
+                var firstK = true;
                 foreach (var key in obj.Keys.OrderBy(k => k, StringComparer.Ordinal))
                 {
-                    if (!firstK) sb.Append(',');
+                    if (!firstK)
+                    {
+                        sb.Append(',');
+                    }
+
                     firstK = false;
                     WriteString(key, sb);
                     sb.Append(':');
@@ -246,10 +437,14 @@ internal static class ModelJson
                 break;
             case System.Collections.IEnumerable list:
                 sb.Append('[');
-                bool firstI = true;
+                var firstI = true;
                 foreach (var item in list)
                 {
-                    if (!firstI) sb.Append(',');
+                    if (!firstI)
+                    {
+                        sb.Append(',');
+                    }
+
                     firstI = false;
                     Write(item, sb);
                 }
@@ -263,7 +458,7 @@ internal static class ModelJson
     private static void WriteString(string s, StringBuilder sb)
     {
         sb.Append('"');
-        foreach (char c in s)
+        foreach (var c in s)
         {
             switch (c)
             {
@@ -275,8 +470,15 @@ internal static class ModelJson
                 case '\r': sb.Append("\\r"); break;
                 case '\t': sb.Append("\\t"); break;
                 default:
-                    if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4", System.Globalization.CultureInfo.InvariantCulture));
-                    else sb.Append(c);
+                    if (c < 0x20)
+                    {
+                        sb.Append("\\u").Append(((int)c).ToString("x4", System.Globalization.CultureInfo.InvariantCulture));
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+
                     break;
             }
         }

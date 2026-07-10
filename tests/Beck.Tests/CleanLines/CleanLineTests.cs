@@ -39,12 +39,18 @@ public sealed class CleanLineTests
     public void ChaosMonkey_NoHardViolations()
     {
         var failures = new List<string>();
-        for (int seed = 0; seed < SeedCount; seed++)
+        for (var seed = 0; seed < SeedCount; seed++)
         {
-            QualityReport r = LineQuality.Analyze(DiagramFuzzer.Yaml(seed));
-            foreach (Defect d in r.Violations.Where(d => d.IsHard).Take(3))
+            var r = LineQuality.Analyze(DiagramFuzzer.Yaml(seed));
+            foreach (var d in r.Violations.Where(d => d.IsHard).Take(3))
+            {
                 failures.Add($"seed {seed}: [{d.Kind}] {d.Detail}");
-            if (failures.Count > 30) break;
+            }
+
+            if (failures.Count > 30)
+            {
+                break;
+            }
         }
         Assert.True(failures.Count == 0,
             $"{failures.Count} routing violations over {SeedCount} fuzzed diagrams "
@@ -57,13 +63,16 @@ public sealed class CleanLineTests
         int edges = 0, straight = 0, jogs = 0, merged = 0, faces = 0, skewed = 0, bends = 0, tight = 0;
         var worst = new List<(double Score, int Seed, QualityReport R)>();
 
-        for (int seed = 0; seed < SeedCount; seed++)
+        for (var seed = 0; seed < SeedCount; seed++)
         {
-            QualityReport r = LineQuality.Analyze(DiagramFuzzer.Yaml(seed));
+            var r = LineQuality.Analyze(DiagramFuzzer.Yaml(seed));
             edges += r.Edges; straight += r.StraightEdges; jogs += r.MicroJogs;
             merged += r.MergedRuns; faces += r.Faces; skewed += r.SkewedFaces; bends += r.Bends;
             tight += r.TightEdges;
-            if (r.Edges > 0) worst.Add(((r.MicroJogs + r.MergedRuns) / (double)r.Edges, seed, r));
+            if (r.Edges > 0)
+            {
+                worst.Add(((r.MicroJogs + r.MergedRuns) / (double)r.Edges, seed, r));
+            }
         }
 
         var got = new Baseline(
@@ -78,8 +87,10 @@ public sealed class CleanLineTests
         _out.WriteLine("");
         _out.WriteLine("Worst offenders (seed → micro-jogs + merged runs per edge):");
         foreach (var w in worst.OrderByDescending(w => w.Score).Take(8))
+        {
             _out.WriteLine(FormattableString.Invariant(
                 $"  seed {w.Seed,4}  score {w.Score:0.00}  edges {w.R.Edges,2}  jogs {w.R.MicroJogs,2}  merged {w.R.MergedRuns,2}  straight {w.R.StraightRate:0%}"));
+        }
 
         if (Environment.GetEnvironmentVariable("BECK_REGEN") == "1")
         {
@@ -88,18 +99,24 @@ public sealed class CleanLineTests
             return;
         }
 
-        Baseline want = JsonSerializer.Deserialize<Baseline>(
+        var want = JsonSerializer.Deserialize<Baseline>(
             File.ReadAllText(Path.GetFullPath(BaselinePath)),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
 
         var regressions = new List<string>();
         void HigherIsBetter(string name, double g, double w, double tol = 0.005)
         {
-            if (g < w - tol) regressions.Add(FormattableString.Invariant($"{name}: {g:0.0000} < baseline {w:0.0000}"));
+            if (g < w - tol)
+            {
+                regressions.Add(FormattableString.Invariant($"{name}: {g:0.0000} < baseline {w:0.0000}"));
+            }
         }
         void LowerIsBetter(string name, double g, double w, double tol = 0.005)
         {
-            if (g > w + tol) regressions.Add(FormattableString.Invariant($"{name}: {g:0.0000} > baseline {w:0.0000}"));
+            if (g > w + tol)
+            {
+                regressions.Add(FormattableString.Invariant($"{name}: {g:0.0000} > baseline {w:0.0000}"));
+            }
         }
         HigherIsBetter("straight-edge rate", got.StraightRate, want.StraightRate);
         LowerIsBetter("micro-jogs per edge", got.MicroJogsPerEdge, want.MicroJogsPerEdge);
@@ -133,28 +150,45 @@ public sealed class CleanLineTests
     [Fact]
     public void DumpSeed()
     {
-        if (Environment.GetEnvironmentVariable("BECK_SEED") is not string s || !int.TryParse(s, out int seed)) return;
-        string yaml = DiagramFuzzer.Yaml(seed);
+        if (Environment.GetEnvironmentVariable("BECK_SEED") is not { } s || !int.TryParse(s, out var seed))
+        {
+            return;
+        }
+
+        var yaml = DiagramFuzzer.Yaml(seed);
         _out.WriteLine(yaml);
-        QualityReport r = LineQuality.Analyze(yaml);
+        var r = LineQuality.Analyze(yaml);
         _out.WriteLine(Describe($"seed {seed}", yaml, r));
-        foreach (Defect d in r.Violations) _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
+        foreach (var d in r.Violations)
+        {
+            _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
+        }
     }
 
     /// <summary>Debugging affordance: score and dump an arbitrary YAML file. BECK_YAML=&lt;path&gt;.</summary>
     [Fact]
     public void DumpYaml()
     {
-        if (Environment.GetEnvironmentVariable("BECK_YAML") is not string path || !File.Exists(path)) return;
-        string yaml = File.ReadAllText(path);
-        QualityReport r = LineQuality.Analyze(yaml);
+        if (Environment.GetEnvironmentVariable("BECK_YAML") is not { } path || !File.Exists(path))
+        {
+            return;
+        }
+
+        var yaml = File.ReadAllText(path);
+        var r = LineQuality.Analyze(yaml);
         _out.WriteLine(Describe(Path.GetFileName(path), yaml, r));
         var (_, layout, _) = LineQuality.Route(yaml);
         foreach (var (id, rect) in layout.Groups.OrderBy(k => k.Key))
+        {
             _out.WriteLine(FormattableString.Invariant(
                 $"  group {id,-8} x {rect.X:0.#}..{rect.X + rect.W:0.#}  y {rect.Y:0.#}..{rect.Y + rect.H:0.#}"));
+        }
+
         _out.WriteLine($"  canvas {layout.Width} × {layout.Height}");
-        foreach (Defect d in r.Violations) _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
+        foreach (var d in r.Violations)
+        {
+            _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
+        }
     }
 
     // ---- pinned real-world shapes: the two diagrams that motivated the harness ----
@@ -194,8 +228,8 @@ public sealed class CleanLineTests
     [InlineData(nameof(ThreeIntoOne))]
     public void PinnedShapes_HaveNoViolations(string which)
     {
-        string yaml = which == nameof(ServeAndBuild) ? ServeAndBuild : ThreeIntoOne;
-        QualityReport r = LineQuality.Analyze(yaml);
+        var yaml = which == nameof(ServeAndBuild) ? ServeAndBuild : ThreeIntoOne;
+        var r = LineQuality.Analyze(yaml);
         _out.WriteLine(Describe(which, yaml, r));
         Assert.Empty(r.Violations);
     }
@@ -208,11 +242,17 @@ public sealed class CleanLineTests
             + $"{r.MicroJogs} micro-jogs, {r.MergedRuns} merged runs, {r.SkewedFaces}/{r.Faces} skewed fans");
         var (_, layout, edges) = LineQuality.Route(yaml);
         foreach (var e in edges)
+        {
             sb.AppendLine(CultureInfo.InvariantCulture,
                 $"  {e.Edge.Id,-24} {string.Join(" → ", e.Points.Select(p => $"({p.X:0.#},{p.Y:0.#})"))}");
+        }
+
         foreach (var (id, rect) in layout.Nodes.OrderBy(k => k.Key))
+        {
             sb.AppendLine(CultureInfo.InvariantCulture,
                 $"  node {id,-10} x {rect.X:0.#}..{rect.X + rect.W:0.#}  y {rect.Y:0.#}..{rect.Y + rect.H:0.#}  c ({rect.X + rect.W / 2:0.#},{rect.Y + rect.H / 2:0.#})");
+        }
+
         return sb.ToString();
     }
 }

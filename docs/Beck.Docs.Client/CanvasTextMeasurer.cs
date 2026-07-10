@@ -1,4 +1,3 @@
-using Beck.Rendering.Text;
 using Beck.Text;
 using Microsoft.JSInterop;
 
@@ -35,17 +34,19 @@ public sealed class CanvasTextMeasurer : ITextMeasurer
     /// </summary>
     public TextMetrics Measure(string text, FontRole role, FontRoleSpec spec)
     {
-        string t = spec.Uppercase ? text.ToUpperInvariant() : text;
+        var t = spec.Uppercase ? text.ToUpperInvariant() : text;
 
         // [advanceWidth, ascent, descent] in CSS px. mono/weight/size come from the active style's
         // spec, so a role a style remapped measures at its rendered typography.
-        double[] m = _js.Invoke<double[]>("beckMeasure.text", t, spec.Mono, spec.Weight, spec.SizePx);
-        double width = m[0];
+        var m = _js.Invoke<double[]>("beckMeasure.text", t, spec.Mono, spec.Weight, spec.SizePx);
+        var width = m[0];
 
         // CSS letter-spacing adds a gap after every character (Chrome keeps the trailing gap) —
         // applied here, not in the canvas font string, to match SkiaTextMeasurer exactly.
         if (spec.LetterSpacingEm != 0 && t.Length > 0)
+        {
             width += t.Length * spec.LetterSpacingEm * spec.SizePx;
+        }
 
         return new TextMetrics(width, m[1], m[2]);
     }

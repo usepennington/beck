@@ -12,7 +12,7 @@ namespace Beck.Model;
 internal static class Js
 {
     // Decimal/float grammar accepted by JS Number() (the range diagrams use).
-    private static readonly Regex DecimalRe =
+    private static readonly Regex _decimalRe =
         new(@"^[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$", RegexOptions.Compiled);
 
     /// <summary>JS <c>Math.round</c>: half rounds toward +∞ (not banker's, not away-from-zero).</summary>
@@ -21,9 +21,15 @@ internal static class Js
     /// <summary>JS <c>String(number)</c>: integral values print without a decimal point.</summary>
     public static string Str(double n)
     {
-        if (n == 0) return "0"; // normalizes -0 → "0"
-        if (n == Math.Floor(n) && Math.Abs(n) < 1e21)
+        if (n == 0)
+        {
+            return "0"; // normalizes -0 → "0"
+        }
+
+        if (Math.Abs(n - Math.Floor(n)) < 0.001 && Math.Abs(n) < 1e21)
+        {
             return n.ToString("0", CultureInfo.InvariantCulture);
+        }
         // Default (no format) is shortest round-trippable in .NET Core 3+; matches
         // ECMAScript for the fixed-notation range diagrams use.
         return n.ToString(CultureInfo.InvariantCulture);
@@ -45,8 +51,8 @@ internal static class Js
     public static bool TryNumber(string raw, out double value)
     {
         value = 0;
-        string s = raw.Trim();
-        return s.Length > 0 && DecimalRe.IsMatch(s)
+        var s = raw.Trim();
+        return s.Length > 0 && _decimalRe.IsMatch(s)
             && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 }

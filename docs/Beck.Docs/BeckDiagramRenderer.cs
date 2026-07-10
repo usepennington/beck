@@ -1,6 +1,4 @@
-using Beck.Rendering;
 using Beck.Skia;
-using Beck.Rendering.Text;
 using Beck.Text;
 
 namespace Beck.Docs;

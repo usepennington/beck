@@ -1,10 +1,9 @@
-@using Beck.Rendering
 @* Markdown-embedded icon reference: `<IconGallery />`. Rendered server-side from the C# engine's
    built-in icon registry (BeckSvg.IconRegistry), so the page can never drift from the shipped set.
    Keys that share identical svg are aliases and collapse onto one card. *@
 
-<div class="not-prose my-7" data-beck-icon-gallery data-count="@_groups.Count">
-    @foreach (var g in _groups)
+<div class="not-prose my-7" data-beck-icon-gallery data-count="@Groups.Count">
+    @foreach (var g in Groups)
     {
         <div class="beck-icon-card">
             <span class="beck-icon-card-chip" aria-hidden="true">@((MarkupString)g.Svg)</span>
@@ -22,7 +21,7 @@
 
     // Group the registry by identical svg markup (aliases like db/database share a glyph),
     // preserving the registry's insertion order — it's roughly category-grouped.
-    private static readonly List<IconGroup> _groups = BuildGroups();
+    private static readonly List<IconGroup> Groups = BuildGroups();
 
     private static List<IconGroup> BuildGroups()
     {
@@ -30,7 +29,7 @@
         var bySvg = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var (key, svg) in BeckSvg.IconRegistry)
         {
-            if (bySvg.TryGetValue(svg, out int i))
+            if (bySvg.TryGetValue(svg, out var i))
             {
                 groups[i].Keys.Add(key);
             }

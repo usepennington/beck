@@ -1,5 +1,3 @@
-using Beck.Rendering;
-using Beck;
 using Beck.Styles;
 using Xunit;
 
@@ -16,36 +14,36 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class ClassicSvgGoldenTests
 {
-    private static readonly string CorpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
-    private static readonly string GoldenDir = Path.Combine(AppContext.BaseDirectory, "Goldens", "svg");
+    private static readonly string _corpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
+    private static readonly string _goldenDir = Path.Combine(AppContext.BaseDirectory, "Goldens", "svg");
 
     // A pinned suffix keeps the golden stable regardless of the content-hash algorithm.
     private const string PinnedSuffix = "cla551c0";
 
-    public static IEnumerable<object[]> Diagrams() => new[]
-    {
-        new object[] { "arch-kitchen" },
-        new object[] { "seq-kitchen" },
-        new object[] { "class" },
-    };
+    public static IEnumerable<object[]> Diagrams() =>
+    [
+        ["arch-kitchen"],
+        ["seq-kitchen"],
+        ["class"],
+    ];
 
     [Theory]
     [MemberData(nameof(Diagrams))]
     public void ClassicSvg_MatchesGolden(string name)
     {
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, name + ".yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = PinnedSuffix });
-        string golden = File.ReadAllText(Path.Combine(GoldenDir, name + ".svg"));
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, name + ".yaml"));
+        var actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = PinnedSuffix });
+        var golden = File.ReadAllText(Path.Combine(_goldenDir, name + ".svg"));
         Assert.Equal(golden, actual);
     }
 
     // A single frozen golden per non-classic built-in style (Phase 3 policy: full corpus for
     // classic only, one representative golden + the StyleSmokeTests invariants for the rest).
     // Each style pins its own IdSuffix so the golden is independent of the content-hash algorithm.
-    public static IEnumerable<object[]> Styles() => StyleCases.Select(c => new object[] { c.Golden });
+    public static IEnumerable<object[]> Styles() => _styleCases.Select(c => new object[] { c.Golden });
 
-    private static readonly (string Golden, string Suffix, BeckStyle Style)[] StyleCases =
-    {
+    private static readonly (string Golden, string Suffix, BeckStyle Style)[] _styleCases =
+    [
         ("minimal",   "min1ma1c", MinimalStyle.Instance),
         ("terminal",  "term1na1", TerminalStyle.Instance),
         ("blueprint", "b1uepr1n", BlueprintStyle.Instance),
@@ -54,16 +52,16 @@ public sealed class ClassicSvgGoldenTests
         ("sketch",    "sk3tchg0", SketchStyle.Instance),
         ("extrude",   "extrud30", ExtrudeStyle.Instance),
         ("circuit",   "c1rcu1t0", CircuitStyle.Instance),
-    };
+    ];
 
     [Theory]
     [MemberData(nameof(Styles))]
     public void StyleSvg_MatchesGolden(string golden)
     {
-        var c = StyleCases.Single(s => s.Golden == golden);
-        string yaml = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        string actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = c.Suffix, Style = c.Style });
-        Assert.Equal(File.ReadAllText(Path.Combine(GoldenDir, golden + ".svg")), actual);
+        var c = _styleCases.Single(s => s.Golden == golden);
+        var yaml = File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
+        var actual = BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = c.Suffix, Style = c.Style });
+        Assert.Equal(File.ReadAllText(Path.Combine(_goldenDir, golden + ".svg")), actual);
     }
 
     /// <summary>
@@ -74,18 +72,24 @@ public sealed class ClassicSvgGoldenTests
     [Fact]
     public void Regenerate()
     {
-        if (Environment.GetEnvironmentVariable("BECK_REGEN") != "1") return;
-        string srcGoldens = Path.Combine(SourceDir(), "Goldens", "svg");
-        foreach (string name in new[] { "arch-kitchen", "seq-kitchen", "class" })
+        if (Environment.GetEnvironmentVariable("BECK_REGEN") != "1")
         {
-            string yaml = File.ReadAllText(Path.Combine(CorpusDir, name + ".yaml"));
+            return;
+        }
+
+        var srcGoldens = Path.Combine(SourceDir(), "Goldens", "svg");
+        foreach (var name in new[] { "arch-kitchen", "seq-kitchen", "class" })
+        {
+            var yaml = File.ReadAllText(Path.Combine(_corpusDir, name + ".yaml"));
             File.WriteAllText(Path.Combine(srcGoldens, name + ".svg"),
                 BeckSvg.Render(yaml, new SvgRenderOptions { IdSuffix = PinnedSuffix }));
         }
-        string kitchen = File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
-        foreach (var c in StyleCases)
+        var kitchen = File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
+        foreach (var c in _styleCases)
+        {
             File.WriteAllText(Path.Combine(srcGoldens, c.Golden + ".svg"),
                 BeckSvg.Render(kitchen, new SvgRenderOptions { IdSuffix = c.Suffix, Style = c.Style }));
+        }
     }
 
     private static string SourceDir([System.Runtime.CompilerServices.CallerFilePath] string self = "") =>

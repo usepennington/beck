@@ -1,4 +1,3 @@
-using Beck.Rendering;
 using Beck.Styles;
 using Xunit;
 
@@ -63,7 +62,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Classic_KeepsTheHistoricalRipple()
     {
-        string svg = Render(BeckStyle.Classic);
+        var svg = Render(BeckStyle.Classic);
         // The classic ripple element + its scale(1.15) expansion, untouched.
         Assert.Contains("transform:scale(1.15)", svg);
         Assert.Contains("translateY(-2px) scale(1.04)", svg);
@@ -72,7 +71,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Blueprint_SurveyRing_IsOffsetLinearAndRectangular()
     {
-        string svg = Render(BlueprintStyle.Instance);
+        var svg = Render(BlueprintStyle.Instance);
         // Linear (un-eased, technical) outward scale — not classic's Power2Out ripple curve.
         Assert.Contains("animation-timing-function:linear", svg);
         Assert.Contains("transform:scale(1.22)", svg);
@@ -82,7 +81,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Sketch_MarkerPop_JoltsTheCard_WithNoOverlayElement()
     {
-        string svg = Render(SketchStyle.Instance);
+        var svg = Render(SketchStyle.Instance);
         // The card itself pops…
         Assert.Contains("scale(1.08)", svg);
         // …and no ripple overlay element (or track) is emitted at all.
@@ -93,7 +92,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Minimal_Flash_TintsTheCardFace_WithoutMoving()
     {
-        string svg = Render(MinimalStyle.Instance);
+        var svg = Render(MinimalStyle.Instance);
         // A filled wash (no stroke ring), peaking at 0.45 × the 0.4 amplitude.
         Assert.Contains("fill=\"var(--beck-packet)\" opacity=\"0\"/>", svg);
         Assert.Contains("opacity:0.18;", svg);
@@ -105,7 +104,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Brutalist_Slam_SnapsAThickBorder_NoEasingNoScalingNoZoom()
     {
-        string svg = Render(BrutalistStyle.Instance);
+        var svg = Render(BrutalistStyle.Instance);
         // OverlayStroke 2 × 2.4 — the slammed border.
         Assert.Contains("stroke-width=\"4.8\"", svg);
         // Hard cuts: the slam keyframes carry no timing function and no transform, and the card
@@ -117,11 +116,11 @@ public sealed class StylePulseTests
     [Fact]
     public void Terminal_Flicker_BlinksTwice()
     {
-        string svg = Render(TerminalStyle.Instance);
+        var svg = Render(TerminalStyle.Instance);
         // Two on-windows at 0.5 amplitude → the on-value appears in two paired windows;
         // the invert wash is a filled rect over the card face.
         Assert.Contains("fill=\"var(--beck-packet)\" opacity=\"0\"/>", svg);
-        int on = svg.Split("opacity:0.5;").Length - 1;
+        var on = svg.Split("opacity:0.5;").Length - 1;
         Assert.True(on >= 4, $"expected two on/off flicker windows (≥4 stops at 0.5), saw {on}");
         // LiftEnabled=false: phosphor cells don't move.
         Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
@@ -130,7 +129,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Glow_GlowRing_CarriesABloomHalo_WithoutMoving()
     {
-        string svg = Render(GlowStyle.Instance);
+        var svg = Render(GlowStyle.Instance);
         Assert.Contains("filter:drop-shadow(0 0 6px var(--beck-packet))", svg);
         Assert.Contains("transform:scale(1.3)", svg);
         Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
@@ -139,7 +138,7 @@ public sealed class StylePulseTests
     [Fact]
     public void Circuit_Led_BlinksAnAmberCornerDot_WithoutMoving()
     {
-        string svg = Render(CircuitStyle.Instance);
+        var svg = Render(CircuitStyle.Instance);
         Assert.Contains("r=\"3\" fill=\"var(--beck-gold)\"", svg);
         Assert.DoesNotContain("transform:scale(1.15)", svg);
         Assert.DoesNotContain("translateY(-2px) scale(1.04)", svg);
@@ -148,7 +147,7 @@ public sealed class StylePulseTests
     [Fact]
     public void CustomStyle_PulseColor_IsSanitized()
     {
-        BeckStyle custom = BeckStyle.Classic with
+        var custom = BeckStyle.Classic with
         {
             Name = "custom-pulse",
             Motion = BeckStyle.Classic.Motion with
@@ -157,7 +156,7 @@ public sealed class StylePulseTests
                 PulseColor = "red}</style><script>url(evil)",
             },
         };
-        string svg = BeckSvg.Render(FlowYaml, new SvgRenderOptions { Style = custom, IdSuffix = "pu15etst" });
+        var svg = BeckSvg.Render(FlowYaml, new SvgRenderOptions { Style = custom, IdSuffix = "pu15etst" });
         Assert.DoesNotContain("</style><script>", svg);
         Assert.DoesNotContain("red}", svg);
         Assert.DoesNotContain("url(evil)", svg);
@@ -166,7 +165,9 @@ public sealed class StylePulseTests
     [Fact]
     public void PulseEffects_AreDeterministic()
     {
-        foreach (BeckStyle style in BeckStyles.All)
+        foreach (var style in BeckStyles.All)
+        {
             Assert.Equal(Render(style), Render(style));
+        }
     }
 }

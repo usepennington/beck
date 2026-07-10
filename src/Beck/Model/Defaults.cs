@@ -101,7 +101,11 @@ internal static class Defaults
         }
         foreach (var e in edges)
         {
-            if (!indegree.ContainsKey(e.From) || !indegree.ContainsKey(e.To) || e.From == e.To) continue;
+            if (!indegree.ContainsKey(e.From) || !indegree.ContainsKey(e.To) || e.From == e.To)
+            {
+                continue;
+            }
+
             indegree[e.To] += 1;
             outAdj[e.From].Add(e.To);
         }
@@ -110,17 +114,31 @@ internal static class Defaults
         var seen = new HashSet<string>();
         while (queue.Count > 0)
         {
-            string id = queue.Dequeue();
-            if (!seen.Add(id)) continue;
+            var id = queue.Dequeue();
+            if (!seen.Add(id))
+            {
+                continue;
+            }
+
             order.Add(id);
             foreach (var next in outAdj.GetValueOrDefault(id) ?? new List<string>())
             {
-                int dec = (indegree.TryGetValue(next, out int iv) ? iv : 1) - 1;
+                var dec = (indegree.TryGetValue(next, out var iv) ? iv : 1) - 1;
                 indegree[next] = dec;
-                if (dec <= 0) queue.Enqueue(next);
+                if (dec <= 0)
+                {
+                    queue.Enqueue(next);
+                }
             }
         }
-        foreach (var n in nodes) if (!seen.Contains(n.Id)) order.Add(n.Id);
+        foreach (var n in nodes)
+        {
+            if (!seen.Contains(n.Id))
+            {
+                order.Add(n.Id);
+            }
+        }
+
         return order;
     }
 
@@ -130,9 +148,13 @@ internal static class Defaults
     /// </summary>
     public static FlowModel DeriveFlow(IReadOnlyList<NodeModel> nodes, IReadOnlyList<EdgeModel> edges)
     {
-        List<string> order = TopoOrder(nodes, edges);
+        var order = TopoOrder(nodes, edges);
         var pos = new Dictionary<string, int>();
-        for (int i = 0; i < order.Count; i++) pos[order[i]] = i;
+        for (var i = 0; i < order.Count; i++)
+        {
+            pos[order[i]] = i;
+        }
+
         int P(string id) => pos.GetValueOrDefault(id, 0);
 
         // Stable sort by (from-pos, to-pos) — mirrors JS's stable Array.sort.
@@ -142,8 +164,16 @@ internal static class Defaults
         var labeled = new HashSet<string>();
         foreach (var e in sorted)
         {
-            if (labeled.Add(e.From)) steps.Add(new PhaseStep { Label = e.From });
-            if (!string.IsNullOrEmpty(e.Note)) steps.Add(new NarrateStep { Text = e.Note });
+            if (labeled.Add(e.From))
+            {
+                steps.Add(new PhaseStep { Label = e.From });
+            }
+
+            if (!string.IsNullOrEmpty(e.Note))
+            {
+                steps.Add(new NarrateStep { Text = e.Note });
+            }
+
             steps.Add(new PacketStep { From = e.From, To = e.To, Knobs = new PacketKnobs() });
         }
         if (steps.Count > 0)

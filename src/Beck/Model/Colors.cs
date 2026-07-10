@@ -18,8 +18,16 @@ internal static class Colors
     /// </summary>
     public static string AccentToCss(string? accent, AccentToken fallback)
     {
-        if (string.IsNullOrEmpty(accent)) return $"var(--beck-{Tokens.Accent.Wire(fallback)})";
-        if (IsAccentToken(accent)) return $"var(--beck-{accent})";
+        if (string.IsNullOrEmpty(accent))
+        {
+            return $"var(--beck-{Tokens.Accent.Wire(fallback)})";
+        }
+
+        if (IsAccentToken(accent))
+        {
+            return $"var(--beck-{accent})";
+        }
+
         return accent;
     }
 

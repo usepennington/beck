@@ -43,7 +43,7 @@ public static class ExtrudeStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
+        var c = BeckStyle.Classic;
 
         // Slightly-saturated indigo token table. Every entry keeps the three-tier
         // var(--beck-X, var(--color-Y, literal)) indirection, so a host --color-* / --beck-* palette
@@ -54,8 +54,7 @@ public static class ExtrudeStyle
         // --beck-node-bg inline — get colour-matched depth), the bottom face darker per the top-left
         // light. The dark block re-derives the faces from an *elevated* ink (see below) so they stay
         // visible against the near-black page instead of sinking into it.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #f4f3ff)"),
             ("--beck-node-bg", "var(--color-base-50, #ffffff)"),
             ("--beck-node-border", "var(--color-base-300, #cfd0e8)"),
@@ -84,7 +83,7 @@ public static class ExtrudeStyle
             // The magenta comet hue (mock's `#e879f9`) riding every edge/message — a single fuchsia
             // token, not a palette, since extrude's identity is one comet colour everywhere.
             ("--beck-comet", "var(--color-fuchsia-400, #e879f9)"),
-        });
+        ]);
 
         // Dark overrides only (layered over the light block, which is emitted first): a deep indigo-black
         // page. Unlike light, the depth ink here is an *elevated* mid-indigo (not a near-black), and the
@@ -93,8 +92,7 @@ public static class ExtrudeStyle
         // (nodes read as classic-dark). Ordering is preserved across themes: the right face stays the
         // lighter/more-lit wall, the bottom face the darker/deeper one, only now both sit *above* the
         // surface instead of below it.
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #0c0b16)"),
             ("--beck-node-bg", "var(--color-base-900, #171526)"),
             ("--beck-node-border", "var(--color-base-700, #35324f)"),
@@ -112,14 +110,14 @@ public static class ExtrudeStyle
             ("--beck-depth", "var(--color-base-600, #4a4570)"),
             ("--beck-depth-right", "color-mix(in srgb, var(--beck-depth) 62%, var(--beck-node-bg))"),
             ("--beck-depth-bottom", "color-mix(in srgb, var(--beck-depth) 40%, var(--beck-node-bg))"),
-        });
+        ]);
 
         // Chunky-slab geometry: modest rounding, a thicker node/message stroke and weightier edges (the
         // "toy brick" read). NodeStroke = 2 keeps MeasureBorder at 2 (2·round(2/2)) — classic's budget —
         // so the measured box is unchanged and only the drawn stroke thickens. The node drop-shadow is
         // kept faint (a soft contact shadow under the slab); the depth itself is the StyleArtwork.Extruded
         // faces (DepthOffset below), not a CSS filter, so no resolved colour touches shape CSS.
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             CardRadius = 10,
             ClassRadius = 9,
@@ -149,7 +147,7 @@ public static class ExtrudeStyle
         // else (durations, dim ratios, glow) stays classic. PressDown swaps the pulse/highlight lift for
         // a down-right press toward the depth faces (extrude's identity motion) — compiled into the same
         // shared-cycle transform keyframes, nothing animates at rest.
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             PressDown = true,
             PacketRingMin = 3.0,
@@ -166,14 +164,14 @@ public static class ExtrudeStyle
         // bob is locked out (PressDown above already carries the identity motion); the comet is the only
         // add. Single magenta hue via --beck-comet (no multi-hue palette — that's metro's trait, not
         // extrude's), width 4 to read as a weighty "toy-brick" comet over the chunky base rail.
-        StyleEdges edges = c.Edges with
+        var edges = c.Edges with
         {
             Overlay = EdgeOverlay.Comet,
             OverlayWidth = 4,
             OverlayLinecap = "round",
             CometDash = 2,
             OverlayPeriod = 2.6,
-            OverlayPalette = new[] { "var(--beck-comet)" },
+            OverlayPalette = ["var(--beck-comet)"],
             // Solid lifelines (mock 1e draws them as plain `#3b0764` width-1.5 verticals, no dash) —
             // a dashed scaffold under the chunky slabs read as noise; solid rails match the toy-brick weight.
             Lifeline = LifelineShape.FaintSolid,

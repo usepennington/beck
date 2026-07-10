@@ -31,7 +31,11 @@ internal sealed class MetricsTable
         int[] monoWeights, double[] monoAscent, double[] monoDescent, double[] monoAdvance)
     {
         var extra = new Dictionary<int, double[]>(sansExtra.Length);
-        foreach (var (cp, adv) in sansExtra) extra[cp] = adv;
+        foreach (var (cp, adv) in sansExtra)
+        {
+            extra[cp] = adv;
+        }
+
         return new MetricsTable
         {
             SansWeights = sansWeights,

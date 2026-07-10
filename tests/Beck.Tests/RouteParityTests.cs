@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text.Json;
 using Beck.Layout;
 using Beck.Model;
-using Beck.Rendering;
 using Beck.Route;
 using Xunit;
 
@@ -17,40 +16,49 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class RouteParityTests
 {
-    private static readonly string CorpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
-    private static readonly string LayoutDir = Path.Combine(AppContext.BaseDirectory, "Goldens", "layout");
-    private static readonly string RouteGolden = Path.Combine(AppContext.BaseDirectory, "Goldens", "route", "edges.json");
+    private static readonly string _corpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
+    private static readonly string _layoutDir = Path.Combine(AppContext.BaseDirectory, "Goldens", "layout");
+    private static readonly string _routeGolden = Path.Combine(AppContext.BaseDirectory, "Goldens", "route", "edges.json");
     private static JsonSerializerOptions Opts => new() { PropertyNameCaseInsensitive = true };
 
     private sealed record RectDto(double X, double Y, double W, double H);
     private sealed record LayoutDto(Dictionary<string, RectDto> Nodes, Dictionary<string, RectDto> Groups, double Width, double Height);
 
-    private static readonly Dictionary<string, Dictionary<string, string>> Golden =
-        JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(File.ReadAllText(RouteGolden), Opts)!;
+    private static readonly Dictionary<string, Dictionary<string, string>> _golden =
+        JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(File.ReadAllText(_routeGolden), Opts)!;
 
-    public static IEnumerable<object[]> Files() => Golden.Keys.Select(f => new object[] { f });
+    public static IEnumerable<object[]> Files() => _golden.Keys.Select(f => new object[] { f });
 
     [Theory]
     [MemberData(nameof(Files))]
     public void Route_MatchesOracle(string file)
     {
         var ld = JsonSerializer.Deserialize<LayoutDto>(
-            File.ReadAllText(Path.Combine(LayoutDir, file + ".layout.json")), Opts)!;
+            File.ReadAllText(Path.Combine(_layoutDir, file + ".layout.json")), Opts)!;
         static Dictionary<string, Rect> Rects(Dictionary<string, RectDto> m) =>
             m.ToDictionary(kv => kv.Key, kv => new Rect(kv.Value.X, kv.Value.Y, kv.Value.W, kv.Value.H));
         var layout = new LayoutResult(Rects(ld.Nodes), Rects(ld.Groups), ld.Width, ld.Height);
 
-        DiagramModel model = Validate.LoadDiagram(File.ReadAllText(Path.Combine(CorpusDir, file + ".yaml")));
+        var model = Validate.LoadDiagram(File.ReadAllText(Path.Combine(_corpusDir, file + ".yaml")));
         var got = EdgePainter.RouteEdges(model, layout).ToDictionary(r => r.Edge.Id, r => r.D);
 
         var fails = new List<string>();
-        foreach (var (id, want) in Golden[file])
+        foreach (var (id, want) in _golden[file])
         {
-            if (!got.TryGetValue(id, out string? mine)) { fails.Add($"  {id}: missing"); continue; }
-            string? diff = ComparePath(want, mine);
-            if (diff != null) fails.Add($"  {id}: {diff}\n      oracle: {want}\n      got:    {mine}");
-            foreach (double n in Numbers(mine))
-                if (n < -0.01) fails.Add($"  {id}: NEGATIVE coordinate {n} (off-canvas routing regression)");
+            if (!got.TryGetValue(id, out var mine)) { fails.Add($"  {id}: missing"); continue; }
+            var diff = ComparePath(want, mine);
+            if (diff != null)
+            {
+                fails.Add($"  {id}: {diff}\n      oracle: {want}\n      got:    {mine}");
+            }
+
+            foreach (var n in Numbers(mine))
+            {
+                if (n < -0.01)
+                {
+                    fails.Add($"  {id}: NEGATIVE coordinate {n} (off-canvas routing regression)");
+                }
+            }
         }
         Assert.True(fails.Count == 0, $"{file} route mismatch:\n{string.Join("\n", fails)}");
     }
@@ -59,13 +67,24 @@ public sealed class RouteParityTests
     private static string? ComparePath(string a, string b)
     {
         string[] ta = Tokens(a), tb = Tokens(b);
-        if (ta.Length != tb.Length) return $"token count {ta.Length} vs {tb.Length}";
-        for (int i = 0; i < ta.Length; i++)
+        if (ta.Length != tb.Length)
         {
-            bool na = double.TryParse(ta[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double va);
-            bool nb = double.TryParse(tb[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double vb);
-            if (na && nb) { if (Math.Abs(va - vb) > 0.01) return $"token {i}: {ta[i]} vs {tb[i]}"; }
-            else if (ta[i] != tb[i]) return $"token {i}: '{ta[i]}' vs '{tb[i]}'";
+            return $"token count {ta.Length} vs {tb.Length}";
+        }
+
+        for (var i = 0; i < ta.Length; i++)
+        {
+            var na = double.TryParse(ta[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var va);
+            var nb = double.TryParse(tb[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var vb);
+            if (na && nb) { if (Math.Abs(va - vb) > 0.01)
+                {
+                    return $"token {i}: {ta[i]} vs {tb[i]}";
+                }
+            }
+            else if (ta[i] != tb[i])
+            {
+                return $"token {i}: '{ta[i]}' vs '{tb[i]}'";
+            }
         }
         return null;
     }
@@ -75,7 +94,12 @@ public sealed class RouteParityTests
 
     private static IEnumerable<double> Numbers(string d)
     {
-        foreach (string t in Tokens(d))
-            if (double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out double n)) yield return n;
+        foreach (var t in Tokens(d))
+        {
+            if (double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var n))
+            {
+                yield return n;
+            }
+        }
     }
 }

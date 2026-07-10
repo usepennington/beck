@@ -37,53 +37,77 @@ public sealed class StateDiagramBuilder
     public StateDiagramBuilder() { }
 
     /// <summary>Create a state diagram with a title.</summary>
-    public StateDiagramBuilder(string title) => _meta.Title = title;
+    public StateDiagramBuilder(string title) => _meta._title = title;
 
     /// <summary>Set the diagram title.</summary>
-    public StateDiagramBuilder Title(string title) { _meta.Title = title; return this; }
+    public StateDiagramBuilder Title(string title) { _meta._title = title; return this; }
 
     /// <summary>Set the diagram subtitle.</summary>
-    public StateDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
+    public StateDiagramBuilder Subtitle(string subtitle) { _meta._subtitle = subtitle; return this; }
 
     /// <summary>Set the visual style by its <c>meta.style</c> token (e.g. <c>"classic"</c>).</summary>
-    public StateDiagramBuilder Style(string name) { _meta.Style = name; return this; }
+    public StateDiagramBuilder Style(string name) { _meta._style = name; return this; }
 
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
-    public StateDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
+    public StateDiagramBuilder Style(BeckStyle style) { _meta._style = style.Name; return this; }
 
-    /// <summary>Set the layout direction — <see cref="Authoring.Direction.TB"/> (default) reads like a lifecycle, <see cref="Authoring.Direction.LR"/> like a pipeline.</summary>
-    public StateDiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
+    /// <summary>Set the layout direction — <see cref="Authoring.Direction.Tb"/> (default) reads like a lifecycle, <see cref="Authoring.Direction.Lr"/> like a pipeline.</summary>
+    public StateDiagramBuilder Direction(Direction direction) { _meta._direction = direction; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
-    public StateDiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
+    public StateDiagramBuilder Theme(ThemeMode theme) { _meta._theme = theme; return this; }
 
     /// <summary>Enable or disable the flow animation.</summary>
-    public StateDiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
+    public StateDiagramBuilder Animate(bool animate) { _meta._animate = animate; return this; }
 
     /// <summary>Loop the flow (default) or play it through once.</summary>
-    public StateDiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
+    public StateDiagramBuilder Loop(bool loop) { _meta._loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container.</summary>
-    public StateDiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
+    public StateDiagramBuilder Fit(FitMode fit) { _meta._fit = fit; return this; }
 
     /// <summary>Toggle + tune the narration caption. Captions come from a transition
     /// <see cref="TransitionBuilder.Note"/> (or explicit <see cref="FlowBuilder.Narrate"/> steps);
     /// the knobs pace each caption's on-screen time by its length.</summary>
     public StateDiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
     {
-        _meta.Narrate = enabled;
-        if (wpm is { } w) _meta.NarrateWpm = w;
-        if (min is { } m) _meta.NarrateMin = m;
-        if (pad is { } p) _meta.NarratePad = p;
+        _meta._narrate = enabled;
+        if (wpm is { } w)
+        {
+            _meta._narrateWpm = w;
+        }
+
+        if (min is { } m)
+        {
+            _meta._narrateMin = m;
+        }
+
+        if (pad is { } p)
+        {
+            _meta._narratePad = p;
+        }
+
         return this;
     }
 
     /// <summary>Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius (px).</summary>
     public StateDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
-        if (rank is { } r) _meta.SpacingRank = r;
-        if (node is { } n) _meta.SpacingNode = n;
-        if (cornerRadius is { } c) _meta.SpacingCornerRadius = c;
+        if (rank is { } r)
+        {
+            _meta._spacingRank = r;
+        }
+
+        if (node is { } n)
+        {
+            _meta._spacingNode = n;
+        }
+
+        if (cornerRadius is { } c)
+        {
+            _meta._spacingCornerRadius = c;
+        }
+
         return this;
     }
 
@@ -100,7 +124,11 @@ public sealed class StateDiagramBuilder
     public StateDiagramBuilder State(string id, string title, AccentToken? accent = null)
     {
         var s = new StateBuilder(id).Title(title);
-        if (accent is { } a) s.Accent(a);
+        if (accent is { } a)
+        {
+            s.Accent(a);
+        }
+
         _states.Add(s);
         return this;
     }
@@ -109,7 +137,11 @@ public sealed class StateDiagramBuilder
     public StateDiagramBuilder Transition(string from, string to, string? label = null, Action<TransitionBuilder>? configure = null)
     {
         var t = new TransitionBuilder(from, to);
-        if (label != null) t.Label(label);
+        if (label != null)
+        {
+            t.Label(label);
+        }
+
         configure?.Invoke(t);
         _transitions.Add(t.ToFlow());
         return this;
@@ -134,7 +166,9 @@ public sealed class StateDiagramBuilder
     public string ToYaml()
     {
         if (_states.Count == 0 && _transitions.Count == 0)
+        {
             throw new InvalidOperationException("A state diagram needs at least one State() or Transition().");
+        }
 
         var sb = new StringBuilder();
         sb.Append("type: state\n");
@@ -142,12 +176,18 @@ public sealed class StateDiagramBuilder
         if (_states.Count > 0)
         {
             sb.Append("states:\n");
-            foreach (var s in _states) sb.Append("  - ").Append(s.ToFlow()).Append('\n');
+            foreach (var s in _states)
+            {
+                sb.Append("  - ").Append(s.ToFlow()).Append('\n');
+            }
         }
         if (_transitions.Count > 0)
         {
             sb.Append("transitions:\n");
-            foreach (var t in _transitions) sb.Append("  - ").Append(t).Append('\n');
+            foreach (var t in _transitions)
+            {
+                sb.Append("  - ").Append(t).Append('\n');
+            }
         }
         _flow?.AppendYaml(sb);
         return sb.ToString();
@@ -200,12 +240,36 @@ public sealed class StateBuilder
     internal string ToFlow()
     {
         var pairs = new List<(string, string)> { ("id", YamlWriter.Scalar(_id)) };
-        if (_title != null) pairs.Add(("title", YamlWriter.Scalar(_title)));
-        if (_subtitle != null) pairs.Add(("subtitle", YamlWriter.Scalar(_subtitle)));
-        if (_accent != null) pairs.Add(("accent", YamlWriter.Scalar(_accent)));
-        if (_width is { } w) pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
-        if (_rank is { } r) pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
-        if (_order is { } o) pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));
+        if (_title != null)
+        {
+            pairs.Add(("title", YamlWriter.Scalar(_title)));
+        }
+
+        if (_subtitle != null)
+        {
+            pairs.Add(("subtitle", YamlWriter.Scalar(_subtitle)));
+        }
+
+        if (_accent != null)
+        {
+            pairs.Add(("accent", YamlWriter.Scalar(_accent)));
+        }
+
+        if (_width is { } w)
+        {
+            pairs.Add(("width", w.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_rank is { } r)
+        {
+            pairs.Add(("rank", r.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (_order is { } o)
+        {
+            pairs.Add(("order", o.ToString(CultureInfo.InvariantCulture)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }
@@ -249,10 +313,26 @@ public sealed class TransitionBuilder
             ("from", YamlWriter.Scalar(_from)),
             ("to", YamlWriter.Scalar(_to)),
         };
-        if (_label != null) pairs.Add(("label", YamlWriter.Scalar(_label)));
-        if (_style is { } s) pairs.Add(("style", Tokens.Of(s)));
-        if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
-        if (_note != null) pairs.Add(("note", YamlWriter.Scalar(_note)));
+        if (_label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(_label)));
+        }
+
+        if (_style is { } s)
+        {
+            pairs.Add(("style", Tokens.Of(s)));
+        }
+
+        if (_color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(_color)));
+        }
+
+        if (_note != null)
+        {
+            pairs.Add(("note", YamlWriter.Scalar(_note)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }

@@ -42,37 +42,53 @@ internal sealed class LabelPlacer
     /// call filtering into a fresh per-call list of every <em>other</em> edge.</summary>
     public string MidLabel(IReadOnlyList<Point> points, string text, List<IReadOnlyList<Point>> lines, int selfIndex, ITextMeasurer m)
     {
-        double w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
-        if (w <= 0) w = text.Length * 7;
-        double h = _edgeLabel.SizePx; // edge-label ink height ≈ font size
+        var w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
+        if (w <= 0)
+        {
+            w = text.Length * 7;
+        }
+
+        var h = _edgeLabel.SizePx; // edge-label ink height ≈ font size
         double hw = w / 2 + LabelPadX, hh = h / 2 + LabelPadY;
-        List<Rect> all = _placed.Count > 0 ? _obstacles.Concat(_placed).ToList() : _obstacles;
-        Box box = ChooseLabelBox(points, hw, hh, all, lines, selfIndex, PolylineMidpoint(points));
-        double tx = box.Anchor == "start" ? box.Cx - w / 2 : box.Anchor == "end" ? box.Cx + w / 2 : box.Cx;
+        var all = _placed.Count > 0 ? _obstacles.Concat(_placed).ToList() : _obstacles;
+        var box = ChooseLabelBox(points, hw, hh, all, lines, selfIndex, PolylineMidpoint(points));
+        var tx = box.Anchor == "start" ? box.Cx - w / 2 : box.Anchor == "end" ? box.Cx + w / 2 : box.Cx;
         _placed.Add(new Rect(box.Cx - box.Hw, box.Cy - box.Hh, box.Hw * 2, box.Hh * 2));
         return $"<text class=\"beck-edge-label\" x=\"{I(tx)}\" y=\"{I(box.Cy)}\" text-anchor=\"{box.Anchor}\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{P(_edgeLabel.Weight)}\"{Guard(w)}>{SvgWriter.Text(text)}</text>";
     }
 
     public string EndLabel(IReadOnlyList<Point> points, string text, bool atStart, ITextMeasurer m)
     {
-        if (points.Count < 2) return "";
-        Point a = atStart ? points[0] : points[^1];
-        Point b = atStart ? points[1] : points[^2];
-        double len = StepRound.Dist(a, b);
-        if (len == 0) len = 1;
+        if (points.Count < 2)
+        {
+            return "";
+        }
+
+        var a = atStart ? points[0] : points[^1];
+        var b = atStart ? points[1] : points[^2];
+        var len = StepRound.Dist(a, b);
+        if (len == 0)
+        {
+            len = 1;
+        }
+
         double dx = (b.X - a.X) / len, dy = (b.Y - a.Y) / len;
         double px = a.X + dx * 18 - dy * 10, py = a.Y + dy * 18 + dx * 10;
-        double w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
-        double hw = text.Length * 3.5 + 3;
+        var w = m.Measure(text, FontRole.EdgeLabel, _edgeLabel).Width;
+        var hw = text.Length * 3.5 + 3;
         _placed.Add(new Rect(px - hw, py - 7, hw * 2, 14));
         return $"<text class=\"beck-edge-label\" x=\"{I(px)}\" y=\"{I(py)}\" text-anchor=\"middle\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{P(_edgeLabel.Weight)}\"{Guard(w)}>{SvgWriter.Text(text)}</text>";
     }
 
     private double BoxGap(Box box, Rect r)
     {
-        double ix = Math.Min(box.Cx + box.Hw, r.X + r.W) - Math.Max(box.Cx - box.Hw, r.X);
-        double iy = Math.Min(box.Cy + box.Hh, r.Y + r.H) - Math.Max(box.Cy - box.Hh, r.Y);
-        if (ix > 0 && iy > 0) return -Math.Min(ix, iy);
+        var ix = Math.Min(box.Cx + box.Hw, r.X + r.W) - Math.Max(box.Cx - box.Hw, r.X);
+        var iy = Math.Min(box.Cy + box.Hh, r.Y + r.H) - Math.Max(box.Cy - box.Hh, r.Y);
+        if (ix > 0 && iy > 0)
+        {
+            return -Math.Min(ix, iy);
+        }
+
         return Math.Sqrt((ix > 0 ? 0 : ix * ix) + (iy > 0 ? 0 : iy * iy));
     }
 
@@ -81,23 +97,39 @@ internal sealed class LabelPlacer
         double x1 = box.Cx - box.Hw, y1 = box.Cy - box.Hh, x2 = box.Cx + box.Hw, y2 = box.Cy + box.Hh;
         double dx = b.X - a.X, dy = b.Y - a.Y;
         double t0 = 0, t1 = 1;
-        bool inside = true;
+        var inside = true;
         foreach (var (p, q) in new[] { (-dx, a.X - x1), (dx, x2 - a.X), (-dy, a.Y - y1), (dy, y2 - a.Y) })
         {
             if (p == 0) { if (q < 0) { inside = false; break; } }
             else
             {
-                double rr = q / p;
-                if (p < 0) t0 = Math.Max(t0, rr); else t1 = Math.Min(t1, rr);
+                var rr = q / p;
+                if (p < 0)
+                {
+                    t0 = Math.Max(t0, rr);
+                }
+                else
+                {
+                    t1 = Math.Min(t1, rr);
+                }
+
                 if (t0 > t1) { inside = false; break; }
             }
         }
-        if (inside) return -4;
-        double len2 = dx * dx + dy * dy; if (len2 == 0) len2 = 1;
-        double min = double.PositiveInfinity;
+        if (inside)
+        {
+            return -4;
+        }
+
+        var len2 = dx * dx + dy * dy; if (len2 == 0)
+        {
+            len2 = 1;
+        }
+
+        var min = double.PositiveInfinity;
         foreach (var (cxp, cyp) in new[] { (x1, y1), (x2, y1), (x1, y2), (x2, y2) })
         {
-            double t = Math.Max(0, Math.Min(1, ((cxp - a.X) * dx + (cyp - a.Y) * dy) / len2));
+            var t = Math.Max(0, Math.Min(1, ((cxp - a.X) * dx + (cyp - a.Y) * dy) / len2));
             min = Math.Min(min, StepRound.Dist(new Point(cxp, cyp), new Point(a.X + dx * t, a.Y + dy * t)));
         }
         return min;
@@ -113,12 +145,23 @@ internal sealed class LabelPlacer
     private (double Node, double Line) Clearance(Box box, List<Rect> obstacles, List<IReadOnlyList<Point>> lines, int skipIndex)
     {
         double node = double.PositiveInfinity, line = double.PositiveInfinity;
-        foreach (var o in obstacles) node = Math.Min(node, BoxGap(box, o));
-        for (int li = 0; li < lines.Count; li++)
+        foreach (var o in obstacles)
         {
-            if (li == skipIndex) continue;
+            node = Math.Min(node, BoxGap(box, o));
+        }
+
+        for (var li = 0; li < lines.Count; li++)
+        {
+            if (li == skipIndex)
+            {
+                continue;
+            }
+
             var poly = lines[li];
-            for (int i = 0; i < poly.Count - 1; i++) line = Math.Min(line, SegGap(box, poly[i], poly[i + 1]));
+            for (var i = 0; i < poly.Count - 1; i++)
+            {
+                line = Math.Min(line, SegGap(box, poly[i], poly[i + 1]));
+            }
         }
         return (node, line);
     }
@@ -127,13 +170,13 @@ internal sealed class LabelPlacer
     {
         var segs = new List<double>();
         double total = 0;
-        for (int i = 0; i < points.Count - 1; i++) { double l = StepRound.Dist(points[i], points[i + 1]); segs.Add(l); total += l; }
-        double half = total / 2;
-        for (int i = 0; i < segs.Count; i++)
+        for (var i = 0; i < points.Count - 1; i++) { var l = StepRound.Dist(points[i], points[i + 1]); segs.Add(l); total += l; }
+        var half = total / 2;
+        for (var i = 0; i < segs.Count; i++)
         {
             if (half <= segs[i])
             {
-                double t = segs[i] != 0 ? half / segs[i] : 0;
+                var t = segs[i] != 0 ? half / segs[i] : 0;
                 return new Point(points[i].X + (points[i + 1].X - points[i].X) * t, points[i].Y + (points[i + 1].Y - points[i].Y) * t);
             }
             half -= segs[i];
@@ -149,43 +192,47 @@ internal sealed class LabelPlacer
 
         Box? best = null;
         double bestClear = double.NegativeInfinity, bestDist = double.PositiveInfinity;
-        bool bestOnLine = true;
+        var bestOnLine = true;
         void Consider(double cx0, double cy0, string anchor, int segIdx)
         {
             var (cx, cy) = Clamp(cx0, cy0);
             var box = new Box(cx, cy, hw, hh, anchor);
             var (nodeClear, lineClear) = Clearance(box, obstacles, lines, selfIndex);
-            for (int j = 0; j < points.Count - 1; j++) { if (j == segIdx) continue; lineClear = Math.Min(lineClear, SegGap(box, points[j], points[j + 1])); }
-            double clear = Math.Min(nodeClear, lineClear);
-            double dist = StepRound.Dist(new Point(cx, cy), mid);
+            for (var j = 0; j < points.Count - 1; j++) { if (j == segIdx) { continue; } lineClear = Math.Min(lineClear, SegGap(box, points[j], points[j + 1])); }
+            var clear = Math.Min(nodeClear, lineClear);
+            var dist = StepRound.Dist(new Point(cx, cy), mid);
 
             // Never sit on a line if some candidate doesn't. Both sides of a segment can score
             // negative — the label above one rung of an A⇄B pair lands on the other rung, the label
             // below noses into a card's bbox corner — and since the two sides are equidistant from
             // the midpoint, the old single-minimum tie-break just kept whichever was tried first,
             // which is always "above". The corner is fine; the line is not.
-            bool onLine = lineClear < 0;
+            var onLine = lineClear < 0;
             if (best is not null && onLine != bestOnLine)
             {
                 if (!onLine) { best = box; bestClear = clear; bestDist = dist; bestOnLine = false; }
                 return;
             }
-            bool tie = clear == bestClear || Math.Abs(clear - bestClear) <= 6;
+            var tie = Math.Abs(clear - bestClear) < 0.001 || Math.Abs(clear - bestClear) <= 6;
             if (best is null || clear > bestClear + 6 || (tie && dist < bestDist))
             { best = box; bestClear = clear; bestDist = dist; bestOnLine = onLine; }
         }
 
-        for (int i = 0; i < points.Count - 1; i++)
+        for (var i = 0; i < points.Count - 1; i++)
         {
             Point a = points[i], b = points[i + 1];
             double dx = b.X - a.X, dy = b.Y - a.Y;
-            double len = Math.Sqrt(dx * dx + dy * dy);
-            if (len < 1) continue;
-            double inset = Math.Min(LabelEndInset / len, 0.5);
-            int steps = Math.Max(1, Math.Min(6, (int)Math.Floor(len / 40)));
-            for (int k = 0; k <= steps; k++)
+            var len = Math.Sqrt(dx * dx + dy * dy);
+            if (len < 1)
             {
-                double tt = inset + (1 - 2 * inset) * ((double)k / steps);
+                continue;
+            }
+
+            var inset = Math.Min(LabelEndInset / len, 0.5);
+            var steps = Math.Max(1, Math.Min(6, (int)Math.Floor(len / 40)));
+            for (var k = 0; k <= steps; k++)
+            {
+                var tt = inset + (1 - 2 * inset) * ((double)k / steps);
                 double pxp = a.X + dx * tt, pyp = a.Y + dy * tt;
                 if (Math.Abs(dy) >= Math.Abs(dx))
                 {
@@ -202,15 +249,19 @@ internal sealed class LabelPlacer
 
         if (bestClear < 0)
         {
-            for (int i = 0; i < points.Count - 1; i++)
+            for (var i = 0; i < points.Count - 1; i++)
             {
                 Point a = points[i], b = points[i + 1];
-                if (StepRound.Dist(a, b) < 1) continue;
+                if (StepRound.Dist(a, b) < 1)
+                {
+                    continue;
+                }
+
                 var (cx, cy) = Clamp((a.X + b.X) / 2, (a.Y + b.Y) / 2);
                 var box = new Box(cx, cy, hw, hh, "middle");
                 var (nodeClear, lineClear) = Clearance(box, obstacles, lines, selfIndex);
-                for (int j = 0; j < points.Count - 1; j++) { if (j == i) continue; lineClear = Math.Min(lineClear, SegGap(box, points[j], points[j + 1])); }
-                double clear = Math.Min(nodeClear, lineClear);
+                for (var j = 0; j < points.Count - 1; j++) { if (j == i) { continue; } lineClear = Math.Min(lineClear, SegGap(box, points[j], points[j + 1])); }
+                var clear = Math.Min(nodeClear, lineClear);
                 if (clear > bestClear) { best = box; bestClear = clear; }
             }
         }

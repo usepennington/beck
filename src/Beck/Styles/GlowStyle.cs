@@ -41,14 +41,13 @@ public static class GlowStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
+        var c = BeckStyle.Classic;
 
         // Light table. Glass node surface (very translucent slate); a faint slate base rail; an indigo/
         // violet accent ramp for the bloom + active read; and the cyan→violet gradient / cyan·light-cyan·
         // violet comet hues carried by dedicated --beck-* tokens over the host ramp. Surfaces stay light so
         // the style still adopts a light host page.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #ffffff)"),
             ("--beck-node-bg", "color-mix(in srgb, var(--color-base-400, #94a3b8) 7%, transparent)"),
             ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 30%, var(--color-base-200, #e2e8f0))"),
@@ -76,13 +75,12 @@ public static class GlowStyle
             ("--beck-comet-1", "var(--color-cyan-400, #22d3ee)"),
             ("--beck-comet-2", "var(--color-cyan-300, #67e8f9)"),
             ("--beck-comet-3", "var(--color-violet-400, #a78bfa)"),
-        });
+        ]);
 
         // Dark is the showpiece: a deep night surface, a ramp-step-brighter accent ramp so bloom + gradient
         // read as light, and a slightly brighter slate rail. The glow hues stay vivid on both themes, so
         // they are not overridden here.
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #080b16)"),
             ("--beck-node-bg", "color-mix(in srgb, var(--color-base-400, #94a3b8) 8%, transparent)"),
             ("--beck-node-border", "color-mix(in srgb, var(--beck-accent) 42%, var(--color-base-700, #30363d))"),
@@ -94,9 +92,9 @@ public static class GlowStyle
             ("--beck-info", "var(--color-violet-400, #c084fc)"),
             ("--beck-edge", "var(--color-base-500, #64748b)"),
             ("--beck-icon-bg", "color-mix(in srgb, var(--beck-accent) 16%, var(--color-base-800, #21262d))"),
-        });
+        ]);
 
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             // Softer corners so the bloom haloes a rounded edge.
             CardRadius = 16,
@@ -133,7 +131,7 @@ public static class GlowStyle
                 "drop-shadow(0 4px 12px rgb(0 0 0/.08))",
         };
 
-        StyleMix mix = c.Mix with
+        var mix = c.Mix with
         {
             // Brighter icon chips + activation glow so the luminous read carries into class cards and
             // sequence activation bars. (NodeStroke mix is unused for node surfaces now — the gradient rim
@@ -143,7 +141,7 @@ public static class GlowStyle
             ActivationGlow = 66,
         };
 
-        StyleStrokes strokes = c.Strokes with
+        var strokes = c.Strokes with
         {
             // Real cyan→violet gradient rim on every node surface (shared beck-node-grad def).
             GradientNodes = true,
@@ -151,7 +149,7 @@ public static class GlowStyle
             EdgeDash = "3 4",
         };
 
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             // Breathing pulse on the flow-active node: classic's snap (0.6/0.7s) stretched to a slower
             // rise-and-settle. Still flow-active-only and compiled onto the shared cycle (no always-on loop).
@@ -174,7 +172,7 @@ public static class GlowStyle
             LiftEnabled = false,
         };
 
-        StyleEdges edges = c.Edges with
+        var edges = c.Edges with
         {
             // Faint slate base rail under the bright comet. 0.4 (vs the mock's dark-only .35) keeps the rail
             // legible on both themes.
@@ -189,7 +187,7 @@ public static class GlowStyle
             CometDash = 15,
             OverlayPeriod = 2.4,
             // Per-edge hue alternation cyan → light-cyan → violet.
-            OverlayPalette = new[] { "var(--beck-comet-1)", "var(--beck-comet-2)", "var(--beck-comet-3)" },
+            OverlayPalette = ["var(--beck-comet-1)", "var(--beck-comet-2)", "var(--beck-comet-3)"],
             // Comet bloom — a fixed cyan halo on the bright overlay (keeps labels crisp; matches the mock's
             // group drop-shadow read without blooming text).
             OverlayBloom = "drop-shadow(0 0 6px color-mix(in srgb, var(--beck-comet-1) 55%, transparent))",

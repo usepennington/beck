@@ -34,50 +34,74 @@ public sealed class SequenceDiagramBuilder
     public SequenceDiagramBuilder() { }
 
     /// <summary>Create a sequence diagram with a title.</summary>
-    public SequenceDiagramBuilder(string title) => _meta.Title = title;
+    public SequenceDiagramBuilder(string title) => _meta._title = title;
 
     /// <summary>Set the diagram title.</summary>
-    public SequenceDiagramBuilder Title(string title) { _meta.Title = title; return this; }
+    public SequenceDiagramBuilder Title(string title) { _meta._title = title; return this; }
 
     /// <summary>Set the diagram subtitle.</summary>
-    public SequenceDiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
+    public SequenceDiagramBuilder Subtitle(string subtitle) { _meta._subtitle = subtitle; return this; }
 
     /// <summary>Set the visual style by its <c>meta.style</c> token (e.g. <c>"classic"</c>).</summary>
-    public SequenceDiagramBuilder Style(string name) { _meta.Style = name; return this; }
+    public SequenceDiagramBuilder Style(string name) { _meta._style = name; return this; }
 
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
-    public SequenceDiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
+    public SequenceDiagramBuilder Style(BeckStyle style) { _meta._style = style.Name; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
-    public SequenceDiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
+    public SequenceDiagramBuilder Theme(ThemeMode theme) { _meta._theme = theme; return this; }
 
     /// <summary>Enable or disable the flow animation.</summary>
-    public SequenceDiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
+    public SequenceDiagramBuilder Animate(bool animate) { _meta._animate = animate; return this; }
 
     /// <summary>Loop the flow (default) or play it through once.</summary>
-    public SequenceDiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
+    public SequenceDiagramBuilder Loop(bool loop) { _meta._loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container.</summary>
-    public SequenceDiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
+    public SequenceDiagramBuilder Fit(FitMode fit) { _meta._fit = fit; return this; }
 
     /// <summary>Toggle + tune the narration caption. Captions come from a message
     /// <see cref="MessageBuilder.Note"/> (or explicit <see cref="FlowBuilder.Narrate"/> steps);
     /// the knobs pace each caption's on-screen time by its length.</summary>
     public SequenceDiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
     {
-        _meta.Narrate = enabled;
-        if (wpm is { } w) _meta.NarrateWpm = w;
-        if (min is { } m) _meta.NarrateMin = m;
-        if (pad is { } p) _meta.NarratePad = p;
+        _meta._narrate = enabled;
+        if (wpm is { } w)
+        {
+            _meta._narrateWpm = w;
+        }
+
+        if (min is { } m)
+        {
+            _meta._narrateMin = m;
+        }
+
+        if (pad is { } p)
+        {
+            _meta._narratePad = p;
+        }
+
         return this;
     }
 
     /// <summary>Tune spacing: <paramref name="node"/> is the minimum gap between lifelines.</summary>
     public SequenceDiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
-        if (rank is { } r) _meta.SpacingRank = r;
-        if (node is { } n) _meta.SpacingNode = n;
-        if (cornerRadius is { } c) _meta.SpacingCornerRadius = c;
+        if (rank is { } r)
+        {
+            _meta._spacingRank = r;
+        }
+
+        if (node is { } n)
+        {
+            _meta._spacingNode = n;
+        }
+
+        if (cornerRadius is { } c)
+        {
+            _meta._spacingCornerRadius = c;
+        }
+
         return this;
     }
 
@@ -95,7 +119,11 @@ public sealed class SequenceDiagramBuilder
     public SequenceDiagramBuilder Participant(string id, string title, NodeKind? kind = null)
     {
         var p = new NodeBuilder(id).Title(title);
-        if (kind is { } k) p.Kind(k);
+        if (kind is { } k)
+        {
+            p.Kind(k);
+        }
+
         _participants.Add(p);
         _ids.Add(id);
         return this;
@@ -118,7 +146,11 @@ public sealed class SequenceDiagramBuilder
     public SequenceDiagramBuilder Section(string label, AccentToken? accent = null)
     {
         var pairs = new List<(string, string)> { ("section", YamlWriter.Scalar(label)) };
-        if (accent is { } a) pairs.Add(("accent", Tokens.Of(a)));
+        if (accent is { } a)
+        {
+            pairs.Add(("accent", Tokens.Of(a)));
+        }
+
         _messages.Add(YamlWriter.FlowMap(pairs));
         return this;
     }
@@ -136,7 +168,11 @@ public sealed class SequenceDiagramBuilder
         Require(from);
         Require(to);
         var m = new MessageBuilder(from, to, reply);
-        if (label != null) m.Label(label);
+        if (label != null)
+        {
+            m.Label(label);
+        }
+
         configure?.Invoke(m);
         _messages.Add(m.ToFlow());
         return this;
@@ -145,8 +181,10 @@ public sealed class SequenceDiagramBuilder
     private void Require(string id)
     {
         if (!_ids.Contains(id))
+        {
             throw new InvalidOperationException(
                 $"Message references unknown participant '{id}' — declare it with Participant() before sending.");
+        }
     }
 
     /// <summary>Render the diagram as Beck YAML.</summary>
@@ -154,17 +192,30 @@ public sealed class SequenceDiagramBuilder
     public string ToYaml()
     {
         if (_participants.Count == 0)
+        {
             throw new InvalidOperationException("A sequence diagram needs at least one Participant().");
+        }
+
         if (_messages.Count == 0)
+        {
             throw new InvalidOperationException("A sequence diagram needs at least one Message().");
+        }
 
         var sb = new StringBuilder();
         sb.Append("type: sequence\n");
         _meta.AppendYaml(sb);
         sb.Append("participants:\n");
-        foreach (var p in _participants) sb.Append("  - ").Append(p.ToFlow()).Append('\n');
+        foreach (var p in _participants)
+        {
+            sb.Append("  - ").Append(p.ToFlow()).Append('\n');
+        }
+
         sb.Append("messages:\n");
-        foreach (var m in _messages) sb.Append("  - ").Append(m).Append('\n');
+        foreach (var m in _messages)
+        {
+            sb.Append("  - ").Append(m).Append('\n');
+        }
+
         _flow?.AppendYaml(sb);
         return sb.ToString();
     }
@@ -225,13 +276,41 @@ public sealed class MessageBuilder
             ("from", YamlWriter.Scalar(_from)),
             ("to", YamlWriter.Scalar(_to)),
         };
-        if (_label != null) pairs.Add(("label", YamlWriter.Scalar(_label)));
-        if (_reply) pairs.Add(("reply", "true"));
-        if (_kind is { } k) pairs.Add(("kind", Tokens.Of(k)));
-        if (_style is { } s) pairs.Add(("style", Tokens.Of(s)));
-        if (_color != null) pairs.Add(("color", YamlWriter.Scalar(_color)));
-        if (_note != null) pairs.Add(("note", YamlWriter.Scalar(_note)));
-        if (_activate is { } a) pairs.Add(("activate", a ? "true" : "false"));
+        if (_label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(_label)));
+        }
+
+        if (_reply)
+        {
+            pairs.Add(("reply", "true"));
+        }
+
+        if (_kind is { } k)
+        {
+            pairs.Add(("kind", Tokens.Of(k)));
+        }
+
+        if (_style is { } s)
+        {
+            pairs.Add(("style", Tokens.Of(s)));
+        }
+
+        if (_color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(_color)));
+        }
+
+        if (_note != null)
+        {
+            pairs.Add(("note", YamlWriter.Scalar(_note)));
+        }
+
+        if (_activate is { } a)
+        {
+            pairs.Add(("activate", a ? "true" : "false"));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 }

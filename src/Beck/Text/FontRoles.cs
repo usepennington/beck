@@ -23,24 +23,24 @@ public static class FontRoles
     /// through a style's <see cref="FontRoleTable"/>). A custom style supplies its own table.</summary>
     public static FontRoleSpec Of(FontRole role) => role switch
     {
-        FontRole.CardTitle       => new(false, 600, 14,    0,     false),
-        FontRole.CardSubtitle    => new(false, 400, 12,    0,     false),
-        FontRole.Status          => new(false, 500, 10.4,  0,     false),
-        FontRole.GhostLabel      => new(false, 500, 11.52, 0,     false),
-        FontRole.StatusInline    => new(false, 500, 9.92,  0,     false),
-        FontRole.PillTitle       => new(false, 600, 14,    0,     false),
-        FontRole.PillSubtitle    => new(false, 400, 10.88, 0,     false),
-        FontRole.ClassStereotype => new(false, 400, 10.4,  0.03,  false),
-        FontRole.ClassTitle      => new(false, 600, 14,    0,     false),
-        FontRole.ClassMember     => new(true,  400, 11.52, 0,     false),
-        FontRole.EdgeLabel       => new(false, 500, 11.2,  0,     false),
-        FontRole.PacketLabel     => new(false, 600, 10.56, 0,     false),
-        FontRole.GroupLabel      => new(false, 600, 11.2,  0.04,  true),
-        FontRole.MsgText         => new(true,  500, 10.88, 0,     false),
-        FontRole.BandLabel       => new(true,  700, 9.92,  0.14,  true),
-        FontRole.DiagramTitle    => new(false, 700, 24,   -0.02,  false),
-        FontRole.DiagramSubtitle => new(false, 400, 14.4,  0,     false),
-        FontRole.Narration       => new(false, 400, 14.72, 0,     false),
+        FontRole.CardTitle => new(false, 600, 14, 0, false),
+        FontRole.CardSubtitle => new(false, 400, 12, 0, false),
+        FontRole.Status => new(false, 500, 10.4, 0, false),
+        FontRole.GhostLabel => new(false, 500, 11.52, 0, false),
+        FontRole.StatusInline => new(false, 500, 9.92, 0, false),
+        FontRole.PillTitle => new(false, 600, 14, 0, false),
+        FontRole.PillSubtitle => new(false, 400, 10.88, 0, false),
+        FontRole.ClassStereotype => new(false, 400, 10.4, 0.03, false),
+        FontRole.ClassTitle => new(false, 600, 14, 0, false),
+        FontRole.ClassMember => new(true, 400, 11.52, 0, false),
+        FontRole.EdgeLabel => new(false, 500, 11.2, 0, false),
+        FontRole.PacketLabel => new(false, 600, 10.56, 0, false),
+        FontRole.GroupLabel => new(false, 600, 11.2, 0.04, true),
+        FontRole.MsgText => new(true, 500, 10.88, 0, false),
+        FontRole.BandLabel => new(true, 700, 9.92, 0.14, true),
+        FontRole.DiagramTitle => new(false, 700, 24, -0.02, false),
+        FontRole.DiagramSubtitle => new(false, 400, 14.4, 0, false),
+        FontRole.Narration => new(false, 400, 14.72, 0, false),
         _ => throw new ArgumentOutOfRangeException(nameof(role)),
     };
 }
@@ -62,7 +62,7 @@ public static class FontRoles
 /// </remarks>
 public sealed class FontRoleTable : IEquatable<FontRoleTable>
 {
-    private static readonly int RoleCount = Enum.GetValues<FontRole>().Length;
+    private static readonly int _roleCount = Enum.GetValues<FontRole>().Length;
 
     // Indexed by (int)role. FontRole is contiguous 0..RoleCount-1.
     private readonly FontRoleSpec[] _specs;
@@ -71,16 +71,21 @@ public sealed class FontRoleTable : IEquatable<FontRoleTable>
     /// <see cref="FontRoles.Of"/>; the source switch remains the one definition of the data).</summary>
     public FontRoleTable(Func<FontRole, FontRoleSpec> resolve)
     {
-        _specs = new FontRoleSpec[RoleCount];
-        foreach (FontRole role in Enum.GetValues<FontRole>()) _specs[(int)role] = resolve(role);
+        _specs = new FontRoleSpec[_roleCount];
+        foreach (var role in Enum.GetValues<FontRole>())
+        {
+            _specs[(int)role] = resolve(role);
+        }
     }
 
     /// <summary>Build a table from an explicit spec map (custom styles); every role must be present.</summary>
     public FontRoleTable(IReadOnlyDictionary<FontRole, FontRoleSpec> specs)
     {
-        _specs = new FontRoleSpec[RoleCount];
-        foreach (FontRole role in Enum.GetValues<FontRole>())
+        _specs = new FontRoleSpec[_roleCount];
+        foreach (var role in Enum.GetValues<FontRole>())
+        {
             _specs[(int)role] = specs.TryGetValue(role, out var s) ? s : throw new ArgumentOutOfRangeException(nameof(specs), $"missing spec for role {role}");
+        }
     }
 
     /// <summary>Resolve a role's concrete typography.</summary>
@@ -97,7 +102,11 @@ public sealed class FontRoleTable : IEquatable<FontRoleTable>
     public override int GetHashCode()
     {
         var hc = new HashCode();
-        foreach (FontRoleSpec s in _specs) hc.Add(s);
+        foreach (var s in _specs)
+        {
+            hc.Add(s);
+        }
+
         return hc.ToHashCode();
     }
 }

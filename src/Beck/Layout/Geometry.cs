@@ -31,10 +31,10 @@ internal static class Geometry
     /// </summary>
     public static bool AgainstFlow(Rect from, Rect to, Direction dir) => dir switch
     {
-        Direction.TB => to.Y + to.H <= from.Y,
-        Direction.BT => to.Y >= from.Y + from.H,
-        Direction.LR => to.X + to.W <= from.X,
-        Direction.RL => to.X >= from.X + from.W,
+        Direction.Tb => to.Y + to.H <= from.Y,
+        Direction.Bt => to.Y >= from.Y + from.H,
+        Direction.Lr => to.X + to.W <= from.X,
+        Direction.Rl => to.X >= from.X + from.W,
         _ => false,
     };
 }

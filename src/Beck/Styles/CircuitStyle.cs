@@ -49,74 +49,72 @@ public static class CircuitStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
-        const string copper = "var(--color-primary-600, #b87333)";
-        const string gold = "#e0b34d";
+        var c = BeckStyle.Classic;
+        const string Copper = "var(--color-primary-600, #b87333)";
+        const string Gold = "#e0b34d";
 
         // Mono everything (like terminal): the single CSS token indirection point
         // (Stylesheet's scope{font-family:var(--beck-font);}) flips every default <text> to mono, while
         // the spots already on --beck-font-mono are unchanged. MetricsFont stays Inter — the textLength
         // guard absorbs the sans-metric vs mono-render gap, same tradeoff terminal makes.
-        StyleTypography typography = c.Typography with { SansFamily = c.Typography.MonoFamily };
+        var typography = c.Typography with { SansFamily = c.Typography.MonoFamily };
 
         // Light board: a pale green substrate with copper traces and gold vias/pins. Every entry keeps
         // the three-tier var(--beck-X, var(--color-Y, literal)) chain so a host palette still wins; only
         // the literal fallbacks lean PCB. --beck-pin / --beck-via are extra circuit tokens (like extrude's
         // --beck-depth*) feeding the StyleArtwork.Circuit chip pins + trace vias.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #eaf2ec)"),
             ("--beck-node-bg", "var(--color-base-50, #f6f2e9)"),
-            ("--beck-node-border", $"color-mix(in srgb, {copper} 45%, var(--color-base-200, #cdd8cf))"),
+            ("--beck-node-border", $"color-mix(in srgb, {Copper} 45%, var(--color-base-200, #cdd8cf))"),
             ("--beck-node-shadow", "0 1px 3px rgb(20 60 40 / 0.06), 0 4px 12px rgb(20 60 40 / 0.07)"),
             ("--beck-text", "var(--color-base-800, #163a29)"),
             ("--beck-text-muted", "var(--color-base-500, #4c6b58)"),
             ("--beck-text-faint", "var(--color-base-400, #7d9a88)"),
-            ("--beck-primary", copper),
+            ("--beck-primary", Copper),
             ("--beck-success", "var(--color-emerald-500, #10b981)"),
             ("--beck-warn", "var(--color-amber-500, #f59e0b)"),
             ("--beck-danger", "var(--color-red-500, #ef4444)"),
             ("--beck-info", "var(--color-violet-500, #8b5cf6)"),
-            ("--beck-neutral", $"color-mix(in srgb, {copper} 24%, var(--color-base-400, #7d9a88))"),
+            ("--beck-neutral", $"color-mix(in srgb, {Copper} 24%, var(--color-base-400, #7d9a88))"),
             ("--beck-group-border", $"color-mix(in srgb, var(--beck-neutral) {P(c.Mix.GroupBorder)}%, transparent)"),
             ("--beck-group-label", "var(--beck-text-muted)"),
-            ("--beck-edge", copper),
-            ("--beck-packet", $"var(--beck-gold, {gold})"),
-            ("--beck-icon-bg", $"color-mix(in srgb, {copper} 12%, var(--color-base-100, #e3ede5))"),
-            ("--beck-accent", copper),
+            ("--beck-edge", Copper),
+            ("--beck-packet", $"var(--beck-gold, {Gold})"),
+            ("--beck-icon-bg", $"color-mix(in srgb, {Copper} 12%, var(--color-base-100, #e3ede5))"),
+            ("--beck-accent", Copper),
             // Circuit chrome tokens: copper chip pins, gold trace vias, and the dark trace bed under the
             // copper trace (the two-layer trace's wide darker layer — a darker mix of the copper edge).
-            ("--beck-gold", $"var(--color-amber-400, {gold})"),
-            ("--beck-pin", $"color-mix(in srgb, {copper} 80%, var(--beck-gold))"),
+            ("--beck-gold", $"var(--color-amber-400, {Gold})"),
+            ("--beck-pin", $"color-mix(in srgb, {Copper} 80%, var(--beck-gold))"),
             ("--beck-via", "var(--beck-gold)"),
-            ("--beck-edge-underlay", $"color-mix(in srgb, {copper} 60%, var(--color-base-800, #163a29))"),
+            ("--beck-edge-underlay", $"color-mix(in srgb, {Copper} 60%, var(--color-base-800, #163a29))"),
             // The amber signal comet's hue (mock 1h's #fcd34d pulse) — the palette-less overlay fallback
             // token. Reuses --beck-gold so the travelling signal, the vias and the chip pins read as one
             // gold electrical family; theme-adapts through --beck-gold (dark inherits it unchanged).
             ("--beck-edge-overlay", "var(--beck-gold)"),
-        });
+        ]);
 
         // Dark board (the circuit hero): a deep green substrate, near-black chip bodies with copper
         // borders, bright gold traces/vias. Partial override layered over the light block (emitted first).
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #07231a)"),
             ("--beck-node-bg", "var(--color-base-900, #0d3527)"),
-            ("--beck-node-border", $"color-mix(in srgb, {copper} 55%, var(--color-base-700, #1c5240))"),
+            ("--beck-node-border", $"color-mix(in srgb, {Copper} 55%, var(--color-base-700, #1c5240))"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.4), 0 4px 14px rgb(0 0 0 / 0.5)"),
             ("--beck-text", "var(--color-base-50, #e8f5ee)"),
             ("--beck-text-muted", "var(--color-base-400, #8fb6a1)"),
             ("--beck-text-faint", "var(--color-base-500, #5f8570)"),
-            ("--beck-edge", $"color-mix(in srgb, {copper} 60%, var(--beck-gold))"),
+            ("--beck-edge", $"color-mix(in srgb, {Copper} 60%, var(--beck-gold))"),
             ("--beck-icon-bg", "var(--color-base-800, #0a2d21)"),
             // Deep-emerald trace bed on the dark board, under the bright gold-copper trace.
-            ("--beck-edge-underlay", $"color-mix(in srgb, {copper} 45%, var(--color-base-900, #052015))"),
-        });
+            ("--beck-edge-underlay", $"color-mix(in srgb, {Copper} 45%, var(--color-base-900, #052015))"),
+        ]);
 
         // Chip-like geometry: small rounding (a socketed IC), plus the circuit artwork knobs — pin
         // length/thickness/pitch and via radius. NodeStroke stays 1.5 (classic MeasureBorder) so boxes
         // measure identically; only the copper trace stroke thickens a touch.
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             CardRadius = 5,
             ClassRadius = 5,
@@ -137,7 +135,7 @@ public static class CircuitStyle
 
         // Packets bloom brighter (the electrical-pulse read) — a wider glow blur over the classic dot.
         // GlowEnabled stays on; nothing else about the motion changes.
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             PacketGlowBlur = 4.0,
             // The status LED (mock 1h): a small amber dot inset in the chip's top-right corner blinks
@@ -161,7 +159,7 @@ public static class CircuitStyle
         //    --beck-edge-overlay fallback (= --beck-gold); its per-edge phase is baked into the start
         //    dash-offset (no delay chain) and it is killed under reduced motion. An additional path
         //    sharing the edge's exact d — routing and the single continuous flow path are unchanged.
-        StyleEdges edges = c.Edges with
+        var edges = c.Edges with
         {
             UnderlayWidth = 4,
             UnderlayColor = "var(--beck-edge-underlay)",

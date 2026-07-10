@@ -34,11 +34,11 @@ internal sealed class CssCompiler
 {
     // Card-effect eases are parameter-fixed and deterministic, so their sampled CSS is hoisted
     // once here instead of re-running Easing.ToCss per element per render.
-    private static readonly string PulseInCss = Easing.ToCss(Easing.BackOut(3));
-    private static readonly string PulsePeakCss = Easing.ToCss(Easing.ElasticOut(1, 0.5));
-    private static readonly string HighlightInCss = Easing.ToCss(Easing.BackOut(2));
-    private static readonly string HighlightPeakCss = Easing.ToCss(Easing.ElasticOut(1, 0.4));
-    private static readonly string Power2OutCss = Easing.ToCss(Easing.Power2Out);
+    private static readonly string _pulseInCss = Easing.ToCss(Easing.BackOut(3));
+    private static readonly string _pulsePeakCss = Easing.ToCss(Easing.ElasticOut(1, 0.5));
+    private static readonly string _highlightInCss = Easing.ToCss(Easing.BackOut(2));
+    private static readonly string _highlightPeakCss = Easing.ToCss(Easing.ElasticOut(1, 0.4));
+    private static readonly string _power2OutCss = Easing.ToCss(Easing.Power2Out);
 
     private readonly string _h;
     private readonly Schedule _s;
@@ -48,7 +48,6 @@ internal sealed class CssCompiler
     private readonly SeqChoreo? _choreo;
     private readonly bool _scrub;
     private readonly double _t;
-    private readonly string _iter;
     private readonly string _cyc;
     private bool _needGlow;
 
@@ -62,10 +61,10 @@ internal sealed class CssCompiler
         _choreo = choreo;
         _scrub = scrub;
         _t = schedule.Duration + schedule.RepeatDelay;
-        _iter = schedule.Repeat == -1 ? "infinite" : schedule.Repeat == 0 ? "1" : (schedule.Repeat + 1).ToString(CultureInfo.InvariantCulture);
+        var iter = schedule.Repeat == -1 ? "infinite" : schedule.Repeat == 0 ? "1" : (schedule.Repeat + 1).ToString(CultureInfo.InvariantCulture);
         // Scrub mode drives every keyframe track off scroll position instead of time:
         // `auto` duration + a view() timeline (added by ScrubTimeline). Same keyframes.
-        _cyc = scrub ? "auto linear both" : $"{Nm(_t)}s linear {_iter}";
+        _cyc = scrub ? "auto linear both" : $"{Nm(_t)}s linear {iter}";
     }
 
     private double Pct(double time) => _t <= 0 ? 0 : Math.Clamp(time / _t * 100, 0, 100);
@@ -79,77 +78,106 @@ internal sealed class CssCompiler
     /// <summary>The fx-layer markup (overlays behind, then trails + packet circles).</summary>
     public string Markup()
     {
-        if (!HasContent) return "";
+        if (!HasContent)
+        {
+            return "";
+        }
+
         var sb = new StringBuilder("<g class=\"beck-fx\">");
 
         // glow / ripple overlays (behind the packets) — one element per card effect.
-        for (int j = 0; j < _s.Cards.Count; j++)
+        for (var j = 0; j < _s.Cards.Count; j++)
         {
-            CardFx c = _s.Cards[j];
-            if (Box(c.Node) is not { } b) continue;
-            string col = SvgWriter.Attr(c.Color);
-            string box = $"x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\"";
+            var c = _s.Cards[j];
+            if (Box(c.Node) is not { } b)
+            {
+                continue;
+            }
+
+            var col = SvgWriter.Attr(c.Color);
+            var box = $"x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{col}\"";
             if (c.Kind == CardFxKind.Pulse)
+            {
                 PulseMarkup(sb, j, b, c);
+            }
             else // highlight / fail — a glowing border overlay
+            {
                 sb.Append($"<rect class=\"bgl{j}-{_h}\" {box} stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\" style=\"filter:drop-shadow(0 0 {Nm(6 * _motion.EffectAmplitude)}px {c.Color})\"/>");
+            }
         }
 
         // impact rings (the `impact` knob) — expanding ring at each landing point. Gated off
         // wholesale by a style with RingsEnabled=false (minimal's "rings off" identity).
         if (_motion.RingsEnabled)
-            for (int j = 0; j < _s.Impacts.Count; j++)
+        {
+            for (var j = 0; j < _s.Impacts.Count; j++)
             {
-                ImpactFx im = _s.Impacts[j];
+                var im = _s.Impacts[j];
                 sb.Append($"<circle class=\"bimp{j}-{_h}\" cx=\"{Nm(im.X)}\" cy=\"{Nm(im.Y)}\" r=\"{Nm(im.Radius)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(im.Color)}\" stroke-width=\"{Nm(_motion.RingStroke)}\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
             }
+        }
 
         // edge overlays: activate (solid recolor) + stream (marching dashes).
-        for (int j = 0; j < _s.Edges.Count; j++)
+        for (var j = 0; j < _s.Edges.Count; j++)
         {
-            EdgeFx ef = _s.Edges[j];
-            string col = SvgWriter.Attr(ef.Color);
+            var ef = _s.Edges[j];
+            var col = SvgWriter.Attr(ef.Color);
             if (ef.Kind == EdgeFxKind.Activate)
+            {
                 sb.Append($"<path class=\"bact{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" opacity=\"0\"/>");
+            }
             else
+            {
                 sb.Append($"<path class=\"bstr{j}-{_h}\" d=\"{ef.D}\" fill=\"none\" stroke=\"{col}\" stroke-width=\"{Nm(_motion.RingStroke)}\" stroke-dasharray=\"{_strokes.StreamDash}\" opacity=\"0\"/>");
+            }
         }
 
         // working breathing rings (card bounds; the pulse expands via stroke-width). Gated off
         // wholesale by RingsEnabled=false, alongside the impact rings above.
         if (_motion.RingsEnabled)
-        for (int j = 0; j < _s.Working.Count; j++)
         {
-            WorkFx wf = _s.Working[j];
-            if (Box(wf.Node) is not { } b) continue;
-            sb.Append($"<rect class=\"bwrk{j}-{_h}\" x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(wf.Color)}\" stroke-width=\"0\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+            for (var j = 0; j < _s.Working.Count; j++)
+            {
+                var wf = _s.Working[j];
+                if (Box(wf.Node) is not { } b)
+                {
+                    continue;
+                }
+
+                sb.Append($"<rect class=\"bwrk{j}-{_h}\" x=\"{Nm(b.X)}\" y=\"{Nm(b.Y)}\" width=\"{Nm(b.W)}\" height=\"{Nm(b.H)}\" rx=\"{Nm(b.Rx)}\" fill=\"none\" stroke=\"{SvgWriter.Attr(wf.Color)}\" stroke-width=\"0\" opacity=\"0\" style=\"transform-box:fill-box;transform-origin:center\"/>");
+            }
         }
 
         // trails (behind the dots)
-        for (int i = 0; i < _s.Packets.Count; i++)
+        for (var i = 0; i < _s.Packets.Count; i++)
         {
-            PacketHop p = _s.Packets[i];
-            double off = p.Reversed ? -p.Length : p.Length;
+            var p = _s.Packets[i];
+            var off = p.Reversed ? -p.Length : p.Length;
             sb.Append($"<path class=\"beck-trail bt{i}-{_h}\" d=\"{p.D}\" fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"{Nm(_motion.OverlayStroke)}\" ")
               .Append($"style=\"stroke-dasharray:{Nm(p.Length)};stroke-dashoffset:{Nm(off)}\"/>");
         }
         // packet dots
-        for (int i = 0; i < _s.Packets.Count; i++)
+        for (var i = 0; i < _s.Packets.Count; i++)
         {
-            PacketHop p = _s.Packets[i];
-            string fillStroke = p.Shape == PacketShape.Ring
+            var p = _s.Packets[i];
+            var fillStroke = p.Shape == PacketShape.Ring
                 ? $"fill=\"none\" stroke=\"{SvgWriter.Attr(p.Color)}\" stroke-width=\"{Nm(Math.Max(_motion.PacketRingMin, p.Size * _motion.PacketRingFactor))}\""
                 : $"fill=\"{SvgWriter.Attr(p.Color)}\"";
-            bool glowOn = p.Glow && _motion.GlowEnabled;
-            string glow = glowOn ? $" filter=\"url(#beck-glow-{_h})\"" : "";
-            if (glowOn) _needGlow = true;
+            var glowOn = p.Glow && _motion.GlowEnabled;
+            var glow = glowOn ? $" filter=\"url(#beck-glow-{_h})\"" : "";
+            if (glowOn)
+            {
+                _needGlow = true;
+            }
             // Square (terminal's "block packet" glyph): a centred <rect> riding the same offset-path
             // instead of a <circle> — the shape is style data (StyleMotion.PacketGlyph), the markup
             // swap is the only branch this adds. Centred on the offset-path's own origin (no
             // offset-anchor — see the packet-label comment below for why) via x/y=-size.
             if (p.Shape == PacketShape.Square)
+            {
                 sb.Append($"<rect class=\"beck-packet bp{i}-{_h}\" x=\"{Nm(-p.Size)}\" y=\"{Nm(-p.Size)}\" width=\"{Nm(2 * p.Size)}\" height=\"{Nm(2 * p.Size)}\" {fillStroke}{glow} opacity=\"0\" ")
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg\"/>");
+            }
             // Train (metro's identity glyph): an elongated rounded-rect capsule centred on the offset
             // point, its long axis running ALONG the path — the one packet that rotates with the route.
             // offset-rotate:auto aligns the local +x axis with the path tangent (CSS default), so the
@@ -162,14 +190,18 @@ internal sealed class CssCompiler
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:auto\"/>");
             }
             else
+            {
                 sb.Append($"<circle class=\"beck-packet bp{i}-{_h}\" r=\"{Nm(p.Size)}\" {fillStroke}{glow} opacity=\"0\" ")
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg\"/>");
+            }
             // No offset-anchor here: Chromium mispositions SVG <text> with `offset-anchor`
             // (it lands at large negative coordinates). text-anchor="middle" centres the
             // label on the offset point; translateY lifts it above the dot (packet.ts).
             if (!string.IsNullOrEmpty(p.Label))
+            {
                 sb.Append($"<text class=\"beck-packet-label bpl{i}-{_h}\" text-anchor=\"middle\" fill=\"{SvgWriter.Attr(p.Color)}\" opacity=\"0\" ")
                   .Append($"style=\"offset-path:path('{p.D}');offset-rotate:0deg;transform:translateY(-{Nm(p.Size + 6)}px)\">{SvgWriter.Text(p.Label!)}</text>");
+            }
         }
         return sb.Append("</g>").ToString();
     }
@@ -184,9 +216,9 @@ internal sealed class CssCompiler
     /// </summary>
     private void PulseMarkup(StringBuilder sb, int j, NodeBox b, CardFx c)
     {
-        string cls = $"class=\"brip{j}-{_h}\"";
-        string col = SvgWriter.Attr(_motion.PulseColor ?? c.Color);
-        string boxScale = "style=\"transform-box:fill-box;transform-origin:center\"";
+        var cls = $"class=\"brip{j}-{_h}\"";
+        var col = SvgWriter.Attr(_motion.PulseColor ?? c.Color);
+        var boxScale = "style=\"transform-box:fill-box;transform-origin:center\"";
         switch (_motion.Pulse)
         {
             case PulseEffect.MarkerPop:
@@ -234,32 +266,36 @@ internal sealed class CssCompiler
     /// </summary>
     public static string EdgeOverlayCss(string hash, IReadOnlyList<EdgeOverlaySpec> overlays, StyleEdges edges)
     {
-        if (overlays.Count == 0) return "";
+        if (overlays.Count == 0)
+        {
+            return "";
+        }
+
         var sb = new StringBuilder();
-        string dur = Nm(edges.OverlayPeriod);
+        var dur = Nm(edges.OverlayPeriod);
         // Timing: linear (classic — glow's smooth comet, a gliding march) unless OverlaySteps is set,
         // which ratchets the overlay in n hard jumps per cycle (brutalist / terminal's mechanical tick)
         // via the same stepped-ease emitter PacketSteps/TrailSteps use. Draw-on's eased wipe reads as a
         // smooth ink, so it always stays linear.
-        string? stepsTiming = edges.OverlaySteps is int n ? Easing.ToCss(Easing.StepsN(n)) : null;
-        foreach (EdgeOverlaySpec o in overlays)
+        var stepsTiming = edges.OverlaySteps is { } n ? Easing.ToCss(Easing.StepsN(n)) : null;
+        foreach (var o in overlays)
         {
             string cls = $"beo{o.Index}-{hash}", kf = $"kbeo{o.Index}-{hash}";
-            string timing = stepsTiming != null && o.Mode != EdgeOverlay.DrawOn ? stepsTiming : "linear";
+            var timing = stepsTiming != null && o.Mode != EdgeOverlay.DrawOn ? stepsTiming : "linear";
             sb.Append($".b-{hash} .{cls}{{animation:{kf} {dur}s {timing} infinite;}}");
             sb.Append($"@keyframes {kf}{{");
             switch (o.Mode)
             {
                 case EdgeOverlay.Comet:
-                {
-                    // A single lit dash (CometDash) over a full-length gap sweeps one dot end-to-end; the
-                    // per-edge phase is baked into the start offset so comets on different edges are out of
-                    // step without any delay chain.
-                    double span = edges.CometDash + o.Length;
-                    double start = o.Phase * span;
-                    sb.Append($"from{{stroke-dashoffset:{Nm(start)};}}to{{stroke-dashoffset:{Nm(start - span)};}}");
-                    break;
-                }
+                    {
+                        // A single lit dash (CometDash) over a full-length gap sweeps one dot end-to-end; the
+                        // per-edge phase is baked into the start offset so comets on different edges are out of
+                        // step without any delay chain.
+                        var span = edges.CometDash + o.Length;
+                        var start = o.Phase * span;
+                        sb.Append($"from{{stroke-dashoffset:{Nm(start)};}}to{{stroke-dashoffset:{Nm(start - span)};}}");
+                        break;
+                    }
                 case EdgeOverlay.DrawOn:
                     // Wipe from fully hidden (offset = len) to fully drawn, hold, then reset each period.
                     sb.Append($"0%{{stroke-dashoffset:{Nm(o.Length)};}}55%{{stroke-dashoffset:0;}}")
@@ -284,7 +320,11 @@ internal sealed class CssCompiler
     /// <summary>The animation CSS (wrapped in a reduced-motion guard by the caller).</summary>
     public string Css()
     {
-        if (!HasContent) return "";
+        if (!HasContent)
+        {
+            return "";
+        }
+
         var sb = new StringBuilder();
         PacketCss(sb);
         CardCss(sb);
@@ -293,7 +333,11 @@ internal sealed class CssCompiler
         NarrateCss(sb);
         SequenceChoreoCss(sb);
         StatusCss(sb);
-        if (_scrub) ScrubTimeline(sb);
+        if (_scrub)
+        {
+            ScrubTimeline(sb);
+        }
+
         return sb.ToString();
     }
 
@@ -311,29 +355,33 @@ internal sealed class CssCompiler
     {
         foreach (var byNode in _s.Statuses.GroupBy(s => s.Node))
         {
-            int node = byNode.Key;
+            var node = byNode.Key;
             var sw = new List<(double At, int State)> { (0, 0) };
             sw.AddRange(byNode.OrderBy(s => s.At).Select(s => (s.At, s.State)));
             sw.Add((_s.RestoreAt, 0));
             sw.Sort((a, b) => a.At.CompareTo(b.At));
 
-            foreach (int st in sw.Select(x => x.State).Distinct())
+            foreach (var st in sw.Select(x => x.State).Distinct())
             {
-                string kf = $"kst{node}-{st}-{_h}";
+                var kf = $"kst{node}-{st}-{_h}";
                 sb.Append($".b-{_h} .bss{node}-{st}-{_h}{{animation:{kf} {_cyc};}}");
                 sb.Append($"@keyframes {kf}{{");
-                double e = 0.01;
-                int prev = 0;
+                var e = 0.01;
+                var prev = 0;
                 // Process every swap, including the trailing restore-to-0 entry — it must still
                 // emit its keyframe so the pill resets at a mid-flow restore, not just the cycle end.
-                for (int k = 0; k < sw.Count; k++)
+                for (var k = 0; k < sw.Count; k++)
                 {
-                    int val = sw[k].State == st ? 1 : 0;
-                    double at = Pct(sw[k].At);
+                    var val = sw[k].State == st ? 1 : 0;
+                    var at = Pct(sw[k].At);
                     if (k == 0) { sb.Append($"0%{{opacity:{val};}}"); prev = val; continue; }
                     if (val != prev)
                     {
-                        if (at > e) sb.Append($"{P(at - e)}%{{opacity:{prev};}}");
+                        if (at > e)
+                        {
+                            sb.Append($"{P(at - e)}%{{opacity:{prev};}}");
+                        }
+
                         sb.Append($"{P(at)}%{{opacity:{val};}}");
                         prev = val;
                     }
@@ -346,8 +394,12 @@ internal sealed class CssCompiler
     // ---- sequence storytelling: dim the scenery, reveal each row as its packet fires ----
     private void SequenceChoreoCss(StringBuilder sb)
     {
-        if (_choreo is null) return;
-        double finaleAt = Math.Max(0, _s.Duration - 0.75);
+        if (_choreo is null)
+        {
+            return;
+        }
+
+        var finaleAt = Math.Max(0, _s.Duration - 0.75);
 
         // initial dims (the whole block is motion-guarded by the caller).
         sb.Append($".b-{_h} .beck-msg path{{opacity:{G(_motion.DimLine)};}}");
@@ -357,18 +409,23 @@ internal sealed class CssCompiler
 
         // first departure + arrival per message edge.
         var revealAt = new Dictionary<string, (double At, double Arr)>();
-        foreach (PacketHop p in _s.Packets)
-            if (p.EdgeId is { } id && !revealAt.ContainsKey(id)) revealAt[id] = (p.Start, p.Start + p.Duration);
+        foreach (var p in _s.Packets)
+        {
+            if (p.EdgeId is { } id && !revealAt.ContainsKey(id))
+            {
+                revealAt[id] = (p.Start, p.Start + p.Duration);
+            }
+        }
 
         // Reveal ramp lengths, scaled by the style's SequenceRevealScale (1.0 = classic exact:
         // 0.25s row/label, 0.4s band). A style > 1 (editorial) draws the scenery on slowly + softly.
-        double rowDur = 0.25 * _motion.SequenceRevealScale;
-        double bandDur = 0.4 * _motion.SequenceRevealScale;
+        var rowDur = 0.25 * _motion.SequenceRevealScale;
+        var bandDur = 0.4 * _motion.SequenceRevealScale;
 
-        int idx = 0;
+        var idx = 0;
         foreach (var (id, t) in revealAt)
         {
-            string esc = id.Replace("\"", "\\\"");
+            var esc = id.Replace("\"", "\\\"");
             RevealTrack(sb, $"kchl{idx}-{_h}", $".b-{_h} .beck-msg[data-msg=\"{esc}\"] path", _motion.DimLine, t.At, rowDur, finaleAt);
             RevealTrack(sb, $"kcht{idx}-{_h}",
                 $".b-{_h} .beck-msg[data-msg=\"{esc}\"] .beck-msg-chip,.b-{_h} .beck-msg[data-msg=\"{esc}\"] .beck-msg-text",
@@ -377,7 +434,7 @@ internal sealed class CssCompiler
         }
 
         // activation bars: brighten at their start edge, fade after their end edge.
-        for (int i = 0; i < _choreo.Bars.Count; i++)
+        for (var i = 0; i < _choreo.Bars.Count; i++)
         {
             var (start, end) = _choreo.Bars[i];
             double? sT = revealAt.TryGetValue(start, out var s0) ? Math.Max(s0.At, s0.Arr - 0.15) : null;
@@ -386,8 +443,10 @@ internal sealed class CssCompiler
         }
 
         // section bands: light up in phase order.
-        for (int i = 0; i < _choreo.BandCount && i < _s.Phases.Count; i++)
+        for (var i = 0; i < _choreo.BandCount && i < _s.Phases.Count; i++)
+        {
             RevealTrack(sb, $"kchb{i}-{_h}", $".b-{_h} .beck-band[data-band=\"{i}\"]", _motion.DimBand, _s.Phases[i], bandDur, finaleAt);
+        }
     }
 
     // dim -> (reveal to 1 over revealDur at revealAt) -> hold -> (finale back to dim over 0.6s)
@@ -396,27 +455,43 @@ internal sealed class CssCompiler
         double rs = Pct(revealAt), re = Pct(revealAt + revealDur), fs = Pct(finaleAt), fe = Pct(finaleAt + 0.6), e = 0.01;
         sb.Append($"{selector}{{animation:{kf} {_cyc};}}");
         sb.Append($"@keyframes {kf}{{0%{{opacity:{G(dim)};}}");
-        if (rs > e) sb.Append($"{P(rs - e)}%{{opacity:{G(dim)};}}");
+        if (rs > e)
+        {
+            sb.Append($"{P(rs - e)}%{{opacity:{G(dim)};}}");
+        }
+
         sb.Append($"{P(rs)}%{{opacity:{G(dim)};}}");
         sb.Append($"{P(re)}%{{opacity:1;}}");
-        if (fs > re) sb.Append($"{P(fs)}%{{opacity:1;}}");
-        if (fe > fs) sb.Append($"{P(fe)}%{{opacity:{G(dim)};}}");
+        if (fs > re)
+        {
+            sb.Append($"{P(fs)}%{{opacity:1;}}");
+        }
+
+        if (fe > fs)
+        {
+            sb.Append($"{P(fe)}%{{opacity:{G(dim)};}}");
+        }
+
         sb.Append($"100%{{opacity:{G(dim)};}}}}");
     }
 
     private void BarTrack(StringBuilder sb, int i, double? startSec, double? endSec, double finaleSec)
     {
-        string kf = $"kcha{i}-{_h}";
-        double e = 0.01;
+        var kf = $"kcha{i}-{_h}";
+        var e = 0.01;
         sb.Append($".b-{_h} .beck-activation[data-bar=\"{i}\"]{{animation:{kf} {_cyc};}}");
         sb.Append($"@keyframes {kf}{{0%{{opacity:{G(_motion.DimAct)};}}");
         if (startSec is { } ss)
         {
             double s = Pct(ss), se = Pct(ss + 0.3);
-            if (s > e) sb.Append($"{P(s - e)}%{{opacity:{G(_motion.DimAct)};}}");
+            if (s > e)
+            {
+                sb.Append($"{P(s - e)}%{{opacity:{G(_motion.DimAct)};}}");
+            }
+
             sb.Append($"{P(s)}%{{opacity:{G(_motion.DimAct)};}}{P(se)}%{{opacity:1;}}");
         }
-        double fadeAt = endSec ?? finaleSec;
+        var fadeAt = endSec ?? finaleSec;
         double fs = Pct(fadeAt), fe = Pct(fadeAt + 0.35);
         sb.Append($"{P(fs)}%{{opacity:1;}}{P(fe)}%{{opacity:{G(_motion.DimAct)};}}");
         sb.Append($"100%{{opacity:{G(_motion.DimAct)};}}}}");
@@ -428,21 +503,33 @@ internal sealed class CssCompiler
     private void NarrateCss(StringBuilder sb)
     {
         var beats = _s.Narrations;
-        for (int i = 0; i < beats.Count; i++)
+        for (var i = 0; i < beats.Count; i++)
         {
             double inS = Pct(beats[i].At + 0.12), inE = Pct(beats[i].At + 0.42), e = 0.01;
             // Fade out when the next beat begins (else hold to the restore point).
-            double outS = i + 1 < beats.Count ? Pct(beats[i + 1].At) : Pct(_s.RestoreAt);
-            double outE = i + 1 < beats.Count ? Pct(beats[i + 1].At + 0.12) : Math.Min(100, Pct(_s.RestoreAt) + 0.5);
+            var outS = i + 1 < beats.Count ? Pct(beats[i + 1].At) : Pct(_s.RestoreAt);
+            var outE = i + 1 < beats.Count ? Pct(beats[i + 1].At + 0.12) : Math.Min(100, Pct(_s.RestoreAt) + 0.5);
             string pin = Easing.ToCss(Easing.Power1In), pout = Easing.ToCss(Easing.Power2Out);
 
             sb.Append($".b-{_h} .bbeat{i}-{_h}{{animation:kbe{i}-{_h} {_cyc};}}");
             sb.Append($"@keyframes kbe{i}-{_h}{{0%{{opacity:0;}}");
-            if (inS > e) sb.Append($"{P(inS - e)}%{{opacity:0;}}");
+            if (inS > e)
+            {
+                sb.Append($"{P(inS - e)}%{{opacity:0;}}");
+            }
+
             sb.Append($"{P(inS)}%{{opacity:0;animation-timing-function:{pout};}}");
             sb.Append($"{P(inE)}%{{opacity:1;}}");
-            if (outS > inE) sb.Append($"{P(outS)}%{{opacity:1;animation-timing-function:{pin};}}");
-            if (outE > outS) sb.Append($"{P(outE)}%{{opacity:0;}}");
+            if (outS > inE)
+            {
+                sb.Append($"{P(outS)}%{{opacity:1;animation-timing-function:{pin};}}");
+            }
+
+            if (outE > outS)
+            {
+                sb.Append($"{P(outE)}%{{opacity:0;}}");
+            }
+
             sb.Append("100%{opacity:0;}}");
         }
     }
@@ -450,42 +537,65 @@ internal sealed class CssCompiler
     // ---- edge overlays: activate (instant recolor) + stream (marching dashes) ----
     private void EdgeCss(StringBuilder sb)
     {
-        double restore = Pct(_s.RestoreAt);
-        bool anyStream = false;
-        for (int j = 0; j < _s.Edges.Count; j++)
+        var restore = Pct(_s.RestoreAt);
+        var anyStream = false;
+        for (var j = 0; j < _s.Edges.Count; j++)
         {
-            EdgeFx ef = _s.Edges[j];
-            string cls = ef.Kind == EdgeFxKind.Activate ? $"bact{j}-{_h}" : $"bstr{j}-{_h}";
-            string kf = ef.Kind == EdgeFxKind.Activate ? $"kact{j}-{_h}" : $"kstr{j}-{_h}";
-            string extra = "";
+            var ef = _s.Edges[j];
+            var cls = ef.Kind == EdgeFxKind.Activate ? $"bact{j}-{_h}" : $"bstr{j}-{_h}";
+            var kf = ef.Kind == EdgeFxKind.Activate ? $"kact{j}-{_h}" : $"kstr{j}-{_h}";
+            var extra = "";
             if (ef.Kind == EdgeFxKind.Stream)
             {
                 anyStream = true;
-                double march = Math.Max(0.5, ef.Length / 220);
+                var march = Math.Max(0.5, ef.Length / 220);
                 extra = $", bmarch-{_h} {Nm(march)}s linear infinite";
             }
             sb.Append($".b-{_h} .{cls}{{animation:{kf} {_cyc}{extra};}}");
             GateKeyframes(sb, kf, Pct(ef.Start), restore);
         }
-        if (anyStream) sb.Append($"@keyframes bmarch-{_h}{{to{{stroke-dashoffset:-14;}}}}");
+        if (anyStream)
+        {
+            sb.Append($"@keyframes bmarch-{_h}{{to{{stroke-dashoffset:-14;}}}}");
+        }
     }
 
     // ---- working: a gated opacity window + an infinite breathing ring ----
     private void WorkingCss(StringBuilder sb)
     {
-        if (!_motion.RingsEnabled || _s.Working.Count == 0) return;
-        for (int j = 0; j < _s.Working.Count; j++)
+        if (!_motion.RingsEnabled || _s.Working.Count == 0)
         {
-            WorkFx wf = _s.Working[j];
-            if (Box(wf.Node) is null) continue;
-            string kf = $"kwrk{j}-{_h}";
+            return;
+        }
+
+        for (var j = 0; j < _s.Working.Count; j++)
+        {
+            var wf = _s.Working[j];
+            if (Box(wf.Node) is null)
+            {
+                continue;
+            }
+
+            var kf = $"kwrk{j}-{_h}";
             sb.Append($".b-{_h} .bwrk{j}-{_h}{{animation:{kf} {_cyc}, bbreath-{_h} 1.5s ease-in-out infinite;}}");
             double s = Pct(wf.Start), end = Pct(wf.End), e = 0.01;
             sb.Append($"@keyframes {kf}{{0%{{opacity:0;}}");
-            if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+            if (s > e)
+            {
+                sb.Append($"{P(s - e)}%{{opacity:0;}}");
+            }
+
             sb.Append($"{P(s)}%{{opacity:1;}}");
-            if (end > s) sb.Append($"{P(end)}%{{opacity:1;}}");
-            if (end + e < 100) sb.Append($"{P(end + e)}%{{opacity:0;}}");
+            if (end > s)
+            {
+                sb.Append($"{P(end)}%{{opacity:1;}}");
+            }
+
+            if (end + e < 100)
+            {
+                sb.Append($"{P(end + e)}%{{opacity:0;}}");
+            }
+
             sb.Append("100%{opacity:0;}}");
         }
         // breathing: expand + fade the ring (stroke-based rebuild of the box-shadow pulse).
@@ -495,31 +605,43 @@ internal sealed class CssCompiler
     /// <summary>Instant-on at <paramref name="start"/>, instant-off at <paramref name="restore"/> (steps-end pairs).</summary>
     private void GateKeyframes(StringBuilder sb, string kf, double start, double restore)
     {
-        double e = 0.01;
+        var e = 0.01;
         sb.Append($"@keyframes {kf}{{0%{{opacity:0;}}");
-        if (start > e) sb.Append($"{P(start - e)}%{{opacity:0;}}");
+        if (start > e)
+        {
+            sb.Append($"{P(start - e)}%{{opacity:0;}}");
+        }
+
         sb.Append($"{P(start)}%{{opacity:1;}}");
-        if (restore > start) sb.Append($"{P(restore)}%{{opacity:1;}}");
-        if (restore + e < 100) sb.Append($"{P(restore + e)}%{{opacity:0;}}");
+        if (restore > start)
+        {
+            sb.Append($"{P(restore)}%{{opacity:1;}}");
+        }
+
+        if (restore + e < 100)
+        {
+            sb.Append($"{P(restore + e)}%{{opacity:0;}}");
+        }
+
         sb.Append("100%{opacity:0;}}");
     }
 
     // ---- packets + trails (M8) ----
     private void PacketCss(StringBuilder sb)
     {
-        double restore = Pct(_s.RestoreAt);
-        for (int i = 0; i < _s.Packets.Count; i++)
+        var restore = Pct(_s.RestoreAt);
+        for (var i = 0; i < _s.Packets.Count; i++)
         {
-            PacketHop p = _s.Packets[i];
+            var p = _s.Packets[i];
             double ws = Pct(p.Start), we = Pct(p.Start + p.Duration);
-            double e = 0.01;
+            var e = 0.01;
             // Brutalist's stepped flow motion: the packet hops its edge in n discrete jumps
             // (StyleMotion.PacketSteps) instead of its smooth per-edge-kind ease. The trail below
             // inherits this stepped ease unless a distinct TrailSteps is set. null → classic ease.
-            Ease packetEase = _motion.PacketSteps is { } pn ? Easing.StepsN(pn) : p.Ease;
-            string ease = Easing.ToCss(packetEase);
-            string startDist = p.Reversed ? "100%" : "0%";
-            string endDist = p.Reversed ? "0%" : "100%";
+            var packetEase = _motion.PacketSteps is { } pn ? Easing.StepsN(pn) : p.Ease;
+            var ease = Easing.ToCss(packetEase);
+            var startDist = p.Reversed ? "100%" : "0%";
+            var endDist = p.Reversed ? "0%" : "100%";
 
             void Rider(string cls)
             {
@@ -528,28 +650,46 @@ internal sealed class CssCompiler
             Rider("bp");
             sb.Append($"@keyframes kp{i}-{_h}{{");
             sb.Append($"0%{{offset-distance:{startDist};opacity:0;}}");
-            if (ws > e) sb.Append($"{P(ws - e)}%{{opacity:0;}}");
+            if (ws > e)
+            {
+                sb.Append($"{P(ws - e)}%{{opacity:0;}}");
+            }
+
             sb.Append($"{P(ws)}%{{offset-distance:{startDist};opacity:1;animation-timing-function:{ease};}}");
             sb.Append($"{P(we)}%{{offset-distance:{endDist};opacity:1;}}");
-            if (we + e < 100) sb.Append($"{P(we + e)}%{{opacity:0;}}");
+            if (we + e < 100)
+            {
+                sb.Append($"{P(we + e)}%{{opacity:0;}}");
+            }
+
             sb.Append($"100%{{offset-distance:{startDist};opacity:0;}}}}");
 
             // label rides the same keyframes (offset-path shared; its own animation ref)
             if (!string.IsNullOrEmpty(p.Label))
+            {
                 sb.Append($".b-{_h} .bpl{i}-{_h}{{animation:kp{i}-{_h} {_cyc};}}");
+            }
 
             // trail: reveal then hold, snap back at restore. A style's TrailSteps (terminal's
             // "hard-step trails") swaps the reveal's timing-function for a blocky steps(n); the
             // travelling packet glyph above keeps its own per-edge-kind ease unchanged.
-            double off = p.Reversed ? -p.Length : p.Length;
-            string trailEase = _motion.TrailSteps is { } trailN ? Easing.ToCss(Easing.StepsN(trailN)) : ease;
+            var off = p.Reversed ? -p.Length : p.Length;
+            var trailEase = _motion.TrailSteps is { } trailN ? Easing.ToCss(Easing.StepsN(trailN)) : ease;
             sb.Append($".b-{_h} .bt{i}-{_h}{{animation:kt{i}-{_h} {_cyc};}}");
             sb.Append($"@keyframes kt{i}-{_h}{{");
             sb.Append($"0%{{stroke-dashoffset:{Nm(off)};}}");
             sb.Append($"{P(ws)}%{{stroke-dashoffset:{Nm(off)};animation-timing-function:{trailEase};}}");
             sb.Append($"{P(we)}%{{stroke-dashoffset:0;}}");
-            if (restore > we) sb.Append($"{P(restore)}%{{stroke-dashoffset:0;}}");
-            if (restore + e < 100) sb.Append($"{P(restore + e)}%{{stroke-dashoffset:{Nm(off)};}}");
+            if (restore > we)
+            {
+                sb.Append($"{P(restore)}%{{stroke-dashoffset:0;}}");
+            }
+
+            if (restore + e < 100)
+            {
+                sb.Append($"{P(restore + e)}%{{stroke-dashoffset:{Nm(off)};}}");
+            }
+
             sb.Append($"100%{{stroke-dashoffset:{Nm(off)};}}}}");
         }
     }
@@ -559,25 +699,47 @@ internal sealed class CssCompiler
     {
         // per-node transform track (pulse/highlight bounce, fail shake) merged into one animation
         var byNode = new Dictionary<int, List<CardFx>>();
-        foreach (CardFx c in _s.Cards)
+        foreach (var c in _s.Cards)
         {
-            if (!byNode.TryGetValue(c.Node, out var list)) byNode[c.Node] = list = new();
+            if (!byNode.TryGetValue(c.Node, out var list))
+            {
+                byNode[c.Node] = list = new();
+            }
+
             list.Add(c);
         }
-        foreach (var (node, list) in byNode) TransformTrack(sb, node, list);
+        foreach (var (node, list) in byNode)
+        {
+            TransformTrack(sb, node, list);
+        }
 
         // ripple / glow overlays (one keyframe animation each — no target sharing)
-        for (int j = 0; j < _s.Cards.Count; j++)
+        for (var j = 0; j < _s.Cards.Count; j++)
         {
-            CardFx c = _s.Cards[j];
-            if (Box(c.Node) is null) continue;
-            if (c.Kind == CardFxKind.Pulse) PulseCss(sb, j, c.Start);
-            else GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? _motion.HighlightDur : _motion.FailDur);
+            var c = _s.Cards[j];
+            if (Box(c.Node) is null)
+            {
+                continue;
+            }
+
+            if (c.Kind == CardFxKind.Pulse)
+            {
+                PulseCss(sb, j, c.Start);
+            }
+            else
+            {
+                GlowCss(sb, j, c.Start, c.Kind == CardFxKind.Highlight ? 0.21 : 0.12, c.Kind == CardFxKind.Highlight ? _motion.HighlightDur : _motion.FailDur);
+            }
         }
 
         // impact rings (gated off with the markup by RingsEnabled=false)
         if (_motion.RingsEnabled)
-            for (int j = 0; j < _s.Impacts.Count; j++) ImpactCss(sb, j, _s.Impacts[j].Start);
+        {
+            for (var j = 0; j < _s.Impacts.Count; j++)
+            {
+                ImpactCss(sb, j, _s.Impacts[j].Start);
+            }
+        }
     }
 
     /// <summary>
@@ -598,21 +760,21 @@ internal sealed class CssCompiler
     private void TransformTrack(StringBuilder sb, int node, List<CardFx> list)
     {
         var pts = new List<(double T, string Tf, string? EaseCss)> { (0, "none", null) };
-        foreach (CardFx c in list.OrderBy(c => c.Start))
+        foreach (var c in list.OrderBy(c => c.Start))
         {
-            double s = c.Start;
+            var s = c.Start;
             switch (c.Kind)
             {
                 // LiftEnabled=false (the "no zoom" styles): pulse/highlight contribute no transform
                 // at all — their overlay cue carries the whole read. The fail shake below still runs.
                 case CardFxKind.Pulse when _motion.LiftEnabled:
-                    pts.Add((s, "none", PulseInCss));
-                    pts.Add((s + 0.18, PulsePeak, PulsePeakCss));
+                    pts.Add((s, "none", _pulseInCss));
+                    pts.Add((s + 0.18, PulsePeak, _pulsePeakCss));
                     pts.Add((s + _motion.PulseDur, "none", null));
                     break;
                 case CardFxKind.Highlight when _motion.LiftEnabled:
-                    pts.Add((s, "none", HighlightInCss));
-                    pts.Add((s + 0.21, ActivePeak, HighlightPeakCss));
+                    pts.Add((s, "none", _highlightInCss));
+                    pts.Add((s + 0.21, ActivePeak, _highlightPeakCss));
                     pts.Add((s + _motion.HighlightDur, "none", null));
                     break;
                 case CardFxKind.Fail:
@@ -626,21 +788,32 @@ internal sealed class CssCompiler
         }
         // Every effect on this node was a lift-disabled pulse/highlight: the track would be
         // all-"none" keyframes, so emit nothing at all (the card genuinely never moves).
-        if (pts.Count == 1) return;
+        if (pts.Count == 1)
+        {
+            return;
+        }
 
         pts.Add((_t, "none", null));
         pts.Sort((a, b) => a.T.CompareTo(b.T));
 
         sb.Append($".b-{_h} .bn{node}-{_h} .beck-fx-node{{animation:kn{node}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kn{node}-{_h}{{");
-        string lastPct = "";
+        var lastPct = "";
         foreach (var (t, tf, easeCss) in pts)
         {
-            string pct = P(Pct(t));
-            if (pct == lastPct) continue; // collapse coincident keyframes (last effect wins)
+            var pct = P(Pct(t));
+            if (pct == lastPct)
+            {
+                continue; // collapse coincident keyframes (last effect wins)
+            }
+
             lastPct = pct;
             sb.Append($"{pct}%{{transform:{tf};");
-            if (easeCss is not null) sb.Append($"animation-timing-function:{easeCss};");
+            if (easeCss is not null)
+            {
+                sb.Append($"animation-timing-function:{easeCss};");
+            }
+
             sb.Append('}');
         }
         sb.Append('}');
@@ -674,7 +847,11 @@ internal sealed class CssCompiler
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{");
         sb.Append("0%{opacity:0;transform:scale(1);}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        }
+
         sb.Append($"{P(s)}%{{opacity:{Nm(0.9 * _motion.EffectAmplitude)};transform:scale(1);animation-timing-function:linear;}}");
         sb.Append($"{P(end)}%{{opacity:0;transform:scale(1.22);}}");
         sb.Append("100%{opacity:0;transform:scale(1);}}");
@@ -686,8 +863,12 @@ internal sealed class CssCompiler
         double s = Pct(start), end = Pct(start + 0.5), e = 0.01;
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
-        sb.Append($"{P(s)}%{{opacity:{Nm(0.45 * _motion.EffectAmplitude)};animation-timing-function:{Power2OutCss};}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        }
+
+        sb.Append($"{P(s)}%{{opacity:{Nm(0.45 * _motion.EffectAmplitude)};animation-timing-function:{_power2OutCss};}}");
         sb.Append($"{P(end)}%{{opacity:0;}}");
         sb.Append("100%{opacity:0;}}");
     }
@@ -696,28 +877,44 @@ internal sealed class CssCompiler
     private void SlamCss(StringBuilder sb, int j, double start)
     {
         double s = Pct(start), end = Pct(start + 0.14), e = 0.01;
-        string on = Nm(_motion.EffectAmplitude);
+        var on = Nm(_motion.EffectAmplitude);
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        }
+
         sb.Append($"{P(s)}%{{opacity:{on};}}");
         sb.Append($"{P(end)}%{{opacity:{on};}}");
-        if (end + e < 100) sb.Append($"{P(end + e)}%{{opacity:0;}}");
+        if (end + e < 100)
+        {
+            sb.Append($"{P(end + e)}%{{opacity:0;}}");
+        }
+
         sb.Append("100%{opacity:0;}}");
     }
 
     // Terminal's CRT blink: the face invert-flickers twice — two instant-on/off windows.
     private void FlickerCss(StringBuilder sb, int j, double start)
     {
-        string on = Nm(0.5 * _motion.EffectAmplitude);
-        double e = 0.01;
+        var on = Nm(0.5 * _motion.EffectAmplitude);
+        var e = 0.01;
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
-        double s0 = Pct(start);
-        if (s0 > e) sb.Append($"{P(s0 - e)}%{{opacity:0;}}");
+        var s0 = Pct(start);
+        if (s0 > e)
+        {
+            sb.Append($"{P(s0 - e)}%{{opacity:0;}}");
+        }
+
         sb.Append($"{P(s0)}%{{opacity:{on};}}{P(Pct(start + 0.09))}%{{opacity:{on};}}{P(Pct(start + 0.09) + e)}%{{opacity:0;}}");
         sb.Append($"{P(Pct(start + 0.18))}%{{opacity:0;}}{P(Pct(start + 0.18) + e)}%{{opacity:{on};}}{P(Pct(start + 0.27))}%{{opacity:{on};}}");
-        if (Pct(start + 0.27) + e < 100) sb.Append($"{P(Pct(start + 0.27) + e)}%{{opacity:0;}}");
+        if (Pct(start + 0.27) + e < 100)
+        {
+            sb.Append($"{P(Pct(start + 0.27) + e)}%{{opacity:0;}}");
+        }
+
         sb.Append("100%{opacity:0;}}");
     }
 
@@ -728,8 +925,12 @@ internal sealed class CssCompiler
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{");
         sb.Append("0%{opacity:0;transform:scale(1);}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
-        sb.Append($"{P(s)}%{{opacity:{Nm(0.9 * _motion.EffectAmplitude)};transform:scale(1);animation-timing-function:{Power2OutCss};}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        }
+
+        sb.Append($"{P(s)}%{{opacity:{Nm(0.9 * _motion.EffectAmplitude)};transform:scale(1);animation-timing-function:{_power2OutCss};}}");
         sb.Append($"{P(end)}%{{opacity:0;transform:scale({Nm(scale)});}}");
         sb.Append("100%{opacity:0;transform:scale(1);}}");
     }
@@ -740,8 +941,12 @@ internal sealed class CssCompiler
         double s = Pct(start), end = Pct(start + 0.35), e = 0.01;
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{0%{{opacity:0;}}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
-        sb.Append($"{P(s)}%{{opacity:{Nm(_motion.EffectAmplitude)};animation-timing-function:{Power2OutCss};}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        }
+
+        sb.Append($"{P(s)}%{{opacity:{Nm(_motion.EffectAmplitude)};animation-timing-function:{_power2OutCss};}}");
         sb.Append($"{P(end)}%{{opacity:0;}}");
         sb.Append("100%{opacity:0;}}");
     }
@@ -749,11 +954,15 @@ internal sealed class CssCompiler
     private void RippleCss(StringBuilder sb, int j, double start)
     {
         double s = Pct(start), end = Pct(start + 0.48), e = 0.01;
-        string po = Power2OutCss;
+        var po = _power2OutCss;
         sb.Append($".b-{_h} .brip{j}-{_h}{{animation:krip{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes krip{j}-{_h}{{");
         sb.Append("0%{opacity:0;transform:scale(1);}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        }
+
         sb.Append($"{P(s)}%{{opacity:{Nm(0.6 * _motion.EffectAmplitude)};transform:scale(1);animation-timing-function:{po};}}");
         sb.Append($"{P(end)}%{{opacity:0;transform:scale(1.15);}}");
         sb.Append("100%{opacity:0;transform:scale(1);}}");
@@ -765,27 +974,39 @@ internal sealed class CssCompiler
         sb.Append($".b-{_h} .bgl{j}-{_h}{{animation:kgl{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kgl{j}-{_h}{{");
         sb.Append("0%{opacity:0;}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;}}");
+        }
+
         sb.Append($"{P(s)}%{{opacity:0;}}");
         sb.Append($"{P(up)}%{{opacity:{Nm(_motion.EffectAmplitude)};}}");
         sb.Append($"{P(hold)}%{{opacity:{Nm(_motion.EffectAmplitude)};}}");
-        if (hold + e < 100) sb.Append($"{P(hold + e)}%{{opacity:0;}}");
+        if (hold + e < 100)
+        {
+            sb.Append($"{P(hold + e)}%{{opacity:0;}}");
+        }
+
         sb.Append("100%{opacity:0;}}");
     }
 
     private void ImpactCss(StringBuilder sb, int j, double start)
     {
         double s = Pct(start), end = Pct(start + 0.55), e = 0.01;
-        string po = Power2OutCss;
+        var po = _power2OutCss;
         // stroke-width sweeps from the style's ring stroke down to a fifth of it (classic:
         // 2.5 -> 0.5) as the ring expands — proportional to RingStroke so a thinner style ring
         // sweeps thinner too.
         string wStart = Nm(_motion.RingStroke), wEnd = Nm(_motion.RingStroke * 0.2);
-        string peakOpacity = Nm(0.9 * _motion.EffectAmplitude);
+        var peakOpacity = Nm(0.9 * _motion.EffectAmplitude);
         sb.Append($".b-{_h} .bimp{j}-{_h}{{animation:kimp{j}-{_h} {_cyc};}}");
         sb.Append($"@keyframes kimp{j}-{_h}{{");
         sb.Append($"0%{{opacity:0;transform:scale(1);stroke-width:{wStart};}}");
-        if (s > e) sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        if (s > e)
+        {
+            sb.Append($"{P(s - e)}%{{opacity:0;transform:scale(1);}}");
+        }
+
         sb.Append($"{P(s)}%{{opacity:{peakOpacity};transform:scale(1);stroke-width:{wStart};animation-timing-function:{po};}}");
         sb.Append($"{P(end)}%{{opacity:0;transform:scale(3.4);stroke-width:{wEnd};}}");
         sb.Append($"100%{{opacity:0;transform:scale(1);stroke-width:{wStart};}}}}");

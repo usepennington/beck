@@ -18,16 +18,20 @@ internal static class Stylesheet
     public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style)
     {
         var sb = new StringBuilder();
-        string scope = $".b-{h}";
-        StyleGeometry geo = style.Geometry;
-        StyleMix mix = style.Mix;
-        StyleStrokes strokes = style.Strokes;
+        var scope = $".b-{h}";
+        var geo = style.Geometry;
+        var mix = style.Mix;
+        var strokes = style.Strokes;
 
         // ---- stratum 1: tokens ----
         void Block(string selector, IReadOnlyList<(string Name, string Value)> tokens)
         {
             sb.Append(selector).Append('{');
-            foreach (var (name, value) in tokens) sb.Append(name).Append(':').Append(value).Append(';');
+            foreach (var (name, value) in tokens)
+            {
+                sb.Append(name).Append(':').Append(value).Append(';');
+            }
+
             sb.Append("--beck-font:").Append(fontFamily).Append(';');
             sb.Append("--beck-font-mono:").Append(monoFamily).Append(';');
             sb.Append('}');
@@ -57,7 +61,11 @@ internal static class Stylesheet
         // The root rule carries the diagram font and, for styles that opt in, a token-driven surface
         // background (blueprint's grid). Classic's SurfaceBackground is "" → byte-identical output.
         sb.Append(scope).Append("{font-family:var(--beck-font);");
-        if (geo.SurfaceBackground.Length > 0) sb.Append(geo.SurfaceBackground);
+        if (geo.SurfaceBackground.Length > 0)
+        {
+            sb.Append(geo.SurfaceBackground);
+        }
+
         sb.Append('}');
         // fx-node wrapper: effect transforms (scale/shake) pivot on the card centre.
         sb.Append($"{scope} .beck-fx-node{{transform-box:fill-box;transform-origin:center;}}");
@@ -72,7 +80,7 @@ internal static class Stylesheet
         // surfaces (glow's glass panels) — the single shared cyan→violet linearGradient defined in
         // StyleDefs. Only the outer node rects pick this up; internal dividers/head-borders keep their
         // flat token stroke below. Classic emits the identical mix rule → byte-identical.
-        string nodeStroke = strokes.GradientNodes
+        var nodeStroke = strokes.GradientNodes
             ? $"url(#beck-node-grad-{h})"
             : $"color-mix(in srgb, var(--beck-accent) {P(mix.NodeStroke)}%, var(--beck-node-border))";
         sb.Append($"{scope} .beck-node{{")
@@ -108,7 +116,7 @@ internal static class Stylesheet
         sb.Append($"{scope} .beck-group-label-bg{{fill:var(--beck-surface);}}");
         // Group labels are already uppercased at the render site; a style can additionally make them
         // mono (blueprint). Classic's GroupLabel role is sans → nothing appended → byte-identical.
-        string glFamily = style.Typography.Roles.Of(FontRole.GroupLabel).Mono ? "font-family:var(--beck-font-mono);" : "";
+        var glFamily = style.Typography.Roles.Of(FontRole.GroupLabel).Mono ? "font-family:var(--beck-font-mono);" : "";
         sb.Append($"{scope} .beck-group-label{{fill:var(--beck-group-label);{glFamily}}}");
 
         // state pills reuse the card treatment; start/end pseudo-states
@@ -128,7 +136,7 @@ internal static class Stylesheet
         // sequence scenery
         // Lifeline dash: classic Dashed (and Wobbly) keep the dash; FaintSolid (glow) drops it. Classic
         // emits the identical rule — byte-identical.
-        string llDash = style.Edges.Lifeline == LifelineShape.FaintSolid ? "" : $"stroke-dasharray:{strokes.LifelineDash};";
+        var llDash = style.Edges.Lifeline == LifelineShape.FaintSolid ? "" : $"stroke-dasharray:{strokes.LifelineDash};";
         sb.Append($"{scope} .beck-lifeline{{stroke-width:{Sw(geo.LifelineStroke)};{llDash}}}");
         sb.Append($"{scope} .beck-activation{{filter:drop-shadow(0 0 5px color-mix(in srgb, var(--beck-accent) {P(mix.ActivationGlow)}%, transparent));}}");
         sb.Append($"{scope} .beck-msg-chip{{fill:var(--beck-node-bg);stroke:color-mix(in srgb, var(--beck-accent) {P(mix.ChipStroke)}%, transparent);stroke-width:{Sw(geo.HairlineStroke)};}}");
@@ -136,7 +144,7 @@ internal static class Stylesheet
         // annotations, consistent with its edge/group/band labels). MsgText is a mono role, so
         // uppercasing is width-invariant — the measured chip still fits. Classic's MsgText is
         // non-uppercase → nothing appended → byte-identical.
-        string mtCase = style.Typography.Roles.Of(FontRole.MsgText).Uppercase ? "text-transform:uppercase;" : "";
+        var mtCase = style.Typography.Roles.Of(FontRole.MsgText).Uppercase ? "text-transform:uppercase;" : "";
         sb.Append($"{scope} .beck-msg-text{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.MsgText)}%, var(--beck-text));{mtCase}}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-chip{{stroke:none;}}");
         sb.Append($"{scope} .beck-msg--reply .beck-msg-text,{scope} .beck-msg-text--bare{{fill:var(--beck-text-muted);}}");
@@ -146,13 +154,13 @@ internal static class Stylesheet
 
         // edges + labels
         // DashedEdges (blueprint) dashes every base edge; classic leaves it solid (byte-identical).
-        string edgeDash = strokes.DashedEdges ? $"stroke-dasharray:{strokes.EdgeDash};" : "";
+        var edgeDash = strokes.DashedEdges ? $"stroke-dasharray:{strokes.EdgeDash};" : "";
         sb.Append($"{scope} .beck-edge{{fill:none;stroke-width:{Sw(geo.EdgeStroke)};stroke-linecap:{style.Edges.BaseLinecap};stroke-linejoin:round;{edgeDash}}}");
         // Edge-label type honours the EdgeLabel role's family/case flags (mono uppercase for blueprint);
         // the textLength guard keeps the run inside its measured box, so this is layout-safe. Classic's
         // EdgeLabel is sans/non-uppercase → nothing appended → byte-identical.
         var elSpec = style.Typography.Roles.Of(FontRole.EdgeLabel);
-        string elType = (elSpec.Mono ? "font-family:var(--beck-font-mono);" : "") + (elSpec.Uppercase ? "text-transform:uppercase;" : "");
+        var elType = (elSpec.Mono ? "font-family:var(--beck-font-mono);" : "") + (elSpec.Uppercase ? "text-transform:uppercase;" : "");
         sb.Append($"{scope} .beck-edge-label{{fill:var(--beck-text-muted);paint-order:stroke;stroke:var(--beck-surface);stroke-width:{geo.EdgeLabelHalo};stroke-linejoin:round;{elType}}}");
 
         // title block
@@ -195,12 +203,14 @@ internal static class Stylesheet
     /// </summary>
     public static string StyleDefs(string h, BeckStyle style)
     {
-        string defs = "";
+        var defs = "";
         if (style.Strokes.GradientNodes)
+        {
             defs += $"<linearGradient id=\"beck-node-grad-{h}\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">" +
                     "<stop offset=\"0\" stop-color=\"var(--beck-node-grad-a, var(--beck-accent))\"/>" +
                     "<stop offset=\"1\" stop-color=\"var(--beck-node-grad-b, var(--beck-info))\"/>" +
                     "</linearGradient>";
+        }
         // Sketch's crayon-wax filter, applied to every .beck-scribble fill path: a low-frequency
         // turbulence displaces the stroke outline (wobbly hand-pressure edges), then a high-frequency
         // grain field turned into an alpha mask by the feColorMatrix eats waxy holes in the stroke so
@@ -208,6 +218,7 @@ internal static class Stylesheet
         // user space, so every node lands on a different patch of the same field and no two cards
         // texture alike. One shared def serves all paths.
         if (style.Artwork == StyleArtwork.Sketch)
+        {
             defs += $"<filter id=\"beck-crayon-{h}\" x=\"-15%\" y=\"-15%\" width=\"130%\" height=\"130%\">" +
                     "<feTurbulence type=\"fractalNoise\" baseFrequency=\"0.036\" numOctaves=\"3\" seed=\"26\" result=\"warp\"/>" +
                     "<feDisplacementMap in=\"SourceGraphic\" in2=\"warp\" scale=\"6\" xChannelSelector=\"R\" yChannelSelector=\"G\" result=\"rough\"/>" +
@@ -217,6 +228,8 @@ internal static class Stylesheet
                     "<feColorMatrix in=\"grain\" type=\"matrix\" values=\"0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.02 1.47\" result=\"mask\"/>" +
                     "<feComposite in=\"rough\" in2=\"mask\" operator=\"in\"/>" +
                     "</filter>";
+        }
+
         return defs;
     }
 }

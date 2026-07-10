@@ -15,9 +15,12 @@ internal static class StateBuilder
 
     private static NodeModel StatePill(IReadOnlyDictionary<string, object?> s)
     {
-        string id = AsString(s.GetValueOrDefault("id"), "state.id");
+        var id = AsString(s.GetValueOrDefault("id"), "state.id");
         if (id is Pseudo or StartId or EndId)
+        {
             throw new BeckYamlException($"\"{id}\" is reserved — reference the start/end pseudo-state from a transition instead");
+        }
+
         return new NodeModel
         {
             Id = id,
@@ -53,14 +56,17 @@ internal static class StateBuilder
 
     public static DiagramModel Build(IReadOnlyDictionary<string, object?> root)
     {
-        DiagramMeta meta = Validate.BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.State);
+        var meta = Validate.BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.State);
 
         // Declared states collected first, pushed in first-reference order.
         var declared = new Dictionary<string, NodeModel>();
         foreach (var rs in AsArray(root.GetValueOrDefault("states"), "states"))
         {
-            NodeModel n = StatePill(AsObject(rs, "state"));
-            if (!declared.TryAdd(n.Id, n)) throw new BeckYamlException($"Duplicate state id \"{n.Id}\"");
+            var n = StatePill(AsObject(rs, "state"));
+            if (!declared.TryAdd(n.Id, n))
+            {
+                throw new BeckYamlException($"Duplicate state id \"{n.Id}\"");
+            }
         }
 
         var nodes = new List<NodeModel>();
@@ -71,12 +77,19 @@ internal static class StateBuilder
         {
             if (id == Pseudo)
             {
-                string pid = ctx == "from" ? StartId : EndId;
-                if (!byId.ContainsKey(pid)) Add(PseudoNode(pid));
+                var pid = ctx == "from" ? StartId : EndId;
+                if (!byId.ContainsKey(pid))
+                {
+                    Add(PseudoNode(pid));
+                }
+
                 return pid;
             }
             if (!byId.ContainsKey(id))
+            {
                 Add(declared.GetValueOrDefault(id) ?? StatePill(new Dictionary<string, object?> { ["id"] = id }));
+            }
+
             return id;
         }
 
@@ -84,8 +97,8 @@ internal static class StateBuilder
         foreach (var rt in AsArray(root.GetValueOrDefault("transitions"), "transitions"))
         {
             var t = AsObject(rt, "transition");
-            string from = Ensure(AsString(t.GetValueOrDefault("from"), "transition.from"), "from");
-            string to = Ensure(AsString(t.GetValueOrDefault("to"), "transition.to"), "to");
+            var from = Ensure(AsString(t.GetValueOrDefault("from"), "transition.from"), "from");
+            var to = Ensure(AsString(t.GetValueOrDefault("to"), "transition.to"), "to");
             edges.Add(new EdgeModel
             {
                 Id = $"{from}->{to}#{edges.Count}",
@@ -102,14 +115,26 @@ internal static class StateBuilder
             });
         }
         // Declared states never referenced by a transition still render.
-        foreach (var (id, n) in declared) if (!byId.ContainsKey(id)) Add(n);
-        if (nodes.Count == 0)
-            throw new BeckYamlException("A state diagram needs at least one entry under `states` or `transitions`");
+        foreach (var (id, n) in declared)
+        {
+            if (!byId.ContainsKey(id))
+            {
+                Add(n);
+            }
+        }
 
-        FlowModel flow = root.GetValueOrDefault("flow") != null
-            ? Validate.BuildFlow(AsObject(root["flow"], "flow"), new HashSet<string>(byId.Keys), new HashSet<string>())
+        if (nodes.Count == 0)
+        {
+            throw new BeckYamlException("A state diagram needs at least one entry under `states` or `transitions`");
+        }
+
+        var flow = root.GetValueOrDefault("flow") != null
+            ? Validate.BuildFlow(AsObject(root["flow"], "flow"), [..byId.Keys], [])
             : Defaults.DeriveFlow(nodes, edges);
-        if (!meta.Loop) flow.Repeat = 0;
+        if (!meta.Loop)
+        {
+            flow.Repeat = 0;
+        }
 
         return new DiagramModel { Meta = meta, Nodes = nodes, Groups = [], Edges = edges, Flow = flow, Sections = [] };
     }

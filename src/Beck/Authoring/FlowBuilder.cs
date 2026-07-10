@@ -25,7 +25,7 @@ namespace Beck.Authoring;
 /// </example>
 public sealed class FlowBuilder
 {
-    private readonly List<(string Key, string Value)> _steps = new();
+    private readonly List<(string Key, string Value)> _steps = [];
     private int? _repeat;
     private double? _repeatDelay;
 
@@ -60,9 +60,21 @@ public sealed class FlowBuilder
             ("from", YamlWriter.Scalar(from)),
             ("to", YamlWriter.Scalar(to)),
         };
-        if (via is { Length: > 0 }) pairs.Add(("via", YamlWriter.FlowSeq(via.Select(YamlWriter.Scalar))));
-        if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
-        if (label != null) pairs.Add(("label", YamlWriter.Scalar(label)));
+        if (via is { Length: > 0 })
+        {
+            pairs.Add(("via", YamlWriter.FlowSeq(via.Select(YamlWriter.Scalar))));
+        }
+
+        if (color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(color)));
+        }
+
+        if (label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(label)));
+        }
+
         AppendPacketKnobs(pairs, shape, ease, size, speed, glow, impact);
         return Step("packet", YamlWriter.FlowMap(pairs));
     }
@@ -123,8 +135,16 @@ public sealed class FlowBuilder
             ("count", count.ToString(CultureInfo.InvariantCulture)),
             ("stagger", stagger.ToString(CultureInfo.InvariantCulture)),
         };
-        if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
-        if (label != null) pairs.Add(("label", YamlWriter.Scalar(label)));
+        if (color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(color)));
+        }
+
+        if (label != null)
+        {
+            pairs.Add(("label", YamlWriter.Scalar(label)));
+        }
+
         AppendPacketKnobs(pairs, shape, ease, size, speed, glow, impact);
         return Step("burst", YamlWriter.FlowMap(pairs));
     }
@@ -161,7 +181,11 @@ public sealed class FlowBuilder
     public FlowBuilder Fail(string node, string? text = null, string? color = null)
     {
         var extra = new List<(string? Key, string Value)>();
-        if (text != null) extra.Add(("text", YamlWriter.Scalar(text)));
+        if (text != null)
+        {
+            extra.Add(("text", YamlWriter.Scalar(text)));
+        }
+
         extra.Add(Color(color));
         return Step("fail", NodeMap(node, extra.ToArray()));
     }
@@ -175,10 +199,21 @@ public sealed class FlowBuilder
     public FlowBuilder Narrate(string text, double? hold = null, string? color = null)
     {
         if (hold == null && color == null)
+        {
             return Step("narrate", YamlWriter.Scalar(text));
+        }
+
         var pairs = new List<(string, string)> { ("text", YamlWriter.Scalar(text)) };
-        if (hold is { } h) pairs.Add(("hold", h.ToString(CultureInfo.InvariantCulture)));
-        if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
+        if (hold is { } h)
+        {
+            pairs.Add(("hold", h.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(color)));
+        }
+
         return Step("narrate", YamlWriter.FlowMap(pairs));
     }
 
@@ -196,7 +231,7 @@ public sealed class FlowBuilder
     {
         var sub = new FlowBuilder();
         build(sub);
-        var items = sub._steps.Select(s => YamlWriter.FlowMap(new[] { (s.Key, s.Value) }));
+        var items = sub._steps.Select(s => YamlWriter.FlowMap([(s.Key, s.Value)]));
         return Step("parallel", YamlWriter.FlowSeq(items));
     }
 
@@ -220,19 +255,48 @@ public sealed class FlowBuilder
         bool? glow,
         bool? impact)
     {
-        if (shape is { } sh) pairs.Add(("shape", Tokens.Of(sh)));
-        if (ease is { } e) pairs.Add(("ease", Tokens.Of(e)));
-        if (size is { } sz) pairs.Add(("size", sz.ToString(CultureInfo.InvariantCulture)));
-        if (speed is { } sp) pairs.Add(("speed", sp.ToString(CultureInfo.InvariantCulture)));
-        if (glow is { } g) pairs.Add(("glow", g ? "true" : "false"));
-        if (impact is { } im) pairs.Add(("impact", im ? "true" : "false"));
+        if (shape is { } sh)
+        {
+            pairs.Add(("shape", Tokens.Of(sh)));
+        }
+
+        if (ease is { } e)
+        {
+            pairs.Add(("ease", Tokens.Of(e)));
+        }
+
+        if (size is { } sz)
+        {
+            pairs.Add(("size", sz.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (speed is { } sp)
+        {
+            pairs.Add(("speed", sp.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (glow is { } g)
+        {
+            pairs.Add(("glow", g ? "true" : "false"));
+        }
+
+        if (impact is { } im)
+        {
+            pairs.Add(("impact", im ? "true" : "false"));
+        }
     }
 
     private static string NodeMap(string node, params (string? Key, string Value)[] extra)
     {
         var pairs = new List<(string, string)> { ("node", YamlWriter.Scalar(node)) };
         foreach (var (k, v) in extra)
-            if (k != null) pairs.Add((k, v));
+        {
+            if (k != null)
+            {
+                pairs.Add((k, v));
+            }
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 
@@ -243,19 +307,37 @@ public sealed class FlowBuilder
             ("from", YamlWriter.Scalar(from)),
             ("to", YamlWriter.Scalar(to)),
         };
-        if (color != null) pairs.Add(("color", YamlWriter.Scalar(color)));
+        if (color != null)
+        {
+            pairs.Add(("color", YamlWriter.Scalar(color)));
+        }
+
         return YamlWriter.FlowMap(pairs);
     }
 
     /// <summary>Emit the <c>flow:</c> block (only when at least one step was added).</summary>
     internal void AppendYaml(StringBuilder sb)
     {
-        if (_steps.Count == 0 && _repeat == null && _repeatDelay == null) return;
+        if (_steps.Count == 0 && _repeat == null && _repeatDelay == null)
+        {
+            return;
+        }
+
         sb.Append("flow:\n");
-        if (_repeat is { } r) sb.Append("  repeat: ").Append(r.ToString(CultureInfo.InvariantCulture)).Append('\n');
-        if (_repeatDelay is { } rd) sb.Append("  repeatDelay: ").Append(rd.ToString(CultureInfo.InvariantCulture)).Append('\n');
+        if (_repeat is { } r)
+        {
+            sb.Append("  repeat: ").Append(r.ToString(CultureInfo.InvariantCulture)).Append('\n');
+        }
+
+        if (_repeatDelay is { } rd)
+        {
+            sb.Append("  repeatDelay: ").Append(rd.ToString(CultureInfo.InvariantCulture)).Append('\n');
+        }
+
         sb.Append("  steps:\n");
         foreach (var (key, value) in _steps)
+        {
             sb.Append("    - ").Append(key).Append(": ").Append(value).Append('\n');
+        }
     }
 }

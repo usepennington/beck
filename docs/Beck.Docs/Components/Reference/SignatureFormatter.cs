@@ -11,7 +11,7 @@ namespace Beck.Docs.Components.Reference;
 /// </summary>
 internal static class SignatureFormatter
 {
-    private static readonly NullabilityInfoContext Nullability = new();
+    private static readonly NullabilityInfoContext _nullability = new();
 
     public static string Format(MethodBase method)
     {
@@ -23,7 +23,11 @@ internal static class SignatureFormatter
         else
         {
             var m = (MethodInfo)method;
-            if (m.IsStatic) sb.Append("static ");
+            if (m.IsStatic)
+            {
+                sb.Append("static ");
+            }
+
             sb.Append(FriendlyName(m.ReturnType)).Append(' ').Append(m.Name);
         }
 
@@ -31,7 +35,11 @@ internal static class SignatureFormatter
         var parameters = method.GetParameters();
         for (var i = 0; i < parameters.Length; i++)
         {
-            if (i > 0) sb.Append(", ");
+            if (i > 0)
+            {
+                sb.Append(", ");
+            }
+
             AppendParameter(sb, parameters[i]);
         }
         sb.Append(')');
@@ -40,12 +48,15 @@ internal static class SignatureFormatter
 
     private static void AppendParameter(StringBuilder sb, ParameterInfo p)
     {
-        if (p.GetCustomAttribute<ParamArrayAttribute>() != null) sb.Append("params ");
+        if (p.GetCustomAttribute<ParamArrayAttribute>() != null)
+        {
+            sb.Append("params ");
+        }
 
         var name = FriendlyName(p.ParameterType);
         // Nullable value types already render as T?; restore the ? on annotated reference types.
         if (!p.ParameterType.IsValueType &&
-            Nullability.Create(p).WriteState == NullabilityState.Nullable)
+            _nullability.Create(p).WriteState == NullabilityState.Nullable)
         {
             name += "?";
         }
@@ -72,9 +83,21 @@ internal static class SignatureFormatter
     /// </summary>
     public static string FriendlyName(Type t)
     {
-        if (Primitives.TryGetValue(t, out var primitive)) return primitive;
-        if (Nullable.GetUnderlyingType(t) is { } underlying) return FriendlyName(underlying) + "?";
-        if (t.IsArray) return FriendlyName(t.GetElementType()!) + "[]";
+        if (_primitives.TryGetValue(t, out var primitive))
+        {
+            return primitive;
+        }
+
+        if (Nullable.GetUnderlyingType(t) is { } underlying)
+        {
+            return FriendlyName(underlying) + "?";
+        }
+
+        if (t.IsArray)
+        {
+            return FriendlyName(t.GetElementType()!) + "[]";
+        }
+
         if (t.IsGenericType)
         {
             var name = t.Name[..t.Name.IndexOf('`')];
@@ -83,7 +106,7 @@ internal static class SignatureFormatter
         return t.Name;
     }
 
-    private static readonly Dictionary<Type, string> Primitives = new()
+    private static readonly Dictionary<Type, string> _primitives = new()
     {
         [typeof(void)] = "void",
         [typeof(bool)] = "bool",

@@ -20,15 +20,19 @@ namespace Beck.Model;
 internal static class YamlLoader
 {
     /// <summary>Parse a diagram source; <c>yaml.load(src) ?? {}</c> semantics (empty/null → empty map).</summary>
-    public static object? ParseYaml(string src)
+    public static object ParseYaml(string src)
     {
         try
         {
             var stream = new YamlStream();
             using var reader = new StringReader(src);
             stream.Load(reader);
-            if (stream.Documents.Count == 0) return new Dictionary<string, object?>();
-            object? value = Convert(stream.Documents[0].RootNode);
+            if (stream.Documents.Count == 0)
+            {
+                return new Dictionary<string, object?>();
+            }
+
+            var value = Convert(stream.Documents[0].RootNode);
             return value ?? new Dictionary<string, object?>();
         }
         catch (YamlException ex)
@@ -51,7 +55,7 @@ internal static class YamlLoader
         var result = new Dictionary<string, object?>();
         foreach (var (key, val) in map.Children)
         {
-            string keyStr = key is YamlScalarNode ks ? ks.Value ?? "" : key.ToString() ?? "";
+            var keyStr = key is YamlScalarNode ks ? ks.Value ?? "" : key.ToString();
             result[keyStr] = Convert(val);
         }
         return result;
@@ -60,14 +64,22 @@ internal static class YamlLoader
     private static List<object?> ConvertSeq(YamlSequenceNode seq)
     {
         var result = new List<object?>(seq.Children.Count);
-        foreach (var item in seq.Children) result.Add(Convert(item));
+        foreach (var item in seq.Children)
+        {
+            result.Add(Convert(item));
+        }
+
         return result;
     }
 
     private static object? ConvertScalar(YamlScalarNode scalar)
     {
         // Quoted / literal / folded scalars are always strings.
-        if (scalar.Style != ScalarStyle.Plain) return scalar.Value ?? "";
+        if (scalar.Style != ScalarStyle.Plain)
+        {
+            return scalar.Value ?? "";
+        }
+
         return (scalar.Value ?? "") switch
         {
             "" or "~" or "null" or "Null" or "NULL" => null,

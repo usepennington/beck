@@ -32,34 +32,34 @@ public sealed class DiagramBuilder
     public DiagramBuilder() { }
 
     /// <summary>Create a diagram with a title.</summary>
-    public DiagramBuilder(string title) => _meta.Title = title;
+    public DiagramBuilder(string title) => _meta._title = title;
 
     /// <summary>Set the diagram title.</summary>
-    public DiagramBuilder Title(string title) { _meta.Title = title; return this; }
+    public DiagramBuilder Title(string title) { _meta._title = title; return this; }
 
     /// <summary>Set the diagram subtitle.</summary>
-    public DiagramBuilder Subtitle(string subtitle) { _meta.Subtitle = subtitle; return this; }
+    public DiagramBuilder Subtitle(string subtitle) { _meta._subtitle = subtitle; return this; }
 
     /// <summary>Set the visual style by its <c>meta.style</c> token (e.g. <c>"classic"</c>).</summary>
-    public DiagramBuilder Style(string name) { _meta.Style = name; return this; }
+    public DiagramBuilder Style(string name) { _meta._style = name; return this; }
 
     /// <summary>Set the visual style from a <see cref="BeckStyle"/> (emits its <see cref="BeckStyle.Name"/>).</summary>
-    public DiagramBuilder Style(BeckStyle style) { _meta.Style = style.Name; return this; }
+    public DiagramBuilder Style(BeckStyle style) { _meta._style = style.Name; return this; }
 
-    /// <summary>Set the layout direction — <see cref="Authoring.Direction.TB"/> (default), <see cref="Authoring.Direction.BT"/>, <see cref="Authoring.Direction.LR"/>, or <see cref="Authoring.Direction.RL"/>.</summary>
-    public DiagramBuilder Direction(Direction direction) { _meta.Direction = direction; return this; }
+    /// <summary>Set the layout direction — <see cref="Authoring.Direction.Tb"/> (default), <see cref="Authoring.Direction.Bt"/>, <see cref="Authoring.Direction.Lr"/>, or <see cref="Authoring.Direction.Rl"/>.</summary>
+    public DiagramBuilder Direction(Direction direction) { _meta._direction = direction; return this; }
 
     /// <summary>Set the theme: <see cref="ThemeMode.Auto"/> (default), <see cref="ThemeMode.Light"/>, or <see cref="ThemeMode.Dark"/>.</summary>
-    public DiagramBuilder Theme(ThemeMode theme) { _meta.Theme = theme; return this; }
+    public DiagramBuilder Theme(ThemeMode theme) { _meta._theme = theme; return this; }
 
     /// <summary>Enable or disable the flow animation.</summary>
-    public DiagramBuilder Animate(bool animate) { _meta.Animate = animate; return this; }
+    public DiagramBuilder Animate(bool animate) { _meta._animate = animate; return this; }
 
     /// <summary>Loop the flow (default) or play it through once.</summary>
-    public DiagramBuilder Loop(bool loop) { _meta.Loop = loop; return this; }
+    public DiagramBuilder Loop(bool loop) { _meta._loop = loop; return this; }
 
     /// <summary>How the diagram behaves when wider than its container: <see cref="FitMode.Shrink"/> scales it down to fit (default); <see cref="FitMode.Scroll"/> keeps natural size and scrolls horizontally.</summary>
-    public DiagramBuilder Fit(FitMode fit) { _meta.Fit = fit; return this; }
+    public DiagramBuilder Fit(FitMode fit) { _meta._fit = fit; return this; }
 
     /// <summary>Toggle + tune the narration caption under the diagram. Captions appear
     /// only where the flow supplies them (a <see cref="FlowBuilder.Narrate"/> step or an
@@ -68,19 +68,43 @@ public sealed class DiagramBuilder
     /// floor seconds, <paramref name="pad"/> extra seconds.</summary>
     public DiagramBuilder Narrate(bool enabled = true, int? wpm = null, double? min = null, double? pad = null)
     {
-        _meta.Narrate = enabled;
-        if (wpm is { } w) _meta.NarrateWpm = w;
-        if (min is { } m) _meta.NarrateMin = m;
-        if (pad is { } p) _meta.NarratePad = p;
+        _meta._narrate = enabled;
+        if (wpm is { } w)
+        {
+            _meta._narrateWpm = w;
+        }
+
+        if (min is { } m)
+        {
+            _meta._narrateMin = m;
+        }
+
+        if (pad is { } p)
+        {
+            _meta._narratePad = p;
+        }
+
         return this;
     }
 
     /// <summary>Tune layout spacing: rank gap (along the flow), node gap (across), and corner radius (px).</summary>
     public DiagramBuilder Spacing(int? rank = null, int? node = null, int? cornerRadius = null)
     {
-        if (rank is { } r) _meta.SpacingRank = r;
-        if (node is { } n) _meta.SpacingNode = n;
-        if (cornerRadius is { } c) _meta.SpacingCornerRadius = c;
+        if (rank is { } r)
+        {
+            _meta._spacingRank = r;
+        }
+
+        if (node is { } n)
+        {
+            _meta._spacingNode = n;
+        }
+
+        if (cornerRadius is { } c)
+        {
+            _meta._spacingCornerRadius = c;
+        }
+
         return this;
     }
 
@@ -105,7 +129,11 @@ public sealed class DiagramBuilder
     public DiagramBuilder Node(string id, string title, NodeKind? kind = null)
     {
         var node = new NodeBuilder(id).Title(title);
-        if (kind is { } k) node.Kind(k);
+        if (kind is { } k)
+        {
+            node.Kind(k);
+        }
+
         _nodes.Add(node);
         return this;
     }
@@ -144,20 +172,26 @@ public sealed class DiagramBuilder
 
         sb.Append("nodes:\n");
         foreach (var node in _nodes)
+        {
             sb.Append("  - ").Append(node.ToFlow()).Append('\n');
+        }
 
         if (_groups.Count > 0)
         {
             sb.Append("groups:\n");
             foreach (var group in _groups)
+            {
                 sb.Append("  - ").Append(group.ToFlow()).Append('\n');
+            }
         }
 
         if (_edges.Count > 0)
         {
             sb.Append("edges:\n");
             foreach (var edge in _edges)
+            {
                 sb.Append("  - ").Append(edge.ToFlow()).Append('\n');
+            }
         }
 
         _flow?.AppendYaml(sb);
@@ -168,20 +202,35 @@ public sealed class DiagramBuilder
     /// <summary>Every edge endpoint must resolve to a declared node or group id.</summary>
     private void ValidateEdgeEndpoints()
     {
-        if (_edges.Count == 0) return;
+        if (_edges.Count == 0)
+        {
+            return;
+        }
 
         var ids = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var node in _nodes) ids.Add(node.Id);
-        foreach (var group in _groups) ids.Add(group.Id);
+        foreach (var node in _nodes)
+        {
+            ids.Add(node.Id);
+        }
+
+        foreach (var group in _groups)
+        {
+            ids.Add(group.Id);
+        }
 
         foreach (var edge in _edges)
         {
             if (!ids.Contains(edge.From))
+            {
                 throw new InvalidOperationException(
                     $"Edge references unknown source '{edge.From}' — declare it as a node or group before emitting.");
+            }
+
             if (!ids.Contains(edge.To))
+            {
                 throw new InvalidOperationException(
                     $"Edge references unknown target '{edge.To}' — declare it as a node or group before emitting.");
+            }
         }
     }
 

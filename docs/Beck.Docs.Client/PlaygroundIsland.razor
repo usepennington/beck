@@ -4,7 +4,7 @@
    statically; this component just supplies the in-browser interactivity. *@
 @rendermode InteractiveWebAssembly
 @inject HttpClient Http
-@inject IJSRuntime JS
+@inject IJSRuntime Js
 @using Beck.Model
 @using Beck.Text
 @implements IDisposable
@@ -199,21 +199,21 @@
     {
         if (firstRender)
         {
-            _measurer = new CanvasTextMeasurer((IJSInProcessRuntime)JS);
+            _measurer = new CanvasTextMeasurer((IJSInProcessRuntime)Js);
             _options = BuildOptions();
-            await JS.InvokeVoidAsync("beckMeasure.fontsReady");
+            await Js.InvokeVoidAsync("beckMeasure.fontsReady");
             RenderNow();
             StateHasChanged();
             // The island has activated and painted: disarm the boot watchdog in
             // beck-editor.js so its "WebAssembly is blocked" notice never shows.
-            await JS.InvokeVoidAsync("beckEditor.ready");
+            await Js.InvokeVoidAsync("beckEditor.ready");
             return;
         }
         // A dropdown was just opened by keyboard: move focus into its option list.
         if (_focusDdOnRender is { } id)
         {
             _focusDdOnRender = null;
-            await JS.InvokeVoidAsync("beckEditor.focusDdOption", id, 0);
+            await Js.InvokeVoidAsync("beckEditor.focusDdOption", id, 0);
         }
     }
 
@@ -240,16 +240,16 @@
     private async Task EditorInit()
     {
         await DefineThemesAsync();
-        await BeckCompletions.RegisterAsync(JS);
+        await BeckCompletions.RegisterAsync(Js);
 
         _hostRef = DotNetObjectReference.Create(this);
-        var theme = await JS.InvokeAsync<string>("beckEditor.observeTheme", _hostRef);
+        var theme = await Js.InvokeAsync<string>("beckEditor.observeTheme", _hostRef);
         _editorTheme = theme == "dark" ? "beck-dark" : "beck";
-        await BlazorMonaco.Editor.Global.SetTheme(JS, _editorTheme);
+        await BlazorMonaco.Editor.Global.SetTheme(Js, _editorTheme);
 
         // Arriving here via an enhanced-navigation link click can leave Monaco created but
         // never painted (see beckEditor.nudge). Kick the render once the editor exists.
-        await JS.InvokeVoidAsync("beckEditor.nudge");
+        await Js.InvokeVoidAsync("beckEditor.nudge");
     }
 
     // Live edits: mirror the editor value into _yaml and re-render (debounced). The single
@@ -267,7 +267,7 @@
     public async Task OnHostThemeChanged(string theme)
     {
         _editorTheme = theme == "dark" ? "beck-dark" : "beck";
-        await BlazorMonaco.Editor.Global.SetTheme(JS, _editorTheme);
+        await BlazorMonaco.Editor.Global.SetTheme(Js, _editorTheme);
     }
 
     // Two brand-tinted Monaco themes (Monaco needs literal colours, so these can't ride the
@@ -275,17 +275,17 @@
     // beck-editor.js flips between them on the site theme toggle.
     private async Task DefineThemesAsync()
     {
-        static List<TokenThemeRule> Rules(string key, string str, string num, string comment) => new()
-        {
+        static List<TokenThemeRule> Rules(string key, string str, string num, string comment) =>
+        [
             new() { Token = "type", Foreground = key },
             new() { Token = "key", Foreground = key },
             new() { Token = "string.yaml", Foreground = str },
             new() { Token = "string", Foreground = str },
             new() { Token = "number", Foreground = num },
-            new() { Token = "comment", Foreground = comment, FontStyle = "italic" },
-        };
+            new() { Token = "comment", Foreground = comment, FontStyle = "italic" }
+        ];
 
-        await BlazorMonaco.Editor.Global.DefineTheme(JS, "beck", new StandaloneThemeData
+        await BlazorMonaco.Editor.Global.DefineTheme(Js, "beck", new StandaloneThemeData
         {
             Base = "vs",
             Inherit = true,
@@ -302,7 +302,7 @@
             },
         });
 
-        await BlazorMonaco.Editor.Global.DefineTheme(JS, "beck-dark", new StandaloneThemeData
+        await BlazorMonaco.Editor.Global.DefineTheme(Js, "beck-dark", new StandaloneThemeData
         {
             Base = "vs-dark",
             Inherit = true,
@@ -339,7 +339,7 @@
         if (_options is null) return; // measurer not wired until the first client render
         try
         {
-            BeckRenderInfo info = BeckSvg.RenderWithInfo(_yaml, _options);
+            var info = BeckSvg.RenderWithInfo(_yaml, _options);
             _svg = info.Svg;
             _nodeCount = info.NodeCount;
             _edgeCount = info.EdgeCount;
@@ -360,7 +360,7 @@
 
     private static string FirstLine(string s)
     {
-        int nl = s.IndexOf('\n');
+        var nl = s.IndexOf('\n');
         return nl < 0 ? s : s[..nl];
     }
 
@@ -394,7 +394,7 @@
             case "ArrowDown":
             case "ArrowUp":
                 if (_open != which) { _open = which; _focusDdOnRender = RootId(which); }
-                else await JS.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), e.Key == "ArrowUp" ? -1 : 1);
+                else await Js.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), e.Key == "ArrowUp" ? -1 : 1);
                 break;
             case "Escape":
                 _open = Dd.None;
@@ -407,14 +407,14 @@
         switch (e.Key)
         {
             case "ArrowDown":
-                await JS.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), 1);
+                await Js.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), 1);
                 break;
             case "ArrowUp":
-                await JS.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), -1);
+                await Js.InvokeVoidAsync("beckEditor.focusDdOption", RootId(which), -1);
                 break;
             case "Escape":
                 _open = Dd.None;
-                await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", RootId(which));
+                await Js.InvokeVoidAsync("beckEditor.focusDdTrigger", RootId(which));
                 break;
         }
     }
@@ -423,7 +423,7 @@
     {
         _open = Dd.None;
         _exampleLabel = ex.Label;
-        await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-examples");
+        await Js.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-examples");
         try
         {
             // Src is a site path like "/examples/x.beck.yaml"; fetch it relative to the app
@@ -450,7 +450,7 @@
         _open = Dd.None;
         _scheme = s.Value;
         _schemeLabel = s.Label;
-        await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-scheme");
+        await Js.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-scheme");
     }
 
     // Selecting a style sets SvgRenderOptions.Style (the site-wide default) and re-renders. A
@@ -459,7 +459,7 @@
     private async Task SelectStyle(StyleChoice s)
     {
         _open = Dd.None;
-        await JS.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-style");
+        await Js.InvokeVoidAsync("beckEditor.focusDdTrigger", "pg-style");
         if (_styleName == s.Name) return;
         _styleName = s.Name;
         _styleLabel = s.Label;
@@ -500,9 +500,8 @@
     private sealed record ExGroup(string Type, string Label, string Glyph, string Short, Ex[] Items);
 
     private static readonly ExGroup[] ExampleGroups =
-    {
-        new("architecture", "Architecture", "⬡", "arch", new[]
-        {
+    [
+        new("architecture", "Architecture", "⬡", "arch", [
             new Ex("Microservices platform", "An API gateway fronting independent services", "/examples/microservices.beck.yaml"),
             new Ex("Event-driven orders", "Synchronous intake, asynchronous fulfilment", "/examples/event-driven.beck.yaml"),
             new Ex("AI agent loop", "Plan, call tools in parallel, then synthesise", "/examples/agent-loop.beck.yaml"),
@@ -513,33 +512,30 @@
             new Ex("Incident response", "A metric breaches, an alert fires, on-call is paged", "/examples/incident-response.beck.yaml"),
             new Ex("Deploy pipeline", "Commit to production through CI/CD stages", "/examples/cicd.beck.yaml"),
             new Ex("Webhook delivery", "A delivery fails, then a retry succeeds — narrated by captions", "/examples/webhook-retry.beck.yaml"),
-            new Ex("Nested groups", "Nested boundaries via recursive compound layout", "/examples/nested-groups.beck.yaml"),
-        }),
-        new("sequence", "Sequence", "▷", "seq", new[]
-        {
+            new Ex("Nested groups", "Nested boundaries via recursive compound layout", "/examples/nested-groups.beck.yaml")
+        ]),
+        new("sequence", "Sequence", "▷", "seq", [
             new Ex("Checkout", "Payment capture and persistence, narrated by captions", "/examples/checkout-sequence.beck.yaml"),
-            new Ex("OAuth login", "Authorization-code flow with PKCE", "/examples/oauth-login.beck.yaml"),
-        }),
-        new("state", "State", "◈", "state", new[]
-        {
+            new Ex("OAuth login", "Authorization-code flow with PKCE", "/examples/oauth-login.beck.yaml")
+        ]),
+        new("state", "State", "◈", "state", [
             new Ex("Order lifecycle", "Placed through to delivered, narrated by captions", "/examples/order-lifecycle.beck.yaml"),
-            new Ex("Circuit breaker", "Closed, open and half-open transitions", "/examples/circuit-breaker.beck.yaml"),
-        }),
-        new("class", "Class", "▤", "class", new[]
-        {
+            new Ex("Circuit breaker", "Closed, open and half-open transitions", "/examples/circuit-breaker.beck.yaml")
+        ]),
+        new("class", "Class", "▤", "class", [
             new Ex("Domain model", "Entities and relations in an order domain", "/examples/domain-model.beck.yaml"),
-            new Ex("Payment gateways", "A gateway interface with provider implementations", "/examples/payment-gateways.beck.yaml"),
-        }),
-    };
+            new Ex("Payment gateways", "A gateway interface with provider implementations", "/examples/payment-gateways.beck.yaml")
+        ])
+    ];
 
     private sealed record Scheme(string Value, string Label);
     private static readonly Scheme[] Schemes =
-    {
+    [
         new("default", "Default"),
         new("monokai", "Monokai"),
         new("one-dark", "One Dark"),
-        new("hot-dog", "Hot Dog Stand"),
-    };
+        new("hot-dog", "Hot Dog Stand")
+    ];
 
     private static string Cap(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 

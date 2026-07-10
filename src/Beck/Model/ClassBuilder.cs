@@ -10,12 +10,12 @@ namespace Beck.Model;
 /// </summary>
 internal static class ClassBuilder
 {
-    private static readonly string[] RelationKinds =
+    private static readonly string[] _relationKinds =
         ["inherits", "implements", "association", "aggregation", "composition", "dependency"];
 
     private static NodeModel ClassNode(IReadOnlyDictionary<string, object?> c)
     {
-        string id = AsString(c.GetValueOrDefault("id"), "class.id");
+        var id = AsString(c.GetValueOrDefault("id"), "class.id");
         return new NodeModel
         {
             // `name` is the natural word for a class; `title` also accepted.
@@ -40,36 +40,51 @@ internal static class ClassBuilder
 
     public static DiagramModel Build(IReadOnlyDictionary<string, object?> root)
     {
-        DiagramMeta meta = Validate.BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.Class);
+        var meta = Validate.BuildMeta(AsObject(root.GetValueOrDefault("meta"), "meta"), DiagramType.Class);
 
         var rawClasses = AsArray(root.GetValueOrDefault("classes"), "classes");
-        if (rawClasses.Count == 0) throw new BeckYamlException("A class diagram needs at least one entry under `classes`");
+        if (rawClasses.Count == 0)
+        {
+            throw new BeckYamlException("A class diagram needs at least one entry under `classes`");
+        }
 
         var nodes = new List<NodeModel>();
         var ids = new HashSet<string>();
         foreach (var rc in rawClasses)
         {
-            NodeModel n = ClassNode(AsObject(rc, "class"));
-            if (!ids.Add(n.Id)) throw new BeckYamlException($"Duplicate class id \"{n.Id}\"");
+            var n = ClassNode(AsObject(rc, "class"));
+            if (!ids.Add(n.Id))
+            {
+                throw new BeckYamlException($"Duplicate class id \"{n.Id}\"");
+            }
+
             nodes.Add(n);
         }
 
-        List<GroupModel> groups = Validate.BuildGroups(AsArray(root.GetValueOrDefault("groups"), "groups"), nodes, ids);
+        var groups = Validate.BuildGroups(AsArray(root.GetValueOrDefault("groups"), "groups"), nodes, ids);
 
         var edges = new List<EdgeModel>();
         foreach (var rr in AsArray(root.GetValueOrDefault("relations"), "relations"))
         {
             var r = AsObject(rr, "relation");
-            string from = AsString(r.GetValueOrDefault("from"), "relation.from");
-            string to = AsString(r.GetValueOrDefault("to"), "relation.to");
-            if (!ids.Contains(from)) throw new BeckYamlException($"Relation references unknown class \"{from}\"");
-            if (!ids.Contains(to)) throw new BeckYamlException($"Relation references unknown class \"{to}\"");
-            string kind = OneOfString(r.GetValueOrDefault("kind"), RelationKinds, "relation.kind", "association");
-            string? label = OptString(r.GetValueOrDefault("label"));
-            string? fromCard = OptString(r.GetValueOrDefault("fromCard"));
-            string? toCard = OptString(r.GetValueOrDefault("toCard"));
-            string? color = OptColor(r.GetValueOrDefault("color"));
-            int i = edges.Count;
+            var from = AsString(r.GetValueOrDefault("from"), "relation.from");
+            var to = AsString(r.GetValueOrDefault("to"), "relation.to");
+            if (!ids.Contains(from))
+            {
+                throw new BeckYamlException($"Relation references unknown class \"{from}\"");
+            }
+
+            if (!ids.Contains(to))
+            {
+                throw new BeckYamlException($"Relation references unknown class \"{to}\"");
+            }
+
+            var kind = OneOfString(r.GetValueOrDefault("kind"), _relationKinds, "relation.kind", "association");
+            var label = OptString(r.GetValueOrDefault("label"));
+            var fromCard = OptString(r.GetValueOrDefault("fromCard"));
+            var toCard = OptString(r.GetValueOrDefault("toCard"));
+            var color = OptColor(r.GetValueOrDefault("color"));
+            var i = edges.Count;
 
             switch (kind)
             {
@@ -156,7 +171,10 @@ internal static class ClassBuilder
         if (root.GetValueOrDefault("flow") != null)
         {
             flow = Validate.BuildFlow(AsObject(root["flow"], "flow"), ids, groupIdSet);
-            if (!meta.Loop) flow.Repeat = 0;
+            if (!meta.Loop)
+            {
+                flow.Repeat = 0;
+            }
         }
         else
         {

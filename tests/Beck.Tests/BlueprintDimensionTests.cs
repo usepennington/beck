@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Beck.Rendering;
 using Beck.Styles;
 using Xunit;
 
@@ -14,13 +13,13 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class BlueprintDimensionTests
 {
-    private static readonly string CorpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
-    private static string ArchKitchen() => File.ReadAllText(Path.Combine(CorpusDir, "arch-kitchen.yaml"));
+    private static readonly string _corpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
+    private static string ArchKitchen() => File.ReadAllText(Path.Combine(_corpusDir, "arch-kitchen.yaml"));
 
-    private static readonly Regex GroupRect = new("<rect class=\"beck-group\"", RegexOptions.Compiled);
-    private static readonly Regex DimensionG = new("<g class=\"beck-dimension\"", RegexOptions.Compiled);
+    private static readonly Regex _groupRect = new("<rect class=\"beck-group\"", RegexOptions.Compiled);
+    private static readonly Regex _dimensionG = new("<g class=\"beck-dimension\"", RegexOptions.Compiled);
     // A full dimension group: the rule line then the two witness ticks, capturing every coordinate.
-    private static readonly Regex DimensionFull = new(
+    private static readonly Regex _dimensionFull = new(
         "<g class=\"beck-dimension\" style=\"fill:none;stroke:var\\(--beck-dimension[^\"]*\\)[^\"]*\">" +
         "<line x1=\"([0-9.]+)\" y1=\"([0-9.]+)\" x2=\"([0-9.]+)\" y2=\"([0-9.]+)\"/>" +
         "<line x1=\"([0-9.]+)\" y1=\"([0-9.]+)\" x2=\"([0-9.]+)\" y2=\"([0-9.]+)\"/>" +
@@ -31,9 +30,9 @@ public sealed class BlueprintDimensionTests
     [Fact]
     public void Blueprint_DrawsOneDimensionLinePerGroup()
     {
-        string svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BlueprintStyle.Instance });
-        int groups = GroupRect.Matches(svg).Count;
-        int dims = DimensionG.Matches(svg).Count;
+        var svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BlueprintStyle.Instance });
+        var groups = _groupRect.Matches(svg).Count;
+        var dims = _dimensionG.Matches(svg).Count;
         Assert.True(groups > 0, "arch-kitchen should have group boxes");
         Assert.Equal(groups, dims);
     }
@@ -41,7 +40,7 @@ public sealed class BlueprintDimensionTests
     [Fact]
     public void Classic_EmitsNoDimensionLines()
     {
-        string svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BeckStyle.Classic });
+        var svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.DoesNotContain("<g class=\"beck-dimension\"", svg);
     }
 
@@ -50,9 +49,9 @@ public sealed class BlueprintDimensionTests
     {
         // Sequence/class/state have no group boxes, so no dimension <g> is drawn (the --beck-dimension
         // token is still declared in <style>, but that is not the markup).
-        foreach (string diagram in new[] { "seq-kitchen", "class", "state" })
+        foreach (var diagram in new[] { "seq-kitchen", "class", "state" })
         {
-            string svg = BeckSvg.Render(File.ReadAllText(Path.Combine(CorpusDir, diagram + ".yaml")),
+            var svg = BeckSvg.Render(File.ReadAllText(Path.Combine(_corpusDir, diagram + ".yaml")),
                 new SvgRenderOptions { Style = BlueprintStyle.Instance });
             Assert.DoesNotContain("<g class=\"beck-dimension\"", svg);
         }
@@ -64,10 +63,10 @@ public sealed class BlueprintDimensionTests
         // The dimension rule spans the group's top edge offset up by DimensionTick; the two witness
         // ticks stand at the box's left/right x, from the top edge (y) up past the rule. Read the geometry
         // straight from the emitted lines and check it against a group rect + the tick constant.
-        string svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BlueprintStyle.Instance });
-        double gap = BlueprintStyle.Instance.Geometry.DimensionTick;
+        var svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BlueprintStyle.Instance });
+        var gap = BlueprintStyle.Instance.Geometry.DimensionTick;
         Assert.True(gap > 0);
-        double over = gap / 3;
+        var over = gap / 3;
 
         // Group rects, keyed for lookup by their x (left edge).
         var groupRects = Regex.Matches(svg, "<rect class=\"beck-group\" x=\"([0-9.]+)\" y=\"([0-9.]+)\" width=\"([0-9.]+)\"")
@@ -78,17 +77,17 @@ public sealed class BlueprintDimensionTests
             .ToList();
         Assert.NotEmpty(groupRects);
 
-        var dims = DimensionFull.Matches(svg).Where(m => m.Groups[1].Success).ToList();
+        var dims = _dimensionFull.Matches(svg).Where(m => m.Groups[1].Success).ToList();
         Assert.Equal(groupRects.Count, dims.Count);
 
-        foreach (Match m in dims)
+        foreach (var m in dims)
         {
-            double[] c = Enumerable.Range(1, 12)
+            var c = Enumerable.Range(1, 12)
                 .Select(i => double.Parse(m.Groups[i].Value, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
             // rule: (rx0, dy)->(rx1, dy); tickL: (rx0, y)->(rx0, tickTop); tickR: (rx1, y)->(rx1, tickTop)
             double rx0 = c[0], dy = c[1], rx1 = c[2];
-            double edgeY = c[5];               // witness tick bottom == group top edge y
-            double tickTop = c[7];
+            var edgeY = c[5];               // witness tick bottom == group top edge y
+            var tickTop = c[7];
             Assert.Equal(dy, c[3], 3);          // rule is horizontal
             Assert.Equal(rx0, c[4], 3);          // left tick x
             Assert.Equal(rx1, c[8], 3);          // right tick x
@@ -109,7 +108,7 @@ public sealed class BlueprintDimensionTests
     public void Blueprint_DimensionColour_GoesThroughToken_NoResolvedLiteral()
     {
         // The stroke flows through --beck-dimension (fallback --beck-group-border) — no hex in shape CSS.
-        string svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BlueprintStyle.Instance });
+        var svg = BeckSvg.Render(ArchKitchen(), new SvgRenderOptions { Style = BlueprintStyle.Instance });
         Assert.Contains("stroke:var(--beck-dimension, var(--beck-group-border))", svg);
         // The token itself is defined in the stylesheet (a subtle primary mix), light + dark.
         Assert.Contains("--beck-dimension:color-mix", svg);

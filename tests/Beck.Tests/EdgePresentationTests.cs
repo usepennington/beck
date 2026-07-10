@@ -1,7 +1,5 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Beck;
-using Beck.Rendering;
 using Beck.Styles;
 using Beck.Svg;
 using Xunit;
@@ -19,18 +17,18 @@ namespace Beck.Tests;
 /// </summary>
 public sealed class EdgePresentationTests
 {
-    private static readonly string CorpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
-    private static string Yaml(string f) => File.ReadAllText(Path.Combine(CorpusDir, f));
+    private static readonly string _corpusDir = Path.Combine(AppContext.BaseDirectory, "Corpus");
+    private static string Yaml(string f) => File.ReadAllText(Path.Combine(_corpusDir, f));
 
     private static BeckStyle WithEdges(Func<StyleEdges, StyleEdges> f) =>
         BeckStyle.Classic with { Edges = f(StyleEdges.Classic) };
 
-    private static readonly Regex BaseEdgeD = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
-    private static readonly Regex BaseEdgeStroke = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"[^\"]*\" style=\"stroke:([^;\"]+)", RegexOptions.Compiled);
-    private static readonly Regex StationStroke = new("<circle class=\"beck-station\"[^>]*;stroke:([^;\"]+)", RegexOptions.Compiled);
-    private static readonly Regex OverlayD = new("<path class=\"beck-edge-overlay [^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
-    private static readonly Regex BedD = new("<path class=\"beck-edge-bed\" d=\"([^\"]*)\"", RegexOptions.Compiled);
-    private static readonly Regex MarkerW = new("markerWidth=\"([^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex _baseEdgeD = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex _baseEdgeStroke = new("<path class=\"beck-edge beck-edge--[^\"]*\" d=\"[^\"]*\" style=\"stroke:([^;\"]+)", RegexOptions.Compiled);
+    private static readonly Regex _stationStroke = new("<circle class=\"beck-station\"[^>]*;stroke:([^;\"]+)", RegexOptions.Compiled);
+    private static readonly Regex _overlayD = new("<path class=\"beck-edge-overlay [^\"]*\" d=\"([^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex _bedD = new("<path class=\"beck-edge-bed\" d=\"([^\"]*)\"", RegexOptions.Compiled);
+    private static readonly Regex _markerW = new("markerWidth=\"([^\"]*)\"", RegexOptions.Compiled);
 
     private static List<string> Matches(Regex r, string s) => r.Matches(s).Select(m => m.Groups[1].Value).ToList();
     private static List<double> Nums(string d) =>
@@ -45,14 +43,17 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Overlay_SharesEdgeD_OnePerEdge()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet }) });
 
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(overlayD);
         Assert.Equal(baseD.Count, overlayD.Count);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
     }
 
     // The overlay compiles to a self-contained shared-cycle loop (@keyframes kbeo…) under the
@@ -60,7 +61,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Overlay_Compiled_NoDelayChain()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet }) });
 
         Assert.Contains("@keyframes kbeo0-", svg);
@@ -72,7 +73,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Classic_EmitsNoOverlay()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.DoesNotContain("beck-edge-overlay", svg);
         Assert.DoesNotContain("kbeo", svg);
     }
@@ -81,12 +82,15 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Overlay_OnSequenceMessages()
     {
-        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+        var svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet }) });
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(overlayD);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
     }
 
     // OverlaySteps swaps the overlay animation's linear timing for steps(n) — brutalist/terminal's
@@ -95,14 +99,14 @@ public sealed class EdgePresentationTests
     [Fact]
     public void OverlaySteps_EmitsSteppedTiming()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
+        var yaml = Yaml("arch-kitchen.yaml");
 
-        string linear = BeckSvg.Render(yaml,
+        var linear = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet }) });
         Assert.Matches(@"\.beo0-[0-9a-f]+\{animation:kbeo0-[0-9a-f]+ [0-9.]+s linear infinite;\}", linear);
         Assert.DoesNotContain("steps(", linear);
 
-        string stepped = BeckSvg.Render(yaml,
+        var stepped = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Comet, OverlaySteps = 8 }) });
         Assert.Matches(@"\.beo0-[0-9a-f]+\{animation:kbeo0-[0-9a-f]+ [0-9.]+s steps\(8\) infinite;\}", stepped);
         // Still a compiled shared-cycle loop, still guarded, still no delay chain.
@@ -115,13 +119,13 @@ public sealed class EdgePresentationTests
     [Fact]
     public void OverlaySteps_AppliesToMarching_NotDrawOn()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
+        var yaml = Yaml("arch-kitchen.yaml");
 
-        string marching = BeckSvg.Render(yaml,
+        var marching = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.Marching, OverlaySteps = 12 }) });
         Assert.Contains("steps(12)", marching);
 
-        string drawOn = BeckSvg.Render(yaml,
+        var drawOn = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn, OverlaySteps = 12 }) });
         Assert.DoesNotContain("steps(", drawOn);
     }
@@ -150,13 +154,13 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseColorPalette_CyclesBaseStrokeByEdgeIndex()
     {
-        string svg = BeckSvg.Render(PaletteChainYaml,
+        var svg = BeckSvg.Render(PaletteChainYaml,
             new SvgRenderOptions
             {
-                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)" } }),
+                Style = WithEdges(e => e with { BaseColorPalette = ["var(--pl-a)", "var(--pl-b)"] }),
             });
 
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.Equal(new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-a)" }, strokes);
     }
 
@@ -166,7 +170,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseColorPalette_AuthoredEdgeColorWins()
     {
-        const string yaml = """
+        const string Yaml = """
             type: architecture
             meta: { title: t, direction: LR }
             nodes:
@@ -179,13 +183,13 @@ public sealed class EdgePresentationTests
               - { from: b, to: c, color: danger }
               - { from: c, to: d }
             """;
-        string svg = BeckSvg.Render(yaml,
+        var svg = BeckSvg.Render(Yaml,
             new SvgRenderOptions
             {
-                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-c)" } }),
+                Style = WithEdges(e => e with { BaseColorPalette = ["var(--pl-a)", "var(--pl-b)", "var(--pl-c)"] }),
             });
 
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.Equal(new[] { "var(--pl-a)", "var(--beck-danger)", "var(--pl-c)" }, strokes);
     }
 
@@ -194,8 +198,8 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseColorPalette_Empty_LeavesDefaultEdgeColour()
     {
-        string svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = BeckStyle.Classic });
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.Equal(new[] { "var(--beck-edge)", "var(--beck-edge)", "var(--beck-edge)" }, strokes);
     }
 
@@ -206,19 +210,19 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseColorPalette_StationRingsFollowLineHue()
     {
-        BeckStyle transit = BeckStyle.Classic with
+        var transit = BeckStyle.Classic with
         {
             Name = "custom-transit",
             Artwork = StyleArtwork.Metro,
             Geometry = BeckStyle.Classic.Geometry with { StationRadius = 4.5 },
-            Edges = StyleEdges.Classic with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-c)" } },
+            Edges = StyleEdges.Classic with { BaseColorPalette = ["var(--pl-a)", "var(--pl-b)", "var(--pl-c)"] },
         };
-        string svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = transit });
+        var svg = BeckSvg.Render(PaletteChainYaml, new SvgRenderOptions { Style = transit });
 
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.Equal(new[] { "var(--pl-a)", "var(--pl-b)", "var(--pl-c)" }, strokes);
 
-        var stations = Matches(StationStroke, svg);
+        var stations = Matches(_stationStroke, svg);
         Assert.Equal(new[]
         {
             "var(--pl-a)", "var(--pl-a)",
@@ -233,7 +237,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseColorPalette_SequenceMessageFollowsExplicitSourceAccent()
     {
-        const string yaml = """
+        const string Yaml = """
             type: sequence
             participants:
               - { id: a, title: A, accent: danger }
@@ -241,13 +245,13 @@ public sealed class EdgePresentationTests
             messages:
               - { from: a, to: b, label: go }
             """;
-        string svg = BeckSvg.Render(yaml,
+        var svg = BeckSvg.Render(Yaml,
             new SvgRenderOptions
             {
-                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)" } }),
+                Style = WithEdges(e => e with { BaseColorPalette = ["var(--pl-a)", "var(--pl-b)"] }),
             });
 
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.Equal(new[] { "var(--beck-danger)" }, strokes);
     }
 
@@ -257,7 +261,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseColorPalette_SequenceAuthoredMessageColorWins_EvenWhenItEqualsADefault()
     {
-        const string yaml = """
+        const string Yaml = """
             type: sequence
             participants:
               - { id: a, title: A }
@@ -265,15 +269,15 @@ public sealed class EdgePresentationTests
             messages:
               - { from: a, to: b, label: go, color: primary }
             """;
-        string svg = BeckSvg.Render(yaml,
+        var svg = BeckSvg.Render(Yaml,
             new SvgRenderOptions
             {
-                Style = WithEdges(e => e with { BaseColorPalette = new[] { "var(--pl-a)", "var(--pl-b)" } }),
+                Style = WithEdges(e => e with { BaseColorPalette = ["var(--pl-a)", "var(--pl-b)"] }),
             });
 
         // `color: primary` equals participant b's kind-default accent (Service → primary); the
         // authored colour must survive, not become source a's palette hue var(--pl-a).
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.Equal(new[] { "var(--beck-primary)" }, strokes);
     }
 
@@ -285,19 +289,22 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Underlay_SharesEdgeD_BeforeBase_OnePerEdge()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { UnderlayWidth = 4 }) });
 
-        var baseD = Matches(BaseEdgeD, svg);
-        var bedD = Matches(BedD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var bedD = Matches(_bedD, svg);
         Assert.NotEmpty(bedD);
         Assert.Equal(baseD.Count, bedD.Count);
-        foreach (string bd in bedD) Assert.Contains(bd, baseD);
+        foreach (var bd in bedD)
+        {
+            Assert.Contains(bd, baseD);
+        }
 
         // Document order: every bed path precedes the matching base edge path (bed is painted behind).
-        foreach (Match bed in BedD.Matches(svg))
+        foreach (Match bed in _bedD.Matches(svg))
         {
-            int basePos = svg.IndexOf($"<path class=\"beck-edge beck-edge--", bed.Index, StringComparison.Ordinal);
+            var basePos = svg.IndexOf($"<path class=\"beck-edge beck-edge--", bed.Index, StringComparison.Ordinal);
             Assert.True(basePos > bed.Index, "each trace bed must sit before (behind) its base edge");
             // No other base edge path is interleaved between this bed and its base edge.
             Assert.DoesNotContain("<path class=\"beck-edge beck-edge--",
@@ -310,13 +317,13 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Underlay_WidthAndColor_OffByDefault()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        string bedded = BeckSvg.Render(yaml,
+        var yaml = Yaml("arch-kitchen.yaml");
+        var bedded = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { UnderlayWidth = 4 }) });
         Assert.Contains("<path class=\"beck-edge-bed\"", bedded);
         Assert.Contains("stroke:var(--beck-edge-underlay, var(--beck-edge));stroke-width:4;", bedded);
 
-        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.DoesNotContain("beck-edge-bed", classic);
     }
 
@@ -325,22 +332,25 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Underlay_OnSequenceMessagesAndLifelines()
     {
-        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+        var svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { UnderlayWidth = 4 }) });
 
         // Messages: bed paths share the message d.
-        var baseD = Matches(BaseEdgeD, svg);
-        var bedD = Matches(BedD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var bedD = Matches(_bedD, svg);
         Assert.NotEmpty(bedD);
-        foreach (string bd in bedD) Assert.Contains(bd, baseD);
+        foreach (var bd in bedD)
+        {
+            Assert.Contains(bd, baseD);
+        }
 
         // Lifelines: a bed line per lifeline, before its base line.
         Assert.Contains("<line class=\"beck-lifeline-bed\"", svg);
-        int bedPos = svg.IndexOf("<line class=\"beck-lifeline-bed\"", StringComparison.Ordinal);
-        int basePos = svg.IndexOf("<line class=\"beck-lifeline\"", StringComparison.Ordinal);
+        var bedPos = svg.IndexOf("<line class=\"beck-lifeline-bed\"", StringComparison.Ordinal);
+        var basePos = svg.IndexOf("<line class=\"beck-lifeline\"", StringComparison.Ordinal);
         Assert.True(bedPos < basePos, "the lifeline bed must sit before (behind) the base lifeline");
 
-        string classic = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
+        var classic = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.DoesNotContain("beck-edge-bed", classic);
         Assert.DoesNotContain("beck-lifeline-bed", classic);
     }
@@ -352,22 +362,25 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Bow_PreservesEndpoints_OnePath()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        var classic = Matches(BaseEdgeD, BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic }));
-        var bowed = Matches(BaseEdgeD, BeckSvg.Render(yaml,
+        var yaml = Yaml("arch-kitchen.yaml");
+        var classic = Matches(_baseEdgeD, BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic }));
+        var bowed = Matches(_baseEdgeD, BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { BowAmplitude = 6 }) }));
 
         Assert.Equal(classic.Count, bowed.Count);
         Assert.NotEmpty(bowed);
-        bool anyChanged = false;
-        for (int i = 0; i < classic.Count; i++)
+        var anyChanged = false;
+        for (var i = 0; i < classic.Count; i++)
         {
             Assert.Equal(First(classic[i]).X, First(bowed[i]).X, 2);
             Assert.Equal(First(classic[i]).Y, First(bowed[i]).Y, 2);
             Assert.Equal(Last(classic[i]).X, Last(bowed[i]).X, 2);
             Assert.Equal(Last(classic[i]).Y, Last(bowed[i]).Y, 2);
             Assert.Equal(1, bowed[i].Count(ch => ch == 'M'));       // still one continuous path
-            if (classic[i] != bowed[i]) anyChanged = true;
+            if (classic[i] != bowed[i])
+            {
+                anyChanged = true;
+            }
         }
         Assert.True(anyChanged, "bow should perturb at least one edge's geometry");
     }
@@ -377,8 +390,8 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BowLine_PreservesEndpoints_IsCurvedAndDeterministic()
     {
-        string a = Shaping.BowLine(104, 53, 126, 53, 5, "seed-1");
-        string b = Shaping.BowLine(104, 53, 126, 53, 5, "seed-1");
+        var a = Shaping.BowLine(104, 53, 126, 53, 5, "seed-1");
+        var b = Shaping.BowLine(104, 53, 126, 53, 5, "seed-1");
         Assert.Equal(a, b);                                        // deterministic for a fixed seed
         Assert.Equal((104d, 53d), First(a));
         Assert.Equal((126d, 53d), Last(a));
@@ -394,7 +407,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void OpenV_EmitsTwoStrokes()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.OpenV }) });
 
         Assert.Contains("<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=", svg);
@@ -406,7 +419,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Classic_FilledArrow()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"), new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.Contains("points=\"0,1 10,5 0,9\"", svg);
     }
 
@@ -415,7 +428,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Chevron_EmitsTwoButtStrokes_NoFilledTriangle()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.Chevron }) });
 
         Assert.Contains("<line x1=\"10\" y1=\"5\" x2=\"2\" y2=\"1.5\" stroke=\"var(--beck-edge)\" stroke-width=\"1.6\" stroke-linecap=\"butt\"/>", svg);
@@ -430,13 +443,15 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Chevron_OrientsAutoStartReverse_OneDefPerColor()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.Chevron }) });
 
         var markerDefs = Regex.Matches(svg, "<marker id=\"beck-arrow-[^\"]*\"[^>]*>");
         Assert.NotEmpty(markerDefs);
         foreach (Match m in markerDefs)
+        {
             Assert.Contains("orient=\"auto-start-reverse\"", m.Value);
+        }
     }
 
     // The chevron's dedupe key is stable: same shape+color collapses to a single marker def (one `<marker>`
@@ -444,14 +459,14 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Chevron_DedupeKey_Stable_OneDef()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
+        var yaml = Yaml("arch-kitchen.yaml");
         var options = new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.Chevron }) };
-        string a = BeckSvg.Render(yaml, options);
-        string b = BeckSvg.Render(yaml, options);
+        var a = BeckSvg.Render(yaml, options);
+        var b = BeckSvg.Render(yaml, options);
         Assert.Equal(a, b);                                        // deterministic
 
         // Exactly one chevron marker def (butt-capped stroke pair) despite many edges reusing it.
-        int defs = Regex.Matches(a, "stroke-linecap=\"butt\"/></marker>").Count;
+        var defs = Regex.Matches(a, "stroke-linecap=\"butt\"/></marker>").Count;
         Assert.Equal(1, defs);
     }
 
@@ -462,9 +477,9 @@ public sealed class EdgePresentationTests
     [Fact]
     public void MarkerScale_MultipliesGeometry()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
-        string scaled = BeckSvg.Render(yaml, new SvgRenderOptions { Style = WithEdges(e => e with { MarkerScale = 2 }) });
+        var yaml = Yaml("arch-kitchen.yaml");
+        var classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var scaled = BeckSvg.Render(yaml, new SvgRenderOptions { Style = WithEdges(e => e with { MarkerScale = 2 }) });
 
         Assert.Contains("markerWidth=\"6\"", classic);
         Assert.Contains("markerWidth=\"12\"", scaled);
@@ -476,14 +491,14 @@ public sealed class EdgePresentationTests
     [Fact]
     public void MarkerScaleToWidth_UsesUserSpaceOnUse()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
+        var yaml = Yaml("arch-kitchen.yaml");
         Assert.DoesNotContain("markerUnits", BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic }));
 
-        string svg = BeckSvg.Render(yaml,
+        var svg = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { MarkerScaleToWidth = true }) });
         Assert.Contains("markerUnits=\"userSpaceOnUse\"", svg);
         // The arrow's classic base width is 6; scaled to width it grows (>6).
-        double w = Matches(MarkerW, svg).Select(v => double.Parse(v, CultureInfo.InvariantCulture)).Max();
+        var w = Matches(_markerW, svg).Select(v => double.Parse(v, CultureInfo.InvariantCulture)).Max();
         Assert.True(w > 6, $"expected a grown marker width, got {w}");
     }
 
@@ -493,15 +508,15 @@ public sealed class EdgePresentationTests
     [Fact]
     public void MarkerOutline_StrokesFilledArrow_OverflowVisible()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        string outlined = BeckSvg.Render(yaml,
+        var yaml = Yaml("arch-kitchen.yaml");
+        var outlined = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { MarkerOutline = "var(--beck-edge)" }) });
         // The filled polygon now carries the outline stroke; the marker element is overflow-visible.
         Assert.Contains("<polygon points=\"0,1 10,5 0,9\" fill=\"var(--beck-edge)\" stroke=\"var(--beck-edge)\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>", outlined);
         Assert.Contains("overflow=\"visible\"", outlined);
 
         // Classic: flat fill, no outline stroke on the arrow polygon, no overflow attribute.
-        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.Contains("<polygon points=\"0,1 10,5 0,9\" fill=\"var(--beck-edge)\"/>", classic);
         Assert.DoesNotContain("overflow=\"visible\"", classic);
     }
@@ -511,8 +526,8 @@ public sealed class EdgePresentationTests
     [Fact]
     public void MarkerOutline_InertForOpenVAndChevron()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        string openV = BeckSvg.Render(yaml,
+        var yaml = Yaml("arch-kitchen.yaml");
+        var openV = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Arrow = EdgeArrow.OpenV, MarkerOutline = "var(--beck-edge)" }) });
         Assert.DoesNotContain("overflow=\"visible\"", openV);
         Assert.DoesNotContain("<polygon points=\"0,1 10,5 0,9\"", openV);
@@ -523,13 +538,13 @@ public sealed class EdgePresentationTests
     [Fact]
     public void BaseOpacity_And_BaseLinecap()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        string faint = BeckSvg.Render(yaml,
+        var yaml = Yaml("arch-kitchen.yaml");
+        var faint = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { BaseOpacity = 0.35, BaseLinecap = "butt" }) });
         Assert.Contains("stroke-opacity:0.35", faint);
         Assert.Contains(".beck-edge{fill:none;stroke-width:1.6;stroke-linecap:butt;", faint);
 
-        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
         Assert.DoesNotContain("stroke-opacity:0.35", classic);    // no base-edge opacity by default
         Assert.Contains(".beck-edge{fill:none;stroke-width:1.6;stroke-linecap:round;", classic);
     }
@@ -539,10 +554,10 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Lifeline_FaintSolid_DropsDash()
     {
-        string yaml = Yaml("sample-sequence.yaml");
+        var yaml = Yaml("sample-sequence.yaml");
         Assert.Contains("stroke-dasharray:6 7", BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic }));
 
-        string solid = BeckSvg.Render(yaml,
+        var solid = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Lifeline = LifelineShape.FaintSolid }) });
         Assert.Contains(".beck-lifeline{stroke-width:2;}", solid);
     }
@@ -550,10 +565,10 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Lifeline_Wobbly_SwapsLineForPath()
     {
-        string yaml = Yaml("sample-sequence.yaml");
+        var yaml = Yaml("sample-sequence.yaml");
         Assert.Contains("<line class=\"beck-lifeline\"", BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic }));
 
-        string wobbly = BeckSvg.Render(yaml,
+        var wobbly = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { Lifeline = LifelineShape.Wobbly }) });
         Assert.Contains("<path class=\"beck-lifeline\"", wobbly);
         Assert.DoesNotContain("<line class=\"beck-lifeline\"", wobbly);
@@ -562,10 +577,10 @@ public sealed class EdgePresentationTests
     [Fact]
     public void WobblySeparators_SwapClassLinesForPaths()
     {
-        string yaml = Yaml("class.yaml");
+        var yaml = Yaml("class.yaml");
         Assert.Contains("<line class=\"beck-class-head-border\"", BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic }));
 
-        string wobbly = BeckSvg.Render(yaml,
+        var wobbly = BeckSvg.Render(yaml,
             new SvgRenderOptions { Style = WithEdges(e => e with { WobblySeparators = true }) });
         Assert.Contains("<path class=\"beck-class-head-border\"", wobbly);
         Assert.DoesNotContain("<line class=\"beck-class-head-border\"", wobbly);
@@ -580,14 +595,17 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Blueprint_MarchesOnEveryArchitectureEdge()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = BlueprintStyle.Instance });
 
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(baseD);
         Assert.Equal(baseD.Count, overlayD.Count);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
 
         Assert.Contains("stroke-dasharray:6 6", svg);
         Assert.Matches(@"\.beo0-[0-9a-z]+\{animation:kbeo0-[0-9a-z]+ 1\.6s linear infinite;\}", svg);
@@ -599,12 +617,15 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Blueprint_MarchesOnSequenceMessagesToo()
     {
-        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+        var svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
             new SvgRenderOptions { Style = BlueprintStyle.Instance });
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(overlayD);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
     }
 
     // ---- draw-on: every connector inks itself in slowly, on architecture AND sequence ----
@@ -615,14 +636,18 @@ public sealed class EdgePresentationTests
     [Fact]
     public void DrawOn_InksEveryArchitectureEdge()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn }) });
 
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(baseD);
         Assert.Equal(baseD.Count, overlayD.Count);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
+
         Assert.Contains("@keyframes kbeo0-", svg);
         Assert.DoesNotContain("animation-delay", svg);
     }
@@ -635,7 +660,7 @@ public sealed class EdgePresentationTests
     [Fact]
     public void DrawOn_InksClassAndSequenceEdgesToo()
     {
-        const string classYaml = """
+        const string ClassYaml = """
             type: class
             meta:
               title: Demo
@@ -652,12 +677,12 @@ public sealed class EdgePresentationTests
             flow:
               steps: []
             """;
-        BeckStyle drawOn = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn });
-        string classSvg = BeckSvg.Render(classYaml, new SvgRenderOptions { Style = drawOn });
-        Assert.NotEmpty(Matches(OverlayD, classSvg));
+        var drawOn = WithEdges(e => e with { Overlay = EdgeOverlay.DrawOn });
+        var classSvg = BeckSvg.Render(ClassYaml, new SvgRenderOptions { Style = drawOn });
+        Assert.NotEmpty(Matches(_overlayD, classSvg));
 
-        string seqSvg = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = drawOn });
-        Assert.NotEmpty(Matches(OverlayD, seqSvg));
+        var seqSvg = BeckSvg.Render(Yaml("sample-sequence.yaml"), new SvgRenderOptions { Style = drawOn });
+        Assert.NotEmpty(Matches(_overlayD, seqSvg));
     }
 
     // ---- terminal (mock 1f): a stepped phosphor block ticks down every wire ----
@@ -670,14 +695,17 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Terminal_SteppedPhosphorBlockOnEveryWire_SharesD_NoDelayChain()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = TerminalStyle.Instance });
 
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(overlayD);
         Assert.Equal(baseD.Count, overlayD.Count);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
 
         // Stepped tick (steps(12)) on a compiled 1.6s shared-cycle loop, guarded, no delay chain.
         Assert.Matches(@"\.beo0-[0-9a-z]+\{animation:kbeo0-[0-9a-z]+ 1\.6s steps\(12\) infinite;\}", svg);
@@ -695,13 +723,13 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Terminal_ChevronRidesBrightAccentOverDefaultWire()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = TerminalStyle.Instance });
 
         // Base edges stay on their token hue — the default wires on the dim-green var(--beck-edge), a
         // kind-default (dependency) edge on var(--beck-neutral) — and NONE on the bright accent: the wire
         // is always the dim trace, never the phosphor.
-        var strokes = Matches(BaseEdgeStroke, svg);
+        var strokes = Matches(_baseEdgeStroke, svg);
         Assert.NotEmpty(strokes);
         Assert.Contains("var(--beck-edge)", strokes);
         Assert.DoesNotContain("var(--beck-accent)", strokes);
@@ -718,11 +746,11 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Terminal_PacketFlowStepsInHardCuts_ClassicDoesNot()
     {
-        string yaml = Yaml("arch-kitchen.yaml");
-        string terminal = BeckSvg.Render(yaml, new SvgRenderOptions { Style = TerminalStyle.Instance });
-        string classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
+        var yaml = Yaml("arch-kitchen.yaml");
+        var terminal = BeckSvg.Render(yaml, new SvgRenderOptions { Style = TerminalStyle.Instance });
+        var classic = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyle.Classic });
 
-        int n = TerminalStyle.Instance.Motion.PacketSteps!.Value;
+        var n = TerminalStyle.Instance.Motion.PacketSteps!.Value;
         Assert.Equal(12, n);
         Assert.Contains($"animation-timing-function:steps({n})", terminal);
         Assert.DoesNotContain("animation-timing-function:steps(", classic);
@@ -738,14 +766,17 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Circuit_AmberSignalCometOnEveryTrace_SharesD_NoDelayChain()
     {
-        string svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
+        var svg = BeckSvg.Render(Yaml("arch-kitchen.yaml"),
             new SvgRenderOptions { Style = CircuitStyle.Instance });
 
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(overlayD);
         Assert.Equal(baseD.Count, overlayD.Count);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
 
         // A width-3 round-capped comet on the single overlay fallback hue (no palette), an 8px lit dash.
         Assert.Contains("stroke:var(--beck-edge-overlay, var(--beck-accent));stroke-width:3;stroke-linecap:round;", svg);
@@ -763,11 +794,14 @@ public sealed class EdgePresentationTests
     [Fact]
     public void Circuit_AmberSignalCometOnSequenceMessages()
     {
-        string svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
+        var svg = BeckSvg.Render(Yaml("sample-sequence.yaml"),
             new SvgRenderOptions { Style = CircuitStyle.Instance });
-        var baseD = Matches(BaseEdgeD, svg);
-        var overlayD = Matches(OverlayD, svg);
+        var baseD = Matches(_baseEdgeD, svg);
+        var overlayD = Matches(_overlayD, svg);
         Assert.NotEmpty(overlayD);
-        foreach (string od in overlayD) Assert.Contains(od, baseD);
+        foreach (var od in overlayD)
+        {
+            Assert.Contains(od, baseD);
+        }
     }
 }

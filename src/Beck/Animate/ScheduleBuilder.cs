@@ -44,25 +44,42 @@ internal static class StatusStates
         var ids = model.Nodes.Select(n => n.Id).ToHashSet();
         var map = new Dictionary<string, List<(string, string)>>();
         foreach (var n in model.Nodes)
-            if (n.Status is { } s) map[n.Id] = new List<(string, string)> { (s, n.Accent) };
+        {
+            if (n.Status is { } s)
+            {
+                map[n.Id] = [(s, n.Accent)];
+            }
+        }
 
         void Add(string node, string text, string color)
         {
-            if (!ids.Contains(node)) return;
+            if (!ids.Contains(node))
+            {
+                return;
+            }
             // A node the flow gives a status but with no authored one gets an empty
             // resting state 0 (no pill shown at rest), then the flow states on top.
-            if (!map.TryGetValue(node, out var list)) map[node] = list = new List<(string, string)> { ("", "") };
-            if (!list.Any(x => x.Item1 == text && x.Item2 == color)) list.Add((text, color));
+            if (!map.TryGetValue(node, out var list))
+            {
+                map[node] = list = [("", "")];
+            }
+
+            if (!list.Any(x => x.Item1 == text && x.Item2 == color))
+            {
+                list.Add((text, color));
+            }
         }
         void Walk(IEnumerable<FlowStep> steps)
         {
             foreach (var st in steps)
+            {
                 switch (st)
                 {
                     case StatusStep s: Add(s.Node, s.Text, s.Color ?? Ac(accent, s.Node)); break;
                     case FailStep f when f.Text is { } t: Add(f.Node, t, f.Color ?? "var(--beck-danger)"); break;
                     case ParallelStep p: Walk(p.Steps); break;
                 }
+            }
         }
         Walk(model.Flow.Steps);
         return map;
@@ -70,7 +87,14 @@ internal static class StatusStates
 
     public static int IndexOf(List<(string Text, string Color)> states, string text, string color)
     {
-        for (int i = 0; i < states.Count; i++) if (states[i].Text == text && states[i].Color == color) return i;
+        for (var i = 0; i < states.Count; i++)
+        {
+            if (states[i].Text == text && states[i].Color == color)
+            {
+                return i;
+            }
+        }
+
         return -1;
     }
 
@@ -99,8 +123,8 @@ internal static class ScheduleBuilder
     {
         // Effect sub-timeline lengths (seconds) — from the style so the schedule duration and the
         // compiler's keyframe windows stay in lockstep (they read the same fields).
-        double PulseDur = motion.PulseDur, HighlightDur = motion.HighlightDur, FailDur = motion.FailDur;
-        FlowModel flow = model.Flow;
+        double pulseDur = motion.PulseDur, highlightDur = motion.HighlightDur, failDur = motion.FailDur;
+        var flow = model.Flow;
         var packets = new List<PacketHop>();
         var cards = new List<CardFx>();
         var impacts = new List<ImpactFx>();
@@ -115,13 +139,21 @@ internal static class ScheduleBuilder
         var accentOf = model.Nodes.ToDictionary(n => n.Id, n => n.Accent);
         var statusMap = StatusStates.Build(model);
         var indexOf = new Dictionary<string, int>();
-        for (int i = 0; i < model.Nodes.Count; i++) indexOf[model.Nodes[i].Id] = i;
+        for (var i = 0; i < model.Nodes.Count; i++)
+        {
+            indexOf[model.Nodes[i].Id] = i;
+        }
+
         var membersOf = model.Groups.ToDictionary(g => g.Id, g => (IReadOnlyList<string>)g.Members);
 
         // A node-card effect that also extends the duration to cover its sub-timeline.
         void AddCard(string nodeId, CardFxKind kind, double at, string color, double dur)
         {
-            if (!indexOf.TryGetValue(nodeId, out int i)) return;
+            if (!indexOf.TryGetValue(nodeId, out var i))
+            {
+                return;
+            }
+
             cards.Add(new CardFx(i, kind, at, color));
             duration = Math.Max(duration, at + dur);
         }
@@ -129,17 +161,29 @@ internal static class ScheduleBuilder
         // Resolve a status (text,color) to its pill-state index and register the swap.
         void AddStatus(string node, string text, string color, double at)
         {
-            if (!statusMap.TryGetValue(node, out var states) || !indexOf.TryGetValue(node, out int i)) return;
-            int s = StatusStates.IndexOf(states, text, color);
-            if (s >= 0) statuses.Add(new StatusFx(i, s, at));
+            if (!statusMap.TryGetValue(node, out var states) || !indexOf.TryGetValue(node, out var i))
+            {
+                return;
+            }
+
+            var s = StatusStates.IndexOf(states, text, color);
+            if (s >= 0)
+            {
+                statuses.Add(new StatusFx(i, s, at));
+            }
         }
 
         // Pulse-on-arrival: a node target flashes; a group target flashes every member.
         void PulseTarget(string targetId, double at, string color)
         {
-            if (indexOf.ContainsKey(targetId)) { AddCard(targetId, CardFxKind.Pulse, at, color, PulseDur); return; }
+            if (indexOf.ContainsKey(targetId)) { AddCard(targetId, CardFxKind.Pulse, at, color, pulseDur); return; }
             if (membersOf.TryGetValue(targetId, out var members))
-                foreach (var m in members) AddCard(m, CardFxKind.Pulse, at, color, PulseDur);
+            {
+                foreach (var m in members)
+                {
+                    AddCard(m, CardFxKind.Pulse, at, color, pulseDur);
+                }
+            }
         }
 
         // Precomputed once so chain hops (and burst expansion) don't each re-scan every edge:
@@ -154,34 +198,50 @@ internal static class ScheduleBuilder
 
         (FlowEdge Edge, bool Reversed)? PathOf(string from, string to, string? edgeId)
         {
-            if (edgeId != null && edgeById.TryGetValue(edgeId, out var hit)) return (hit, false);
-            if (edgeByFromTo.TryGetValue((from, to), out var direct)) return (direct, false);
-            if (edgeByFromTo.TryGetValue((to, from), out var rev)) return (rev, true);
+            if (edgeId != null && edgeById.TryGetValue(edgeId, out var hit))
+            {
+                return (hit, false);
+            }
+
+            if (edgeByFromTo.TryGetValue((from, to), out var direct))
+            {
+                return (direct, false);
+            }
+
+            if (edgeByFromTo.TryGetValue((to, from), out var rev))
+            {
+                return (rev, true);
+            }
+
             return null;
         }
 
         double EmitDot(IReadOnlyList<string> chain, PacketKnobs k, string color, string? label, double startAt, string? edgeId)
         {
-            double at = startAt;
-            for (int i = 0; i < chain.Count - 1; i++)
+            var at = startAt;
+            for (var i = 0; i < chain.Count - 1; i++)
             {
                 var found = PathOf(chain[i], chain[i + 1], chain.Count == 2 ? edgeId : null);
-                if (found is not { } fr) continue;
-                FlowEdge fe = fr.Edge;
-                string? hopLabel = i == chain.Count - 2 ? label : null;
+                if (found is not { } fr)
+                {
+                    continue;
+                }
 
-                PacketKindStyle ks = Defaults.PacketKindStyle[fe.Kind];
-                PacketShape shape = k.Shape ?? StyleGlyph(motion.PacketGlyph) ?? PacketShape.Dot;
-                double size = k.Size ?? Defaults.PacketShapeSize[shape] ?? ks.Size;
-                double speed = k.Speed ?? ks.Speed;
-                bool glow = k.Glow ?? ks.Glow;
-                bool impact = k.Impact ?? false;
-                Ease ease = Easing.ForPacket(k.Ease ?? ks.Ease);
+                var fe = fr.Edge;
+                var hopLabel = i == chain.Count - 2 ? label : null;
 
-                double len = PathLength.Of(fe.D);
+                var ks = Defaults.PacketKindStyle[fe.Kind];
+                var shape = k.Shape ?? StyleGlyph(motion.PacketGlyph) ?? PacketShape.Dot;
+                var size = k.Size ?? Defaults.PacketShapeSize[shape] ?? ks.Size;
+                var speed = k.Speed ?? ks.Speed;
+                var glow = k.Glow ?? ks.Glow;
+                var impact = k.Impact ?? false;
+                var ease = Easing.ForPacket(k.Ease ?? ks.Ease);
+
+                var len = PathLength.Of(fe.D);
                 // 0.6s floor — doubled with the halved PacketKindStyle speeds so degenerate short
                 // hops slow down in step with the rest of the choreography.
-                double dur = Math.Max(0.6, len / speed);
+                var dur = Math.Max(0.6, len / speed);
                 packets.Add(new PacketHop(at, dur, fe.D, len, fr.Reversed, color, shape, size, glow, ease, hopLabel, impact, fe.Id));
                 at += dur;
 
@@ -190,7 +250,7 @@ internal static class ScheduleBuilder
                 PulseTarget(chain[i + 1], at, color);
                 if (impact)
                 {
-                    (double x, double y) = EndPoint(fe.D, fr.Reversed);
+                    (var x, var y) = EndPoint(fe.D, fr.Reversed);
                     impacts.Add(new ImpactFx(at, x, y, color, size));
                 }
             }
@@ -202,78 +262,102 @@ internal static class ScheduleBuilder
             switch (step)
             {
                 case PacketStep p:
-                {
-                    double at = position ?? duration;
-                    var chain = new List<string> { p.From };
-                    if (p.Via != null) chain.AddRange(p.Via);
-                    chain.Add(p.To);
-                    double arrival = EmitDot(chain, p.Knobs, p.Color ?? "var(--beck-packet)", p.Label, at, p.Edge);
-                    duration = Math.Max(duration, arrival);
-                    break;
-                }
-                case BurstStep b:
-                {
-                    double bas = position ?? duration;
-                    var targets = b.Targets.ToList();
-                    for (int c = 0; c < b.Count; c++)
                     {
-                        double at = bas + c * b.Stagger;
-                        for (int t = 0; t < targets.Count; t++)
+                        var at = position ?? duration;
+                        var chain = new List<string> { p.From };
+                        if (p.Via != null)
                         {
-                            var chain = new List<string> { b.From };
-                            if (b.Via != null) chain.AddRange(b.Via);
-                            chain.Add(targets[t]);
-                            double arrival = EmitDot(chain, b.Knobs, b.Color ?? "var(--beck-packet)",
-                                c == 0 && t == 0 ? b.Label : null, at, null);
-                            duration = Math.Max(duration, arrival);
+                            chain.AddRange(p.Via);
                         }
+
+                        chain.Add(p.To);
+                        var arrival = EmitDot(chain, p.Knobs, p.Color ?? "var(--beck-packet)", p.Label, at, p.Edge);
+                        duration = Math.Max(duration, arrival);
+                        break;
                     }
-                    break;
-                }
+                case BurstStep b:
+                    {
+                        var bas = position ?? duration;
+                        var targets = b.Targets.ToList();
+                        for (var c = 0; c < b.Count; c++)
+                        {
+                            var at = bas + c * b.Stagger;
+                            for (var t = 0; t < targets.Count; t++)
+                            {
+                                var chain = new List<string> { b.From };
+                                if (b.Via != null)
+                                {
+                                    chain.AddRange(b.Via);
+                                }
+
+                                chain.Add(targets[t]);
+                                var arrival = EmitDot(chain, b.Knobs, b.Color ?? "var(--beck-packet)",
+                                    c == 0 && t == 0 ? b.Label : null, at, null);
+                                duration = Math.Max(duration, arrival);
+                            }
+                        }
+                        break;
+                    }
                 case PulseStep ps:
-                    AddCard(ps.Node, CardFxKind.Pulse, position ?? duration, ps.Color ?? Accent(accentOf, ps.Node), PulseDur);
+                    AddCard(ps.Node, CardFxKind.Pulse, position ?? duration, ps.Color ?? Accent(accentOf, ps.Node), pulseDur);
                     break;
                 case HighlightStep hs:
-                    AddCard(hs.Node, CardFxKind.Highlight, position ?? duration, hs.Color ?? Accent(accentOf, hs.Node), HighlightDur);
+                    AddCard(hs.Node, CardFxKind.Highlight, position ?? duration, hs.Color ?? Accent(accentOf, hs.Node), highlightDur);
                     break;
                 case StatusStep sts:
                     AddStatus(sts.Node, sts.Text, sts.Color ?? Accent(accentOf, sts.Node), position ?? duration);
                     break;
                 case FailStep fs:
-                {
-                    double at = position ?? duration;
-                    string fcol = fs.Color ?? "var(--beck-danger)";
-                    AddCard(fs.Node, CardFxKind.Fail, at, fcol, FailDur);
-                    if (fs.Text is { } ft) AddStatus(fs.Node, ft, fcol, at);
-                    break;
-                }
+                    {
+                        var at = position ?? duration;
+                        var fcol = fs.Color ?? "var(--beck-danger)";
+                        AddCard(fs.Node, CardFxKind.Fail, at, fcol, failDur);
+                        if (fs.Text is { } ft)
+                        {
+                            AddStatus(fs.Node, ft, fcol, at);
+                        }
+
+                        break;
+                    }
                 case ActivateStep a:
                     if (PathOf(a.From, a.To, null) is { } af)
+                    {
                         edgeFx.Add(new EdgeFx(EdgeFxKind.Activate, position ?? duration, af.Edge.D, a.Color ?? "var(--beck-primary)", PathLength.Of(af.Edge.D)));
+                    }
+
                     break;
                 case StreamStep st:
                     if (PathOf(st.From, st.To, null) is { } sf)
+                    {
                         edgeFx.Add(new EdgeFx(EdgeFxKind.Stream, position ?? duration, sf.Edge.D, st.Color ?? "var(--beck-primary)", PathLength.Of(sf.Edge.D)));
+                    }
+
                     break;
                 case WorkingStep wk:
-                    if (indexOf.TryGetValue(wk.Node, out int wi))
+                    if (indexOf.TryGetValue(wk.Node, out var wi))
+                    {
                         workEvents.Add((wi, position ?? duration, true, wk.Color ?? Accent(accentOf, wk.Node)));
+                    }
+
                     break;
                 case IdleStep il:
-                    if (indexOf.TryGetValue(il.Node, out int ii))
+                    if (indexOf.TryGetValue(il.Node, out var ii))
+                    {
                         workEvents.Add((ii, position ?? duration, false, ""));
+                    }
+
                     break;
                 case WaitStep w:
                     duration = Math.Max(duration, (position ?? duration) + w.Seconds);
                     break;
                 case NarrateStep n:
-                {
-                    double at = position ?? duration;
-                    double hold = n.Hold ?? ReadingTime(n.Text, model.Meta.Narration);
-                    narrations.Add(new NarrateFx(at, n.Color));
-                    duration = Math.Max(duration, at + 0.12 + 0.3 + Math.Max(0, hold));
-                    break;
-                }
+                    {
+                        var at = position ?? duration;
+                        var hold = n.Hold ?? ReadingTime(n.Text, model.Meta.Narration);
+                        narrations.Add(new NarrateFx(at, n.Color));
+                        duration = Math.Max(duration, at + 0.12 + 0.3 + Math.Max(0, hold));
+                        break;
+                    }
                 case PhaseStep:
                     phases.Add(position ?? duration);
                     break;
@@ -281,42 +365,60 @@ internal static class ScheduleBuilder
                     restoreAt = position ?? duration;
                     break;
                 case ParallelStep par:
-                {
-                    double bas = position ?? duration;
-                    foreach (var child in par.Steps) Exec(child, bas);
-                    break;
-                }
-                // status/working/idle/activate/stream/phase land in later M9 commits.
+                    {
+                        var bas = position ?? duration;
+                        foreach (var child in par.Steps)
+                        {
+                            Exec(child, bas);
+                        }
+
+                        break;
+                    }
+                    // status/working/idle/activate/stream/phase land in later M9 commits.
             }
         }
 
-        foreach (var step in flow.Steps) Exec(step, null);
+        foreach (var step in flow.Steps)
+        {
+            Exec(step, null);
+        }
 
-        int repeat = (int)flow.Repeat;
-        if (restoreAt < 0 && repeat != 0) restoreAt = duration;
-        double restore = restoreAt < 0 ? duration : restoreAt;
+        var repeat = (int)flow.Repeat;
+        if (restoreAt < 0 && repeat != 0)
+        {
+            restoreAt = duration;
+        }
+
+        var restore = restoreAt < 0 ? duration : restoreAt;
 
         // Pair each working start with the next idle on that node (else it breathes
         // until the restore point). A re-issued working before an idle is idempotent.
         var working = new List<WorkFx>();
         foreach (var byNode in workEvents.GroupBy(e => e.Node))
         {
-            double? openAt = null; string openColor = "";
+            double? openAt = null; var openColor = "";
             foreach (var ev in byNode.OrderBy(e => e.At))
             {
-                if (ev.Start) { openAt ??= ev.At; if (openAt == ev.At) openColor = ev.Color; }
+                if (ev.Start) { openAt ??= ev.At; if (openAt == ev.At)
+                    {
+                        openColor = ev.Color;
+                    }
+                }
                 else if (openAt is { } s) { working.Add(new WorkFx(byNode.Key, s, ev.At, openColor)); openAt = null; }
             }
-            if (openAt is { } os) working.Add(new WorkFx(byNode.Key, os, Math.Max(os, restore), openColor));
+            if (openAt is { } os)
+            {
+                working.Add(new WorkFx(byNode.Key, os, Math.Max(os, restore), openColor));
+            }
         }
 
         return new Schedule(duration, flow.RepeatDelay, repeat, restore, packets, cards, impacts, edgeFx, working, narrations, phases, statuses);
     }
 
     private static string Accent(IReadOnlyDictionary<string, string> accentOf, string node) =>
-        accentOf.TryGetValue(node, out string? a) ? a : "var(--beck-primary)";
+        accentOf.TryGetValue(node, out var a) ? a : "var(--beck-primary)";
 
-    /// <summary>Maps the public, style-scoped <see cref="Beck.PacketGlyph"/> to the internal
+    /// <summary>Maps the public, style-scoped <see cref="PacketGlyph"/> to the internal
     /// per-hop <see cref="PacketShape"/> the schedule/compiler actually render.</summary>
     private static PacketShape? StyleGlyph(PacketGlyph? glyph) => glyph switch
     {
@@ -331,28 +433,47 @@ internal static class ScheduleBuilder
     private static (double X, double Y) EndPoint(string d, bool reversed)
     {
         var nums = new List<double>();
-        int i = 0;
+        var i = 0;
         while (i < d.Length)
         {
-            char c = d[i];
+            var c = d[i];
             if (c == '-' || c == '.' || char.IsDigit(c))
             {
-                int j = i + 1;
-                while (j < d.Length && (char.IsDigit(d[j]) || d[j] == '.' || d[j] == '-' && d[j - 1] == 'e')) j++;
+                var j = i + 1;
+                while (j < d.Length && (char.IsDigit(d[j]) || d[j] == '.' || d[j] == '-' && d[j - 1] == 'e'))
+                {
+                    j++;
+                }
+
                 if (double.TryParse(d.AsSpan(i, j - i), System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture, out double v)) nums.Add(v);
+                        System.Globalization.CultureInfo.InvariantCulture, out var v))
+                {
+                    nums.Add(v);
+                }
+
                 i = j;
             }
-            else i++;
+            else
+            {
+                i++;
+            }
         }
-        if (nums.Count < 2) return (0, 0);
+        if (nums.Count < 2)
+        {
+            return (0, 0);
+        }
+
         return reversed ? (nums[0], nums[1]) : (nums[^2], nums[^1]);
     }
 
     private static double ReadingTime(string text, NarrationOptions opts)
     {
-        int words = text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
-        if (words == 0) words = 1;
-        return Math.Max(opts.Min, opts.Pad + (double)words / opts.Wpm * 60);
+        var words = text.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        if (words == 0)
+        {
+            words = 1;
+        }
+
+        return Math.Max(opts.Min, opts.Pad + words / opts.Wpm * 60);
     }
 }

@@ -42,7 +42,7 @@ public static class SketchStyle
 
     private static BeckStyle Build()
     {
-        BeckStyle c = BeckStyle.Classic;
+        var c = BeckStyle.Classic;
 
         // Warm-paper token table. Every entry keeps the three-tier var(--beck-X, var(--color-Y, literal))
         // indirection, so a host --color-* / --beck-* palette still wins; only the literal fallbacks warm
@@ -52,8 +52,7 @@ public static class SketchStyle
         // --beck-edge is pulled up to the muted ink so connectors read as pencil lines (the DrawOn overlay
         // then redraws each edge in accent over that base). The group-border entry threads mix.GroupBorder
         // so the 45% ratio has one source.
-        var light = new StyleTokens(new (string, string)[]
-        {
+        var light = new StyleTokens([
             ("--beck-surface", "var(--color-base-50, #fbf7ef)"),
             ("--beck-node-bg", "var(--beck-surface)"),
             ("--beck-node-border", "var(--color-base-300, #d8cdb8)"),
@@ -73,15 +72,14 @@ public static class SketchStyle
             ("--beck-packet", "var(--beck-primary)"),
             ("--beck-icon-bg", "var(--color-base-100, #f3ecdd)"),
             ("--beck-accent", "var(--beck-primary)"),
-        });
+        ]);
 
         // Dark overrides only (layered over the light block, which is emitted first): a warm near-black
         // paper with warm-brown ink for the same hand-drawn feel on a dark page. node-bg and --beck-edge
         // are intentionally NOT overridden here — node-bg references --beck-surface (already re-themed
         // above), and --beck-edge stays the (now per-theme) muted-ink reference so dark edges track the
         // dark ink automatically.
-        var dark = new StyleTokens(new (string, string)[]
-        {
+        var dark = new StyleTokens([
             ("--beck-surface", "var(--color-base-950, #1c1815)"),
             ("--beck-node-border", "var(--color-base-700, #453b2e)"),
             ("--beck-node-shadow", "0 1px 3px rgb(0 0 0 / 0.4), 0 4px 14px rgb(0 0 0 / 0.5)"),
@@ -89,7 +87,7 @@ public static class SketchStyle
             ("--beck-text-muted", "var(--color-base-400, #b3a893)"),
             ("--beck-text-faint", "var(--color-base-500, #857a66)"),
             ("--beck-icon-bg", "var(--color-base-800, #2f271d)"),
-        });
+        ]);
 
         // Friendly rounded geometry + slightly heavier ink stroke (reads as a felt-tip outline). NodeStroke
         // 2 keeps MeasureBorder at 2 (2·round(2/2)) — identical to classic's budget — so the measured box is
@@ -97,7 +95,7 @@ public static class SketchStyle
         // band (8, then per-node hash-varied in the wobble outline); pills keep h/2. Lifeline stroke thins to
         // the mock's 1.2. Soft warm drop-shadows; shadow colours are rgb() literals (shadows are never themed
         // tokens), no resolved colour touches a shape fill/stroke.
-        StyleGeometry geo = c.Geometry with
+        var geo = c.Geometry with
         {
             CardRadius = 8,
             ClassRadius = 8,
@@ -126,7 +124,7 @@ public static class SketchStyle
         // Sans (the host supplies the webfont; the textLength guard absorbs its absence). Roles are classic
         // — Shantell carries the weight hierarchy; the embedded table has weight 400 and the measurer
         // clamps to it, which the guard then fits.
-        StyleTypography typography = c.Typography with
+        var typography = c.Typography with
         {
             SansFamily = "'Shantell Sans', 'Comic Sans MS', cursive",
             MetricsFont = MetricsFont.ShantellSans,
@@ -141,7 +139,7 @@ public static class SketchStyle
         //    has no chip boxes around message labels).
         //  - ActivationGlow 0 → the activation bar's drop-shadow glow becomes transparent (no bloom); the
         //    bar itself is redrawn as an outlined translucent-accent rect in SequencePainter's sketch branch.
-        StyleMix mix = c.Mix with
+        var mix = c.Mix with
         {
             NodeStroke = 100,
             ClassHead = 0,
@@ -151,7 +149,7 @@ public static class SketchStyle
         };
 
         // Dash patterns: the mock's wobbly lifelines and dashed reply messages both march at `4 6`.
-        StyleStrokes strokes = c.Strokes with
+        var strokes = c.Strokes with
         {
             LifelineDash = "4 6",
             EdgeDash = "4 6",
@@ -166,7 +164,7 @@ public static class SketchStyle
         //  - Overlay DrawOn: the connector redraws itself once per OverlayPeriod (accent wipe over the ink
         //    base), compiled onto the shared cycle; reduced-motion shows the fully-drawn base edge.
         //  - Lifeline Wobbly + WobblySeparators: sideways-bowed lifelines and class compartment separators.
-        StyleEdges edges = StyleEdges.Classic with
+        var edges = StyleEdges.Classic with
         {
             BowAmplitude = 10,
             Arrow = EdgeArrow.OpenV,
@@ -180,7 +178,7 @@ public static class SketchStyle
 
         // The marker pop (mock 1b): an arrival jolts the card itself a beat larger — no overlay ring
         // at all, the whiteboard box flexing as the arrow lands.
-        StyleMotion motion = c.Motion with
+        var motion = c.Motion with
         {
             Pulse = PulseEffect.MarkerPop,
         };

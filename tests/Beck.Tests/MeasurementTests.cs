@@ -1,5 +1,4 @@
 using Beck.Skia;
-using Beck.Rendering.Text;
 using Beck.Text;
 using Xunit;
 
@@ -12,7 +11,7 @@ public sealed class MeasurementTests
     public void Skia_LoadsAndMeasures()
     {
         using var m = new SkiaTextMeasurer(TestFonts.Spec());
-        TextMetrics t = m.Measure("API Server", FontRole.CardTitle);
+        var t = m.Measure("API Server", FontRole.CardTitle);
         // 14px SemiBold "API Server" is ~60–90px wide; ascent/descent positive.
         Assert.InRange(t.Width, 40, 120);
         Assert.True(t.Ascent > 0);
@@ -23,8 +22,8 @@ public sealed class MeasurementTests
     public void Skia_WidthGrowsWithText()
     {
         using var m = new SkiaTextMeasurer(TestFonts.Spec());
-        double a = m.Measure("A", FontRole.CardTitle).Width;
-        double ab = m.Measure("AB", FontRole.CardTitle).Width;
+        var a = m.Measure("A", FontRole.CardTitle).Width;
+        var ab = m.Measure("AB", FontRole.CardTitle).Width;
         Assert.True(ab > a);
     }
 
@@ -33,8 +32,8 @@ public sealed class MeasurementTests
     {
         using var m = new SkiaTextMeasurer(TestFonts.Spec());
         // In a monospace font every glyph has the same advance.
-        double one = m.Measure("i", FontRole.ClassMember).Width;
-        double two = m.Measure("W", FontRole.ClassMember).Width;
+        var one = m.Measure("i", FontRole.ClassMember).Width;
+        var two = m.Measure("W", FontRole.ClassMember).Width;
         Assert.Equal(one, two, 3);
     }
 }

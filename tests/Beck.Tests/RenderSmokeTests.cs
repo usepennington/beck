@@ -1,4 +1,3 @@
-using Beck.Rendering;
 using Beck.Skia;
 using Xunit;
 
@@ -17,14 +16,14 @@ public sealed class RenderSmokeTests
         using var measurer = new SkiaTextMeasurer(font);
         var options = new SvgRenderOptions { Measurer = measurer, Font = font };
 
-        string corpus = Path.Combine(AppContext.BaseDirectory, "Corpus");
-        string outDir = Path.Combine(RepoRoot, "tools", "oracle", "rendered");
+        var corpus = Path.Combine(AppContext.BaseDirectory, "Corpus");
+        var outDir = Path.Combine(RepoRoot, "tools", "oracle", "rendered");
         Directory.CreateDirectory(outDir);
 
-        foreach (string file in new[] { "arch-simple", "arch-grouped", "arch-flow", "arch-kitchen", "state", "class", "sample-architecture", "sequence", "seq-kitchen", "sample-sequence" })
+        foreach (var file in new[] { "arch-simple", "arch-grouped", "arch-flow", "arch-kitchen", "state", "class", "sample-architecture", "sequence", "seq-kitchen", "sample-sequence" })
         {
-            string yaml = File.ReadAllText(Path.Combine(corpus, file + ".yaml"));
-            string svg = BeckSvg.Render(yaml, options);
+            var yaml = File.ReadAllText(Path.Combine(corpus, file + ".yaml"));
+            var svg = BeckSvg.Render(yaml, options);
             Assert.StartsWith("<svg", svg);
             File.WriteAllText(Path.Combine(outDir, file + ".svg"), svg);
         }
@@ -35,10 +34,10 @@ public sealed class RenderSmokeTests
     {
         var font = TestFonts.Spec();
         using var measurer = new SkiaTextMeasurer(font);
-        string yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Corpus", "arch-flow.yaml"));
+        var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Corpus", "arch-flow.yaml"));
 
-        string full = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font });
-        string scrub = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font, Animation = AnimationMode.Scrub });
+        var full = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font });
+        var scrub = BeckSvg.Render(yaml, new SvgRenderOptions { Measurer = measurer, Font = font, Animation = AnimationMode.Scrub });
 
         // Full loops on a time cycle; Scrub swaps that for `auto` + a scroll timeline.
         Assert.Contains("linear infinite;", full);

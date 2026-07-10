@@ -1,4 +1,3 @@
-using Beck;
 using Beck.Authoring;
 
 namespace Beck.Docs.Components.Reference;

@@ -1,4 +1,3 @@
-@using Beck.Rendering
 @inject BeckDiagramRenderer Renderer
 
 @((MarkupString)_html)
@@ -19,7 +18,7 @@
     {
         try
         {
-            string svg = Renderer.Render(Yaml, Animation).Svg;
+            var svg = Renderer.Render(Yaml, Animation).Svg;
             _html = $"<div class=\"{Class}\">{svg}</div>";
         }
         catch (Exception ex)
