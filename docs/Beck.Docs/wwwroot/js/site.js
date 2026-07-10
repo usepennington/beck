@@ -216,7 +216,7 @@
     dialog.setAttribute('aria-label', 'Diagram, full screen');
 
     var clone = svg.cloneNode(true);
-    // Drop the engine's inline sizing (max-width cap + height:auto) so the lightbox
+    // Drop the engine's inline sizing (max-width:100% + height:auto) so the lightbox
     // CSS controls the box: natural size from the width/height attributes, shrunk
     // proportionally only when it exceeds the viewport.
     clone.removeAttribute('style');

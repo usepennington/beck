@@ -30,6 +30,27 @@ public sealed class RenderSmokeTests
     }
 
     [Fact]
+    public void FitModeControlsInlineMaxWidth()
+    {
+        const string nodes = """
+            nodes:
+              - { id: a, title: Node A }
+              - { id: b, title: Node B }
+            edges:
+              - { from: a, to: b }
+            """;
+
+        // Default (shrink): responsive — scales down inside a narrow container.
+        var shrink = BeckSvg.Render(nodes);
+        Assert.Contains("style=\"max-width:100%;height:auto\"", shrink);
+
+        // fit: scroll pins natural size (the width attribute's value) so the host scrolls.
+        var scroll = BeckSvg.Render("meta:\n  fit: scroll\n" + nodes);
+        Assert.DoesNotContain("max-width:100%", scroll);
+        Assert.Matches("style=\"max-width:[0-9.]+px;height:auto\"", scroll);
+    }
+
+    [Fact]
     public void ScrubModeDrivesAnimationsOffTheViewTimeline()
     {
         var font = TestFonts.Spec();
