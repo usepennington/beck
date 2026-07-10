@@ -1,6 +1,6 @@
 ---
 title: Add Beck to a Pennington site
-description: Render fenced beck diagrams to static SVG at build time with a code-block preprocessor, measure with your own fonts, and adopt your MonorailCSS palette.
+description: Register the Pennington.Beck package so fenced beck diagrams render to static SVG at build time, pick styles per fence or site-wide, measure with your own fonts, and adopt your MonorailCSS palette.
 order: 21
 sectionLabel: Setup
 uid: docs.guide.pennington
@@ -8,88 +8,112 @@ uid: docs.guide.pennington
 
 This guide shows you how to add Beck to a [Pennington](https://usepennington.github.io/pennington/)
 site so a fenced ` ```beck ` block renders to a static, self-animating `<svg>` at **build time** — no
-client JavaScript. For a generic (non-Pennington) ASP.NET host, see [Add Beck to your
-site](/docs/guides/install) instead.
+client JavaScript. Pennington ships a first-class integration package, **`Pennington.Beck`**, so the
+whole wiring is one package reference and one service registration. For a generic (non-Pennington)
+ASP.NET host, see [Add Beck to your site](/docs/guides/install) instead.
 
 ## Add the package
 
-Beck renders with **`Beck`**, a pure-C# package. Add **`Beck.Skia`** too — the
-preprocessor below measures text with it so cards match your fonts exactly (strongly recommended):
+```bash
+dotnet add package Pennington.Beck
+```
+
+Then register it in `Program.cs`:
+
+```csharp
+builder.Services.AddPenningtonBeck();
+```
+
+That is the whole integration. `Pennington.Beck` hooks the shared code-block pipeline (it works the
+same on `AddPennington`, `AddDocSite`, and `AddBlogSite` hosts), so the next ` ```beck ` fence in any
+Markdown page renders as an inline SVG — on the live dev server and in the static build. It brings
+the `Beck` engine with it; a malformed diagram fails loud with a visible error box and a diagnostics
+entry rather than silently vanishing.
+
+## Tune a fence with flags
+
+A comma-separated tail after the language adjusts one fence without touching its YAML, and flags
+combine (`beck:symbol,static` works):
+
+| flag | effect |
+|---|---|
+| `static` | Renders the fully-revealed final frame with no motion. |
+| `scrub` | Drives the choreography from scroll position instead of a looping timeline. |
+| `style=<name>` | Overrides the document's `meta.style` — render one YAML in any built-in look. |
+
+## Pick a style
+
+Beck ships [nine built-in styles](/docs/guides/styles) — `classic`, `minimal`, `terminal`,
+`blueprint`, `glow`, `brutalist`, `sketch`, `extrude`, and `circuit`. There are three places to set
+one, from narrowest to widest scope:
+
+**Per document**, in the YAML itself:
+
+```yaml
+type: architecture
+meta:
+  style: sketch
+```
+
+**Per fence**, with the `style=` flag — a last-word override that beats the document's own
+`meta.style`, handy when one shared `.beck.yaml` should appear in different looks:
+
+````markdown
+```beck,style=sketch
+type: architecture
+nodes: [ ... ]
+```
+````
+
+**Site-wide**, as the default for every fence via `BeckOptions.RenderOptions` (an individual
+document's `meta.style` still opts back out):
+
+```csharp
+builder.Services.AddPenningtonBeck(beck =>
+{
+    beck.RenderOptions = new SvgRenderOptions { Style = BeckStyles.ByName["sketch"] };
+});
+```
+
+Custom styles you register in `SvgRenderOptions.Styles` are addressable the same three ways — see
+[Author a custom style](/docs/guides/custom-styles) and the
+[style system reference](/docs/reference/styles) for resolution and precedence.
+
+## Measure with your site's own fonts
+
+By default Beck measures text against embedded Inter/IBM Plex Mono metrics, and every label carries
+a `textLength` guard so a font mismatch squeezes glyphs slightly instead of breaking layout. If your
+site renders diagrams in different fonts, cards drift a little tight or roomy — for anything you
+publish, add the optional **`Beck.Skia`** package and point a `SkiaTextMeasurer` at the `.ttf` files
+your CSS actually serves:
 
 ```bash
-dotnet add package Beck
 dotnet add package Beck.Skia
 ```
 
-## Render fenced diagrams
-
-Pennington hands every fenced code block to any `ICodeBlockPreprocessor` you register. Add one that
-renders the `beck` language through `BeckSvg.Render` and returns finished HTML:
-
 ```csharp
-using Beck.Rendering;
-using Beck.Skia;
-using Beck.Rendering.Text;
-using Pennington.Markdown.Extensions;
-
-// Turns a ```beck (inline YAML) or ```beck:symbol (a .beck.yaml file path) fence into a static SVG.
-// Priority 500 runs it before the source-embed preprocessor, so a `beck` fence is never treated as
-// a plain source listing. Add `,static` to a fence for a still frame.
-public sealed class BeckFencePreprocessor : ICodeBlockPreprocessor
+var font = new BeckFontSpec
 {
-    public int Priority => 500;
-
-    private readonly BeckFontSpec _font = new()
+    Family = "IBM Plex Sans",
+    MonoFamily = "IBM Plex Mono",
+    Files = new Dictionary<int, string>
     {
-        Family = "IBM Plex Sans",
-        MonoFamily = "IBM Plex Mono",
-        Files = new Dictionary<int, string>
-        {
-            [400] = "wwwroot/fonts/IBMPlexSans-Regular.ttf",
-            [600] = "wwwroot/fonts/IBMPlexSans-SemiBold.ttf",
-            [700] = "wwwroot/fonts/IBMPlexSans-Bold.ttf",
-        },
-        MonoFiles = new Dictionary<int, string> { [400] = "wwwroot/fonts/IBMPlexMono-Regular.ttf" },
+        [400] = "wwwroot/fonts/IBMPlexSans-Regular.ttf",
+        [600] = "wwwroot/fonts/IBMPlexSans-SemiBold.ttf",
+        [700] = "wwwroot/fonts/IBMPlexSans-Bold.ttf",
+    },
+    MonoFiles = new Dictionary<int, string> { [400] = "wwwroot/fonts/IBMPlexMono-Regular.ttf" },
+};
+
+builder.Services.AddPenningtonBeck(beck =>
+{
+    beck.RenderOptions = new SvgRenderOptions
+    {
+        Font = font,
+        Measurer = new SkiaTextMeasurer(font),
     };
-
-    private readonly SkiaTextMeasurer _measurer;
-    public BeckFencePreprocessor() => _measurer = new SkiaTextMeasurer(_font);
-
-    public CodeBlockPreprocessResult? TryProcess(string code, string languageId)
-    {
-        var id = languageId.Trim();
-        if (id != "beck" && !id.StartsWith("beck:") && !id.StartsWith("beck,")) return null;
-
-        bool isFile = id.Contains(":symbol");
-        var animation = id.Contains(",static") ? AnimationMode.Static : AnimationMode.Full;
-        string yaml = isFile ? File.ReadAllText(Path.GetFullPath(code.Trim())) : code;
-
-        string svg = BeckSvg.Render(yaml, new SvgRenderOptions
-        {
-            Measurer = _measurer,   // exact card sizing over your fonts (see below)
-            Font = _font,
-            Animation = animation,
-        });
-        // SkipTransform: this is finished HTML — the highlighter must not reprocess it.
-        return new CodeBlockPreprocessResult($"<div class=\"beck-embed\">{svg}</div>", "beck", SkipTransform: true);
-    }
-}
+});
 ```
-
-Register it in `Program.cs`:
-
-```csharp
-builder.Services.AddSingleton<ICodeBlockPreprocessor, BeckFencePreprocessor>();
-```
-
-Now any ` ```beck ` fence in your Markdown renders to an inline SVG at build time.
-
-> [!IMPORTANT]
-> **Measure with your site's own fonts.** The preprocessor above wires a `SkiaTextMeasurer` at the
-> `.ttf` files your CSS serves, so Beck sizes each card to the text the browser will actually draw.
-> `BeckSvg.Render(yaml)` also works with no measurer at all — a built-in default measures against
-> Inter/IBM Plex Mono metrics — but if your site renders diagrams in different fonts, cards drift a
-> little tight or roomy. Skia is the recommended setup for anything you publish.
 
 ## Adopt your MonorailCSS palette
 
@@ -130,9 +154,9 @@ render time. See [Match your theme and colours](/docs/guides/theme) for the full
 
 Because Pennington ships TreeSitter `:symbol` source embeds, you can keep a diagram's YAML in one
 `.beck.yaml` file and show both its source and its render from that single file — no duplication.
-Pull the source with a `yaml:symbol` fence, then render the same file with a `beck:symbol` fence —
-the preprocessor turns it into static SVG at build time. Add `,static` (`beck:symbol,static`) for a
-still frame:
+Pull the source with a `yaml:symbol` fence, then render the same file with a `beck:symbol` fence
+(the body is one file path per line; each file renders independently). All the fence flags apply
+(`beck:symbol,static`, `beck:symbol,style=sketch`):
 
 ````markdown
 ```yaml:symbol
@@ -150,9 +174,33 @@ wwwroot/examples/guides/pennington-platform.beck.yaml
 wwwroot/examples/guides/pennington-platform.beck.yaml
 ```
 
+Paths resolve against `BeckOptions.ContentRoot`, which defaults to the working directory — set it to
+match your TreeSitter `ContentRoot` so both `:symbol` forms address files the same way:
+
+```csharp
+builder.Services.AddPenningtonBeck(beck =>
+{
+    beck.ContentRoot = "../..";
+});
+```
+
 This is the convention these docs use throughout, showing each diagram's source beside the diagram
 itself.
 
-Next, learn the language in [Your first diagram](/docs/tutorials/first-diagram), generate diagrams
-from your model in [Generate diagrams from your code](/docs/guides/generate), or fine-tune colours in
+## Fullscreen zoom
+
+Each rendered embed carries a zoom button that opens the diagram in a full-screen lightbox — the
+package's one piece of client JavaScript; rendering stays server-side. Turn it off to emit bare SVG
+with no client behavior:
+
+```csharp
+builder.Services.AddPenningtonBeck(beck =>
+{
+    beck.Zoom = false;
+});
+```
+
+Next, learn the language in [Your first diagram](/docs/tutorials/first-diagram), browse the looks in
+[Pick a built-in style](/docs/guides/styles), generate diagrams from your model in
+[Generate diagrams from your code](/docs/guides/generate), or fine-tune colours in
 [Match your theme and colours](/docs/guides/theme).

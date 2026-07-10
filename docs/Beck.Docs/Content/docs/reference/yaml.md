@@ -45,6 +45,7 @@ the layered types — architecture, state, class.)
 | `subtitle` | string | — | Muted line under the title. |
 | `direction` | `TB` `BT` `LR` `RL` | `TB` | Primary layout axis: top-to-bottom, bottom-to-top, left-to-right, right-to-left. |
 | `theme` | `auto` `light` `dark` | `auto` | `auto` follows the host page. |
+| `style` | string | `classic` | Visual style token — one of the nine built-ins (`classic`, `minimal`, `terminal`, `blueprint`, `glow`, `brutalist`, `sketch`, `extrude`, `circuit`) or a registered custom style. See [Pick a built-in style](/docs/guides/styles) and the [style system reference](/docs/reference/styles). |
 | `animate` | bool | `true` | `false` renders a static frame and never loads the motion runtime. |
 | `loop` | bool | `true` | `false` plays the flow once (forces `flow.repeat: 0`). |
 | `fit` | `shrink` `scroll` | `shrink` | What a diagram wider than its container does: `shrink` scales it down to fit; `scroll` keeps it at natural size and scrolls horizontally. Vertical size is never constrained. |

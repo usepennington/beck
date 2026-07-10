@@ -75,6 +75,7 @@ field tables and defaults, see the [YAML schema reference](/docs/reference/yaml)
 | `title`, `subtitle` | string | — |
 | `direction` | `TB` `BT` `LR` `RL` | `TB` |
 | `theme` | `auto` `light` `dark` | `auto` (follows host page) |
+| `style` | `classic` `minimal` `terminal` `blueprint` `glow` `brutalist` `sketch` `extrude` `circuit` (or a registered custom name) | `classic` |
 | `animate` | bool | `true` |
 | `loop` | bool | `true` (`false` plays once) |
 | `fit` | `shrink` `scroll` | `shrink` |
@@ -352,9 +353,11 @@ Beck renders diagrams with the pure-C# engine — there is no client JS, no npm 
 Two rendering paths:
 
 - **Fenced block (main path):** write a ` ```beck ` block (inline YAML) or a ` ```beck:symbol ` block
-  (pointing at a `.beck.yaml` file) in any Markdown page. The Pennington preprocessor runs the engine
-  at build time and inlines a static, self-animating `<svg>` — no script tag, no client runtime. Flag
-  variants force the static frame: ` ```beck,static ` and ` ```beck:symbol,static `.
+  (pointing at a `.beck.yaml` file) in any Markdown page. The `Pennington.Beck` package's
+  preprocessor runs the engine at build time and inlines a static, self-animating `<svg>` — no
+  script tag, no client runtime. Comma flags tune one fence: `,static` forces the still frame,
+  `,scrub` drives playback from scroll, and `,style=<name>` overrides the document's `meta.style`
+  (they combine, e.g. ` ```beck:symbol,style=sketch,static `).
 - **C# / ASP.NET:** `BeckSvg.Render(yaml)` from the `Beck` package returns a self-contained
   `<svg>` string you write into a page (server-side or at build time).
 
