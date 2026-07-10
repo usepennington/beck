@@ -32,7 +32,8 @@ public sealed class CleanLineTests
 
     private sealed record Baseline(
         double StraightRate, double MicroJogsPerEdge, double MergedRunsPerEdge,
-        double SkewedFaceRate, double BendsPerEdge, int ThroughNodeDiagrams);
+        double SkewedFaceRate, double BendsPerEdge, int ThroughNodeDiagrams,
+        double TightEdgeRate);
 
     [Fact]
     public void ChaosMonkey_NoHardViolations()
@@ -53,7 +54,7 @@ public sealed class CleanLineTests
     [Fact]
     public void ChaosMonkey_AestheticsDoNotRegress()
     {
-        int edges = 0, straight = 0, jogs = 0, merged = 0, faces = 0, skewed = 0, bends = 0, throughNode = 0;
+        int edges = 0, straight = 0, jogs = 0, merged = 0, faces = 0, skewed = 0, bends = 0, throughNode = 0, tight = 0;
         var worst = new List<(double Score, int Seed, QualityReport R)>();
 
         for (int seed = 0; seed < SeedCount; seed++)
@@ -62,6 +63,7 @@ public sealed class CleanLineTests
             edges += r.Edges; straight += r.StraightEdges; jogs += r.MicroJogs;
             merged += r.MergedRuns; faces += r.Faces; skewed += r.SkewedFaces; bends += r.Bends;
             if (r.Violations.Any(d => d.Kind == "through-node")) throughNode++;
+            tight += r.TightEdges;
             if (r.Edges > 0) worst.Add(((r.MicroJogs + r.MergedRuns) / (double)r.Edges, seed, r));
         }
 
@@ -71,7 +73,8 @@ public sealed class CleanLineTests
             MergedRunsPerEdge: (double)merged / edges,
             SkewedFaceRate: faces == 0 ? 0 : (double)skewed / faces,
             BendsPerEdge: (double)bends / edges,
-            ThroughNodeDiagrams: throughNode);
+            ThroughNodeDiagrams: throughNode,
+            TightEdgeRate: (double)tight / edges);
 
         _out.WriteLine(Scorecard(got, edges, faces));
         _out.WriteLine("");
@@ -105,6 +108,7 @@ public sealed class CleanLineTests
         LowerIsBetter("merged runs per edge", got.MergedRunsPerEdge, want.MergedRunsPerEdge);
         LowerIsBetter("skewed-face rate", got.SkewedFaceRate, want.SkewedFaceRate);
         LowerIsBetter("bends per edge", got.BendsPerEdge, want.BendsPerEdge, 0.01);
+        LowerIsBetter("tight-clearance edges", got.TightEdgeRate, want.TightEdgeRate);
         if (got.ThroughNodeDiagrams > want.ThroughNodeDiagrams)
             regressions.Add($"diagrams with an edge cutting a node: {got.ThroughNodeDiagrams} > baseline {want.ThroughNodeDiagrams}");
 
@@ -122,6 +126,7 @@ public sealed class CleanLineTests
         FormattableString.Invariant($"  micro-jogs / edge  {b.MicroJogsPerEdge:0.000}"),
         FormattableString.Invariant($"  merged run pairs   {b.MergedRunsPerEdge:0.000} per edge"),
         FormattableString.Invariant($"  skewed fans        {b.SkewedFaceRate:0.0%} of shared faces"),
+        FormattableString.Invariant($"  tight clearance    {b.TightEdgeRate:0.0%} of edges within {LineQuality.TightPx}px of a node"),
         $"  through-node       {b.ThroughNodeDiagrams} diagrams ({(double)b.ThroughNodeDiagrams / SeedCount:0.0%})",
     });
 

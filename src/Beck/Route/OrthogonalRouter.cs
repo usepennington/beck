@@ -41,6 +41,8 @@ internal static class OrthogonalRouter
     private const double ChannelOffset = 18;
     private const double LanePad = 22;
     private const double LaneMargin = 6;
+    private const double LaneSnap = 28;      // a lane this close to an anchor snaps onto it, erasing the stub
+    private const double LaneSnapClear = 12; // ...but only if the snapped route still clears cards by this much
     private const double SelfLoopExtent = 30;
     private const double SameRankEps = 6;
     private const double StraightenInset = 6;    // keep a nudged anchor this far off a face corner
@@ -139,6 +141,23 @@ internal static class OrthogonalRouter
         return false;
     }
 
+    /// <summary>Distance from an axis-aligned segment to a rect; 0 when they touch or overlap.</summary>
+    private static double SegRectDist(Point a, Point b, Rect r)
+    {
+        double dx = Math.Max(0, Math.Max(r.X - Math.Max(a.X, b.X), Math.Min(a.X, b.X) - (r.X + r.W)));
+        double dy = Math.Max(0, Math.Max(r.Y - Math.Max(a.Y, b.Y), Math.Min(a.Y, b.Y) - (r.Y + r.H)));
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>How close this polyline comes to any obstacle — the room it leaves, not just whether it fits.</summary>
+    private static double PolylineClearance(IReadOnlyList<Point> points, IReadOnlyList<Rect> obstacles)
+    {
+        double min = double.PositiveInfinity;
+        for (int i = 0; i < points.Count - 1; i++)
+            foreach (var o in obstacles) min = Math.Min(min, SegRectDist(points[i], points[i + 1], o));
+        return min;
+    }
+
     private static double ClampLane(double value, double? extent)
     {
         double lo = LaneMargin;
@@ -146,32 +165,108 @@ internal static class OrthogonalRouter
         return Math.Min(Math.Max(value, lo), hi);
     }
 
+    /// <summary>
+    /// Which of the two escape lanes to try first. Both sit <see cref="LanePad"/> clear of every
+    /// obstacle in principle, but <see cref="ClampLane"/> pins a lane inside the canvas, so one can
+    /// end up squeezed against the border with only a few px of room while the other side is wide
+    /// open. Take the roomier lane; only when they are equally roomy does the shorter detour — the
+    /// side the edge's own midpoint already leans toward — decide.
+    /// </summary>
+    private static bool PreferLow(double lowLane, double highLane, double obsLow, double obsHigh, double travelMid)
+    {
+        double lowClear = obsLow - lowLane, highClear = highLane - obsHigh;
+        if (Math.Abs(lowClear - highClear) > 1) return lowClear > highClear;
+        return travelMid <= (obsLow + obsHigh) / 2;
+    }
+
+    /// <summary>
+    /// The obstacles actually standing between the two anchors — those overlapping the corridor the
+    /// edge travels through. Detouring around the bounding box of <em>every</em> node, as this once
+    /// did, walks an edge all the way around the diagram to clear one card in its path, and lands
+    /// the lane hard against the canvas border (every node is inset by the same canvas padding, so
+    /// both escape sides are equally cramped and there is no roomier one to pick). Falls back to the
+    /// full set when nothing overlaps, so a lane always exists.
+    /// </summary>
+    private static IReadOnlyList<Rect> Blocking(Point a, Point b, IReadOnlyList<Rect> obstacles)
+    {
+        double x1 = Math.Min(a.X, b.X), x2 = Math.Max(a.X, b.X);
+        double y1 = Math.Min(a.Y, b.Y), y2 = Math.Max(a.Y, b.Y);
+        var hit = obstacles.Where(o => o.X < x2 && o.X + o.W > x1 && o.Y < y2 && o.Y + o.H > y1).ToList();
+        return hit.Count > 0 ? hit : obstacles;
+    }
+
+    /// <summary>
+    /// The lane positions to try, in order: escape just past the cards actually in the way (a short
+    /// detour with real clearance), then — if that corridor turns out to be occupied by a node that
+    /// was not in the way — past every card, which always exists but hugs the canvas border.
+    /// </summary>
+    private static IEnumerable<double> LaneCandidates(
+        IReadOnlyList<Rect> blockers, IReadOnlyList<Rect> obstacles, bool vertical, Size? bounds, double travelMid)
+    {
+        double extent = vertical ? bounds?.W ?? 0 : bounds?.H ?? 0;
+        double? Extent() => bounds is null ? null : extent;
+        var seen = new List<double>();
+        foreach (var set in ReferenceEquals(blockers, obstacles) ? new[] { obstacles } : new[] { blockers, obstacles })
+        {
+            double lo = vertical ? set.Min(o => o.X) : set.Min(o => o.Y);
+            double hi = vertical ? set.Max(o => o.X + o.W) : set.Max(o => o.Y + o.H);
+            double low = ClampLane(lo - LanePad, Extent()), high = ClampLane(hi + LanePad, Extent());
+            foreach (double lane in PreferLow(low, high, lo, hi, travelMid) ? new[] { low, high } : new[] { high, low })
+                if (!seen.Any(v => Math.Abs(v - lane) < 0.5)) { seen.Add(lane); yield return lane; }
+        }
+    }
+
+    /// <summary>
+    /// A lane sitting a hair off one of the anchors leaves a stub run before the turn — a kink, not
+    /// a detour. Snapping the lane onto that anchor collapses the stub and the edge leaves its node
+    /// straight. But the snap moves the lane toward the very card it was clearing, so take it only
+    /// when the snapped route still leaves <see cref="LaneSnapClear"/> of room: a straight line that
+    /// grazes a card is not the trade we want. Otherwise keep the lane where the padding put it.
+    /// </summary>
     private static List<Point>? LaneDetour(Point a, Point b, bool vertical, IReadOnlyList<Rect> obstacles, Size? bounds)
     {
         if (obstacles.Count == 0) return null;
-        if (vertical)
+        var blockers = Blocking(a, b, obstacles);
+        double aC = vertical ? a.X : a.Y, bC = vertical ? b.X : b.Y;
+
+        List<Point> Build(double lane)
         {
-            double s = Math.Sign(b.Y - a.Y); double dirY = s != 0 ? s : 1;
-            double ch1 = a.Y + dirY * ChannelOffset, ch2 = b.Y - dirY * ChannelOffset;
-            double minX = obstacles.Min(o => o.X), maxX = obstacles.Max(o => o.X + o.W);
-            double left = ClampLane(minX - LanePad, bounds?.W), right = ClampLane(maxX + LanePad, bounds?.W);
-            bool preferLeft = (a.X + b.X) / 2 <= (minX + maxX) / 2;
-            foreach (double laneX in preferLeft ? new[] { left, right } : new[] { right, left })
+            if (vertical)
             {
-                var poly = new List<Point> { a, new(a.X, ch1), new(laneX, ch1), new(laneX, ch2), new(b.X, ch2), b };
-                if (!PolylineHits(poly, obstacles)) return poly;
+                double s = Math.Sign(b.Y - a.Y); double dirY = s != 0 ? s : 1;
+                double ch1 = a.Y + dirY * ChannelOffset, ch2 = b.Y - dirY * ChannelOffset;
+                return new List<Point> { a, new(a.X, ch1), new(lane, ch1), new(lane, ch2), new(b.X, ch2), b };
             }
+            double sx = Math.Sign(b.X - a.X); double dirX = sx != 0 ? sx : 1;
+            double cx1 = a.X + dirX * ChannelOffset, cx2 = b.X - dirX * ChannelOffset;
+            return new List<Point> { a, new(cx1, a.Y), new(cx1, lane), new(cx2, lane), new(cx2, b.Y), b };
         }
-        else
+
+        // Nudge a lane that sits inside the stub zone of an anchor outward, away from that anchor,
+        // so the run into the turn is a segment rather than a nub. Snapping onto the anchor is the
+        // better answer when it is safe; this is the other way out of the same zone.
+        double Push(double lane)
         {
-            double s = Math.Sign(b.X - a.X); double dirX = s != 0 ? s : 1;
-            double ch1 = a.X + dirX * ChannelOffset, ch2 = b.X - dirX * ChannelOffset;
-            double minY = obstacles.Min(o => o.Y), maxY = obstacles.Max(o => o.Y + o.H);
-            double top = ClampLane(minY - LanePad, bounds?.H), bottom = ClampLane(maxY + LanePad, bounds?.H);
-            bool preferTop = (a.Y + b.Y) / 2 <= (minY + maxY) / 2;
-            foreach (double laneY in preferTop ? new[] { top, bottom } : new[] { bottom, top })
+            foreach (double c in new[] { aC, bC })
             {
-                var poly = new List<Point> { a, new(ch1, a.Y), new(ch1, laneY), new(ch2, laneY), new(ch2, b.Y), b };
+                double d = lane - c;
+                if (Math.Abs(d) < LaneSnap) lane = c + (d < 0 ? -LaneSnap : LaneSnap);
+            }
+            return lane;
+        }
+
+        foreach (double raw in LaneCandidates(blockers, obstacles, vertical, bounds, (aC + bC) / 2))
+        {
+            double? snap = Math.Abs(raw - aC) < LaneSnap ? aC : Math.Abs(raw - bC) < LaneSnap ? bC : null;
+            if (snap is double s)
+            {
+                var snapped = Build(s);
+                if (!PolylineHits(snapped, obstacles) && PolylineClearance(snapped, obstacles) >= LaneSnapClear)
+                    return snapped;
+            }
+            foreach (double lane in new[] { Push(raw), raw }.Distinct())
+            {
+                var poly = Build(lane);
                 if (!PolylineHits(poly, obstacles)) return poly;
             }
         }
