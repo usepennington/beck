@@ -27,8 +27,10 @@ namespace Beck;
 /// dash on <see cref="StyleStrokes"/>.</para>
 /// <para><b>What is a sketch-specific branch</b> (keyed off <see cref="StyleArtwork.Sketch"/>, so every
 /// other style stays byte-identical): the wobbly closed-path node/group/pseudo-state outlines and their
-/// per-node hash-derived rounding (<see cref="Rendering.Svg.Artwork"/>); the <c>fill:none</c> node surface
-/// (token <c>--beck-node-bg: none</c>); the accent-matched node/class title ink and accent class dividers
+/// per-node hash-derived rounding (<see cref="Rendering.Svg.Artwork"/>); the opaque-paper node surface
+/// (token <c>--beck-node-bg: var(--beck-surface)</c>) overlaid with a deterministic translucent
+/// <em>crayon-scribble</em> accent fill (<c>Artwork.Scribble</c> + the <c>.beck-scribble</c> rule) on
+/// cards, pills, and class heads; the accent-matched node/class title ink and accent class dividers
 /// (a small style-gated block in <c>Stylesheet</c>); and the outlined, translucent-accent-filled activation
 /// bars (a branch in <c>SequencePainter</c>). The jitter is baked into path geometry, seeded off the
 /// content hash + element id, so the same YAML wobbles the same way forever — nothing breathes on a loop.</para>
@@ -44,14 +46,15 @@ public static class SketchStyle
         // Warm-paper token table. Every entry keeps the three-tier var(--beck-X, var(--color-Y, literal))
         // indirection, so a host --color-* / --beck-* palette still wins; only the literal fallbacks warm
         // up (surface/ink/border/edge), while the semantic accents stay classic so status colour meaning
-        // holds. node-bg is `none` — the mock's fill:none outline surfaces (edges show through the paper);
+        // holds. node-bg is the opaque paper surface — cards no longer let edges show through; the crayon
+        // scribble (Artwork.Scribble + .beck-scribble) lays a translucent accent hachure over that paper.
         // --beck-edge is pulled up to the muted ink so connectors read as pencil lines (the DrawOn overlay
         // then redraws each edge in accent over that base). The group-border entry threads mix.GroupBorder
         // so the 45% ratio has one source.
         var light = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-50, #fbf7ef)"),
-            ("--beck-node-bg", "none"),
+            ("--beck-node-bg", "var(--beck-surface)"),
             ("--beck-node-border", "var(--color-base-300, #d8cdb8)"),
             ("--beck-node-shadow", "0 1px 2px rgb(80 64 32 / 0.06), 0 4px 10px rgb(80 64 32 / 0.07)"),
             ("--beck-text", "var(--color-base-800, #40382c)"),
@@ -73,8 +76,9 @@ public static class SketchStyle
 
         // Dark overrides only (layered over the light block, which is emitted first): a warm near-black
         // paper with warm-brown ink for the same hand-drawn feel on a dark page. node-bg and --beck-edge
-        // are intentionally NOT overridden here — node-bg stays `none`, and --beck-edge stays the (now
-        // per-theme) muted-ink reference so dark edges track the dark ink automatically.
+        // are intentionally NOT overridden here — node-bg references --beck-surface (already re-themed
+        // above), and --beck-edge stays the (now per-theme) muted-ink reference so dark edges track the
+        // dark ink automatically.
         var dark = new StyleTokens(new (string, string)[]
         {
             ("--beck-surface", "var(--color-base-950, #1c1815)"),
@@ -130,7 +134,8 @@ public static class SketchStyle
         // Mix ratios pushed to the mock's bold, flat-fill hand-drawn look:
         //  - NodeStroke 100 → the card outline is the node's pure accent (a felt-tip line), and the
         //    accent-matched title ink (Stylesheet sketch block) reads the same colour → "label matches stroke".
-        //  - ClassHead 0 / ClassHeadBorder 100 → no head fill on the fill:none class card, accent separators.
+        //  - ClassHead 0 / ClassHeadBorder 100 → no flat head fill (the crayon scribble carries the head
+        //    colour instead), accent separators.
         //  - ChipStroke 0 → message/band chips lose their outline so labels sit bare on the paper (the mock
         //    has no chip boxes around message labels).
         //  - ActivationGlow 0 → the activation bar's drop-shadow glow becomes transparent (no bloom); the
