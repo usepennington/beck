@@ -75,8 +75,12 @@ public enum TextLengthGuard
     Off,
 }
 
-/// <summary>Options controlling a <see cref="BeckSvg.Render(string, SvgRenderOptions?)"/> call.</summary>
-public sealed class SvgRenderOptions
+/// <summary>
+/// Options controlling a <see cref="BeckSvg.Render(string, SvgRenderOptions?)"/> call. A record, so
+/// a host can derive from a base configuration with a <c>with</c> expression — the properties are
+/// init-only.
+/// </summary>
+public sealed record SvgRenderOptions
 {
     /// <summary>Text measurer; defaults to the embedded Inter metrics table.</summary>
     public ITextMeasurer Measurer { get; init; } = InterMetricsMeasurer.Instance;
