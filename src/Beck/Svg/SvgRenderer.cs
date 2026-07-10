@@ -228,9 +228,13 @@ internal static class SvgRenderer
             animCss = "@media (prefers-reduced-motion:no-preference){" + motionCss + "}";
         }
 
+        // meta.fit: `shrink` (default) lets the SVG scale down inside a narrow container
+        // (the width attribute already caps it at natural size in wide ones); `scroll`
+        // pins natural size so the host's overflow container scrolls instead.
+        var maxWidth = model.Meta.Fit == FitMode.Scroll ? $"{N(w)}px" : "100%";
         var svg = new StringBuilder();
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
-           .Append($"style=\"max-width:{N(w)}px;height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
+           .Append($"style=\"max-width:{maxWidth};height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
         svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style)).Append(animCss).Append("</style>");
         svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append(edgeDefs).Append(Stylesheet.StyleDefs(hash, style)).Append("</defs>");
         svg.Append(TitleBlock(model, w, style));
