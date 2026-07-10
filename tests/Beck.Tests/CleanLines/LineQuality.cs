@@ -8,13 +8,13 @@ namespace Beck.Tests.CleanLines;
 internal sealed record Defect(string Kind, string Detail)
 {
     /// <summary>
-    /// Hard defects are always wrong and gate the build. <c>through-node</c> is excluded: the
-    /// current router escapes a back edge to whichever reserved gutter is clear, but when a
-    /// sibling blocks the row on <em>both</em> sides it has no third option, so a handful of
-    /// crowded feedback shapes still cut a card. Ratcheted rather than asserted — closing it
-    /// for good needs an obstacle-aware path search, not another special case.
+    /// Hard defects are always wrong and gate the build. <c>through-node</c> joined them once the
+    /// router gained a third escape for a back edge whose rank is blocked on both sides: the
+    /// direct opposite faces plus a lane detour through the empty inter-rank gaps. Every fuzzed
+    /// diagram now routes without cutting a card, so a single one is a regression, not a tolerance.
     /// </summary>
-    public bool IsHard => Kind is "off-canvas" or "anchor-off-face" or "anchor-on-corner" or "diagonal";
+    public bool IsHard => Kind is "off-canvas" or "anchor-off-face" or "anchor-on-corner"
+        or "diagonal" or "through-node";
 }
 
 /// <summary>

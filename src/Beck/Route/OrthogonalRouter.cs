@@ -108,6 +108,13 @@ internal static class OrthogonalRouter
                 foreach (Side face in new[] { near, far })
                     if (!PolylineHits(SameFaceLoop(Anchor(from, face), Anchor(to, face), face, obstacles, bounds), obstacles))
                         return (face, face);
+
+                // Neither gutter escapes — a sibling blocks this node's rank on both sides. Keep the
+                // opposite faces instead: the anchors leave into the inter-rank gaps, which are empty
+                // by construction, and the lane detour threads a free column between them. Only if
+                // that fails too do we settle for the near gutter and its bruised card.
+                if (LaneDetour(a, b, IsVertical(auto.FromSide), obstacles, bounds) is not null)
+                    return auto;
                 return (near, near);
             }
         }
