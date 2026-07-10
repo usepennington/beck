@@ -31,6 +31,8 @@ internal sealed record QualityReport(
     int OffCenterFaces,
     /// <summary>Pairs of segments from different edges sharing a collinear channel.</summary>
     int MergedRuns,
+    /// <summary>Edges running closer than <see cref="LineQuality.TightPx"/> to a node they don't touch.</summary>
+    int TightEdges,
     IReadOnlyList<Defect> Violations)
 {
     public double StraightRate => Edges == 0 ? 1 : (double)StraightEdges / Edges;
@@ -70,6 +72,9 @@ internal static class LineQuality
     /// <summary>Overlap along a shared channel below this is a corner touch, not a merged wire.</summary>
     public const double MergeOverlapPx = 8;
 
+    /// <summary>An edge grazing a node it has no business touching, closer than this, reads as crowded.</summary>
+    public const double TightPx = 12;
+
     public static (DiagramModel Model, LayoutResult Layout, IReadOnlyList<RoutedEdge> Edges) Route(string yaml)
     {
         DiagramModel model = Validate.LoadDiagram(yaml);
@@ -84,7 +89,7 @@ internal static class LineQuality
     {
         var (model, layout, edges) = routed;
         var violations = new List<Defect>();
-        int straight = 0, microJogs = 0, bends = 0, mergedRuns = 0;
+        int straight = 0, microJogs = 0, bends = 0, mergedRuns = 0, tight = 0;
 
         var selfLoops = new HashSet<string>();
         foreach (var e in model.Edges) if (e.From == e.To) selfLoops.Add(e.Id);
@@ -123,6 +128,7 @@ internal static class LineQuality
             }
 
             CheckObstacles(model, layout, re, violations);
+            if (Clearance(layout, re) < TightPx) tight++;
         }
 
         // ---- merged runs: two different edges sharing a collinear channel ----
@@ -138,7 +144,7 @@ internal static class LineQuality
         violations.AddRange(fanViolations);
 
         int nonLoop = edges.Count(e => !selfLoops.Contains(e.Edge.Id));
-        return new QualityReport(nonLoop, straight, microJogs, bends, faces, skewed, offCenter, mergedRuns, violations);
+        return new QualityReport(nonLoop, straight, microJogs, bends, faces, skewed, offCenter, mergedRuns, tight, violations);
     }
 
     /// <summary>
@@ -184,6 +190,35 @@ internal static class LineQuality
 
     private static double Overlap(double a1, double a2, double b1, double b2) =>
         Math.Min(Math.Max(a1, a2), Math.Max(b1, b2)) - Math.Max(Math.Min(a1, a2), Math.Min(b1, b2));
+
+    /// <summary>
+    /// The closest this edge comes to a node it neither starts nor ends at. A route that clears
+    /// every obstacle can still look cramped — the router only ever asked "does this hit?", never
+    /// "how much room did it leave?". Endpoints are excluded: an edge is *supposed* to touch those.
+    /// </summary>
+    private static double Clearance(LayoutResult layout, RoutedEdge re)
+    {
+        var pts = Dedupe(re.Points);
+        double min = double.PositiveInfinity;
+        foreach (var (id, rect) in layout.Nodes)
+        {
+            if (id == re.Edge.From || id == re.Edge.To) continue;
+            for (int i = 0; i < pts.Count - 1; i++) min = Math.Min(min, SegRectDist(pts[i], pts[i + 1], rect));
+        }
+        return min;
+    }
+
+    /// <summary>Distance from an axis-aligned segment to a rect; 0 when they touch or overlap.</summary>
+    private static double SegRectDist(Point a, Point b, Rect r)
+    {
+        double x1 = r.X, y1 = r.Y, x2 = r.X + r.W, y2 = r.Y + r.H;
+        // Segment's own bounding box (it is axis-aligned, so this is exact).
+        double sx1 = Math.Min(a.X, b.X), sx2 = Math.Max(a.X, b.X);
+        double sy1 = Math.Min(a.Y, b.Y), sy2 = Math.Max(a.Y, b.Y);
+        double dx = Math.Max(0, Math.Max(x1 - sx2, sx1 - x2));
+        double dy = Math.Max(0, Math.Max(y1 - sy2, sy1 - y2));
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
 
     private static void CheckObstacles(DiagramModel model, LayoutResult layout, RoutedEdge re, List<Defect> violations)
     {
