@@ -101,17 +101,24 @@ internal sealed class LabelPlacer
         return min;
     }
 
-    private double Clearance(Box box, List<Rect> obstacles, List<IReadOnlyList<Point>> lines, int skipIndex)
+    /// <summary>
+    /// Room around a label box, kept as two numbers rather than one minimum. A box overlapping a
+    /// node reports how deep it went; a box overlapping an edge reports a flat -4 (see SegGap), so
+    /// minning them together makes a label clipping a card's bbox corner by 3px look *better* than
+    /// one lying across a line. They are not comparable: text on a line is unreadable, text nosing
+    /// into the empty corner of a rounded card is not. The caller ranks on <c>Line</c> first.
+    /// </summary>
+    private (double Node, double Line) Clearance(Box box, List<Rect> obstacles, List<IReadOnlyList<Point>> lines, int skipIndex)
     {
-        double min = double.PositiveInfinity;
-        foreach (var o in obstacles) min = Math.Min(min, BoxGap(box, o));
+        double node = double.PositiveInfinity, line = double.PositiveInfinity;
+        foreach (var o in obstacles) node = Math.Min(node, BoxGap(box, o));
         for (int li = 0; li < lines.Count; li++)
         {
             if (li == skipIndex) continue;
             var poly = lines[li];
-            for (int i = 0; i < poly.Count - 1; i++) min = Math.Min(min, SegGap(box, poly[i], poly[i + 1]));
+            for (int i = 0; i < poly.Count - 1; i++) line = Math.Min(line, SegGap(box, poly[i], poly[i + 1]));
         }
-        return min;
+        return (node, line);
     }
 
     private static Point PolylineMidpoint(IReadOnlyList<Point> points)
@@ -140,15 +147,30 @@ internal sealed class LabelPlacer
 
         Box? best = null;
         double bestClear = double.NegativeInfinity, bestDist = double.PositiveInfinity;
+        bool bestOnLine = true;
         void Consider(double cx0, double cy0, string anchor, int segIdx)
         {
             var (cx, cy) = Clamp(cx0, cy0);
             var box = new Box(cx, cy, hw, hh, anchor);
-            double clear = Clearance(box, obstacles, lines, selfIndex);
-            for (int j = 0; j < points.Count - 1; j++) { if (j == segIdx) continue; clear = Math.Min(clear, SegGap(box, points[j], points[j + 1])); }
+            var (nodeClear, lineClear) = Clearance(box, obstacles, lines, selfIndex);
+            for (int j = 0; j < points.Count - 1; j++) { if (j == segIdx) continue; lineClear = Math.Min(lineClear, SegGap(box, points[j], points[j + 1])); }
+            double clear = Math.Min(nodeClear, lineClear);
             double dist = StepRound.Dist(new Point(cx, cy), mid);
+
+            // Never sit on a line if some candidate doesn't. Both sides of a segment can score
+            // negative — the label above one rung of an A⇄B pair lands on the other rung, the label
+            // below noses into a card's bbox corner — and since the two sides are equidistant from
+            // the midpoint, the old single-minimum tie-break just kept whichever was tried first,
+            // which is always "above". The corner is fine; the line is not.
+            bool onLine = lineClear < 0;
+            if (best is not null && onLine != bestOnLine)
+            {
+                if (!onLine) { best = box; bestClear = clear; bestDist = dist; bestOnLine = false; }
+                return;
+            }
             bool tie = clear == bestClear || Math.Abs(clear - bestClear) <= 6;
-            if (best is null || clear > bestClear + 6 || (tie && dist < bestDist)) { best = box; bestClear = clear; bestDist = dist; }
+            if (best is null || clear > bestClear + 6 || (tie && dist < bestDist))
+            { best = box; bestClear = clear; bestDist = dist; bestOnLine = onLine; }
         }
 
         for (int i = 0; i < points.Count - 1; i++)
@@ -184,8 +206,9 @@ internal sealed class LabelPlacer
                 if (StepRound.Dist(a, b) < 1) continue;
                 var (cx, cy) = Clamp((a.X + b.X) / 2, (a.Y + b.Y) / 2);
                 var box = new Box(cx, cy, hw, hh, "middle");
-                double clear = Clearance(box, obstacles, lines, selfIndex);
-                for (int j = 0; j < points.Count - 1; j++) { if (j == i) continue; clear = Math.Min(clear, SegGap(box, points[j], points[j + 1])); }
+                var (nodeClear, lineClear) = Clearance(box, obstacles, lines, selfIndex);
+                for (int j = 0; j < points.Count - 1; j++) { if (j == i) continue; lineClear = Math.Min(lineClear, SegGap(box, points[j], points[j + 1])); }
+                double clear = Math.Min(nodeClear, lineClear);
                 if (clear > bestClear) { best = box; bestClear = clear; }
             }
         }
