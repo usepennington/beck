@@ -76,7 +76,8 @@ internal static class EdgePainter
             EdgeModel edge = model.Edges[i];
             RoutedPath routed = OrthogonalRouter.RouteEdge(new RouteRequest(
                 p.From, p.To, p.FromSide, p.ToSide, edge.Curve, p.Obstacles, radius, primaryHorizontal,
-                new Size(layout.Width, layout.Height), shifts[i].From, shifts[i].To));
+                new Size(layout.Width, layout.Height), shifts[i].From, shifts[i].To,
+                shifts[i].FromFanned, shifts[i].ToFanned));
             outEdges.Add(new RoutedEdge(edge, routed.D, routed.Points));
         }
         return outEdges;
@@ -85,12 +86,13 @@ internal static class EdgePainter
     /// <summary>
     /// Spread anchors of edges sharing a node face along it, ordered by their far
     /// endpoints — a port of <c>svg.ts:anchorShifts</c>. Keeps fan-in/out lines
-    /// from stacking and A↔B pairs parallel.
+    /// from stacking and A↔B pairs parallel. Also reports which anchors landed on a
+    /// shared (fanned) face, so the router knows not to slide them apart again.
     /// </summary>
-    private static (double From, double To)[] AnchorShifts(
+    private static (double From, double To, bool FromFanned, bool ToFanned)[] AnchorShifts(
         IReadOnlyList<EdgeModel> edges, EdgePrep?[] prep, HashSet<string> pointNodes)
     {
-        var shifts = new (double From, double To)[edges.Count];
+        var shifts = new (double From, double To, bool FromFanned, bool ToFanned)[edges.Count];
         var groups = new Dictionary<(string Node, Side Side), List<(int Idx, bool IsFrom)>>();
         void Add(string nodeId, Side side, int idx, bool isFrom)
         {
@@ -154,8 +156,8 @@ internal static class EdgePainter
             for (int i = 0; i < sorted.Count; i++)
             {
                 double off = (i - @base) * step;
-                if (sorted[i].IsFrom) shifts[sorted[i].Idx].From = off;
-                else shifts[sorted[i].Idx].To = off;
+                if (sorted[i].IsFrom) (shifts[sorted[i].Idx].From, shifts[sorted[i].Idx].FromFanned) = (off, true);
+                else (shifts[sorted[i].Idx].To, shifts[sorted[i].Idx].ToFanned) = (off, true);
             }
         }
         return shifts;

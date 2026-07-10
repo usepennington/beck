@@ -3,7 +3,11 @@ namespace Beck.Rendering.Route;
 internal sealed record RouteRequest(
     Rect From, Rect To, Side? FromSide, Side? ToSide, EdgeCurve Curve,
     IReadOnlyList<Rect> Obstacles, double Radius, bool PrimaryHorizontal,
-    Size? Bounds, double FromShift, double ToShift);
+    Size? Bounds, double FromShift, double ToShift,
+    // Whether each anchor sits on a face shared with other edges. A fanned face's anchors are
+    // evenly spread by AnchorShifts, and sliding any one of them — including the middle edge,
+    // whose shift is 0 — breaks that spacing. Not inferable from the shift alone.
+    bool FromFanned = false, bool ToFanned = false);
 
 internal sealed record RoutedPath(string D, IReadOnlyList<Point> Points);
 
@@ -20,8 +24,7 @@ internal static class OrthogonalRouter
     private const double SelfLoopExtent = 30;
     private const double SameRankEps = 6;
     private const double StraightenInset = 6;    // keep a nudged anchor this far off a face corner
-    private const double StraightenSingle = 16;  // most one anchor may slide to straighten an edge
-    private const double StraightenTotal = 24;   // most both anchors may slide, combined
+    private const double StraightenTotal = 24;   // most the anchors may slide, combined
 
     private static Point Center(Rect r) => new(r.X + r.W / 2, r.Y + r.H / 2);
     private static bool IsVertical(Side s) => s is Side.Top or Side.Bottom;
@@ -187,12 +190,17 @@ internal static class OrthogonalRouter
     /// Straighten a nearly-aligned edge by sliding its anchors along their faces — a small "cheat"
     /// so a short cross-axis jog reads as one clean straight line instead of a stepped Z. Applies
     /// only to opposite parallel faces, only when the anchors' perpendicular gap is within budget,
-    /// and only when the resulting straight run clears every obstacle. Prefers to move a single
-    /// free-face anchor (keeping a fanned face's spread intact); larger gaps split the nudge across
-    /// both. Gaps beyond the budget are left as genuine jogs.
+    /// and only when the resulting straight run clears every obstacle.
+    ///
+    /// <para>An anchor on a fanned face never moves. AnchorShifts spreads such a face's anchors
+    /// evenly, and sliding any one of them — the middle edge included, whose shift is 0 — trades a
+    /// straight line for a visibly uneven fan. So a lone anchor may slide to meet a fanned one, two
+    /// lone anchors split the difference, and two fanned anchors leave the jog alone: with layout
+    /// placing nodes on their median neighbor, a fan that still needs a cheat is one the router
+    /// should not be papering over.</para>
     /// </summary>
     private static bool TryStraighten(
-        Rect from, Rect to, Side fromSide, Side toSide, double fromShift, double toShift,
+        Rect from, Rect to, Side fromSide, Side toSide, bool fromFanned, bool toFanned,
         IReadOnlyList<Rect> obstacles, ref Point a, ref Point b)
     {
         if (fromSide == toSide) return false;
@@ -211,14 +219,17 @@ internal static class OrthogonalRouter
         double lo = Math.Max(aLo, bLo), hi = Math.Min(aHi, bHi);
         if (hi < lo) return false; // faces don't overlap — no shared straight line exists
 
-        // Prefer to keep a fanned face (shift != 0) put and move only the free one; else split.
-        bool aFree = fromShift == 0, bFree = toShift == 0;
-        double target = Math.Abs(off) <= StraightenSingle
-            ? (bFree ? aPerp : aFree ? bPerp : (aPerp + bPerp) / 2)
+        // Move a lone anchor in preference to a fanned one; only when both faces are fanned (so
+        // there is no free anchor to give) do we split the nudge and accept the uneven spread.
+        bool aFree = !fromFanned, bFree = !toFanned;
+        double target = aFree && bFree ? (aPerp + bPerp) / 2
+            : aFree ? bPerp
+            : bFree ? aPerp
             : (aPerp + bPerp) / 2;
         target = Math.Clamp(target, lo, hi);
 
-        if (Math.Abs(target - aPerp) > StraightenSingle || Math.Abs(target - bPerp) > StraightenSingle) return false;
+        // One anchor may absorb the whole gap when it is the only one free to move; when both move
+        // they split it, so neither travels far. Either way the combined slide stays in budget.
         if (Math.Abs(target - aPerp) + Math.Abs(target - bPerp) > StraightenTotal + 0.01) return false;
 
         Point na = vert ? new Point(target, a.Y) : new Point(a.X, target);
@@ -317,7 +328,7 @@ internal static class OrthogonalRouter
         if (req.Curve == EdgeCurve.S)
             return new RoutedPath(SCurve(a, b, fromSide), new[] { a, b });
 
-        var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromShift, req.ToShift, req.Obstacles, ref a, ref b)
+        var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromFanned, req.ToFanned, req.Obstacles, ref a, ref b)
             ? new List<Point> { a, b }
             : OrthogonalPolyline(a, b, fromSide, toSide, req.FromShift, req.ToShift, req.Obstacles, req.Bounds);
         return new RoutedPath(StepRound.RoundedPath(poly, req.Radius), poly);
