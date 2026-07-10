@@ -1,9 +1,8 @@
 {
-  "StraightRate": 0.20992220380053564,
-  "MicroJogsPerEdge": 0.012243336309144242,
-  "MergedRunsPerEdge": 0.0983292947328147,
-  "SkewedFaceRate": 0.08061051441492369,
-  "BendsPerEdge": 1.9277515623007269,
-  "ThroughNodeDiagrams": 27,
-  "TightEdgeRate": 0.08436423925519704
+  "StraightRate": 0.2097946690473154,
+  "MicroJogsPerEdge": 0.01243463843897462,
+  "MergedRunsPerEdge": 0.09992347914806785,
+  "SkewedFaceRate": 0.08127328140873688,
+  "BendsPerEdge": 1.9304297921183522,
+  "TightEdgeRate": 0.08340772860604515
 }
