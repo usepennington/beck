@@ -202,7 +202,7 @@ using Beck;
 using Beck.Rendering;
 
 // Site-wide default (a document's own meta.style overrides it):
-string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyles.ByName["glow"] });
+string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyles.Glow });
 ```
 
 Precedence runs `meta.style` (YAML) → `SvgRenderOptions.Style` (C# default) → `classic` — the C#

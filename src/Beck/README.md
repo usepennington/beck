@@ -52,7 +52,7 @@ and flips with light and dark. Select one per document with `meta: { style: sket
 site-wide default from C#:
 
 ```csharp
-string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyles.ByName["glow"] });
+string svg = BeckSvg.Render(yaml, new SvgRenderOptions { Style = BeckStyles.Glow });
 ```
 
 Precedence runs `meta.style` → `SvgRenderOptions.Style` → `classic`. Every built-in is an instance of
