@@ -119,7 +119,7 @@ builder.Services.AddPenningtonBeck(beck =>
 
 MonorailCSS emits your `ColorScheme` as `--color-*` custom properties — `--color-primary-*` from your
 `PrimaryColorName` and `--color-base-*` from your `BaseColorName`. Beck reads exactly those, so
-diagrams take on your brand colour and follow your dark mode with no extra work:
+diagrams take on your brand colour with no extra work:
 
 ```csharp
 builder.Services.AddMonorailCss(_ => new MonorailCssOptions
@@ -149,6 +149,26 @@ ExtraStyles = """
 
 The `body .beck-svg` selector outranks the engine's own defaults, which it injects into each SVG at
 render time. See [Match your theme and colours](/docs/guides/theme) for the full token list.
+
+## Follow your dark mode
+
+Out of the box, diagrams (and the zoom lightbox) switch to their dark tokens under a
+`[data-theme="dark"]` ancestor, falling back to the OS `prefers-color-scheme` when neither
+`data-theme` marker is present. If your site signals dark mode differently — the common
+Tailwind-style `.dark` class on `<html>`, say — point `ThemeHooks` at your markers:
+
+```csharp
+builder.Services.AddPenningtonBeck(beck =>
+{
+    beck.RenderOptions = new SvgRenderOptions { ThemeHooks = ThemeHooks.Class };
+});
+```
+
+`ThemeHooks.Class` keys dark mode off a `.dark` ancestor and drops the OS fallback (class-based
+sites resolve the OS preference themselves in a bootstrap script, so the class is authoritative —
+its absence *means* light). For anything else, build your own: `Dark` is the selector that marks
+the page dark, `Light` guards the fallback so an explicit light choice beats a dark OS preference,
+and `SystemFallback` controls whether the `prefers-color-scheme` hook is emitted at all.
 
 ## Show the source and the render together
 

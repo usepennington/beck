@@ -167,10 +167,18 @@ resolve for free). You only need to supply the two ramps Beck names that Tailwin
 
 ### Dark mode comes for free
 
-Beck reads dark mode from a `.dark` class (or `data-theme="dark"`) on your `<html>` element — the
-exact convention Tailwind uses. When that class is present it switches to the darker shades of your
-`base` ramp and re-themes every diagram on the page automatically. So if your dark toggle already
-flips `.dark` on `<html>`, you have nothing more to do.
+Beck reads dark mode from a `data-theme="dark"` attribute on an ancestor (falling back to the OS
+`prefers-color-scheme` when no `data-theme` marker is present). When it fires, the diagram switches
+to the darker shades of your `base` ramp and re-themes automatically. If your site signals dark
+mode differently — Tailwind's `.dark` class convention, say — tell the renderer once:
+
+```csharp
+var svg = BeckSvg.Render(yaml, new SvgRenderOptions { ThemeHooks = ThemeHooks.Class });
+```
+
+`ThemeHooks.Class` keys dark mode off a `.dark` ancestor with no OS fallback (the class is
+authoritative on such sites — its absence means light); a custom `ThemeHooks` takes any selectors
+your site uses.
 
 For finer control — pinning one diagram's theme, or overriding a single token — see [Match your
 theme and colours](/docs/guides/theme).
