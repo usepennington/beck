@@ -235,7 +235,7 @@ internal static class SvgRenderer
         var svg = new StringBuilder();
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
            .Append($"style=\"max-width:{maxWidth};height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
-        svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style)).Append(animCss).Append("</style>");
+        svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style, options.ThemeHooks)).Append(animCss).Append("</style>");
         svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append(edgeDefs).Append(Stylesheet.StyleDefs(hash, style)).Append("</defs>");
         svg.Append(TitleBlock(model, w, style));
         svg.Append($"<g class=\"beck-canvas\" transform=\"translate(0,{N(titleH)})\">").Append(body).Append("</g>");

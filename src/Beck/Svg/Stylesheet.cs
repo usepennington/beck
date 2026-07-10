@@ -15,7 +15,7 @@ internal static class Stylesheet
     private static string Sw(double n) => SvgWriter.Num(n);
     private static string P(int n) => SvgWriter.Int(n);
 
-    public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style)
+    public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style, ThemeHooks hooks)
     {
         var sb = new StringBuilder();
         var scope = $".b-{h}";
@@ -48,12 +48,16 @@ internal static class Stylesheet
                 Block(scope, light);
                 Block(scope, dark);
                 break;
-            default: // auto — both host-controlled and standalone hooks
+            default: // auto — the host's dark marker, plus the OS-preference hook when enabled
                 Block(scope, light);
-                Block($"[data-theme='dark'] {scope}", dark);
-                sb.Append("@media (prefers-color-scheme: dark){");
-                Block($":root:not([data-theme='light']) {scope}", dark);
-                sb.Append('}');
+                Block($"{hooks.Dark} {scope}", dark);
+                if (hooks.SystemFallback)
+                {
+                    sb.Append("@media (prefers-color-scheme: dark){");
+                    Block($":root:not({hooks.Light}) {scope}", dark);
+                    sb.Append('}');
+                }
+
                 break;
         }
 
@@ -89,10 +93,13 @@ internal static class Stylesheet
           .Append($"stroke-width:{Sw(geo.NodeStroke)};")
           .Append($"filter:{geo.NodeShadow};")
           .Append("}");
-        sb.Append($"[data-theme='dark'] {scope} .beck-node{{filter:{geo.NodeShadowDark};}}");
-        sb.Append("@media (prefers-color-scheme: dark){");
-        sb.Append($":root:not([data-theme='light']) {scope} .beck-node{{filter:{geo.NodeShadowDark};}}");
-        sb.Append('}');
+        sb.Append($"{hooks.Dark} {scope} .beck-node{{filter:{geo.NodeShadowDark};}}");
+        if (hooks.SystemFallback)
+        {
+            sb.Append("@media (prefers-color-scheme: dark){");
+            sb.Append($":root:not({hooks.Light}) {scope} .beck-node{{filter:{geo.NodeShadowDark};}}");
+            sb.Append('}');
+        }
         sb.Append($"{scope} .beck-node--external{{stroke-dasharray:{strokes.NodeDash};}}");
         sb.Append($"{scope} .beck-node--subtle{{opacity:.72;}}");
         sb.Append($"{scope} .beck-node--ghost{{fill:transparent;stroke-dasharray:{strokes.NodeDash};filter:none;}}");

@@ -5,12 +5,52 @@ namespace Beck;
 /// <summary>How the diagram resolves its light/dark theme. Overrides <c>meta.theme</c>.</summary>
 public enum ThemeMode
 {
-    /// <summary>Follow the host: <c>[data-theme]</c> ancestor, else <c>prefers-color-scheme</c>. Emits both hooks.</summary>
+    /// <summary>
+    /// Follow the host: a dark-marker ancestor (default <c>[data-theme='dark']</c>), else
+    /// <c>prefers-color-scheme</c>. The selectors are configurable via
+    /// <see cref="SvgRenderOptions.ThemeHooks"/>.
+    /// </summary>
     Auto,
     /// <summary>Pin the light token set (no media query emitted).</summary>
     Light,
     /// <summary>Pin the dark token set (no media query emitted).</summary>
     Dark,
+}
+
+/// <summary>
+/// The host CSS hooks a <see cref="ThemeMode.Auto"/> diagram uses to follow the page's dark mode.
+/// The default matches sites that stamp <c>data-theme="light"|"dark"</c> on an ancestor (falling
+/// back to the OS preference when neither is set); <see cref="Class"/> matches Tailwind-style
+/// sites that toggle a <c>.dark</c> class instead. A record — compare presets by value.
+/// </summary>
+public sealed record ThemeHooks
+{
+    /// <summary>The default: <c>data-theme</c> attribute markers plus the OS-preference fallback.</summary>
+    public static ThemeHooks DataTheme { get; } = new();
+
+    /// <summary>
+    /// Tailwind-style class markers: <c>.dark</c> on an ancestor means dark, its absence means
+    /// light. No <see cref="SystemFallback"/> — such sites resolve the OS preference themselves
+    /// in a bootstrap script, so the class is always authoritative.
+    /// </summary>
+    public static ThemeHooks Class { get; } = new() { Dark = ".dark", Light = ".light", SystemFallback = false };
+
+    /// <summary>Selector matching an ancestor that marks the page dark.</summary>
+    public string Dark { get; init; } = "[data-theme='dark']";
+
+    /// <summary>
+    /// Selector matching an ancestor that explicitly marks the page light — it guards the
+    /// <see cref="SystemFallback"/> media query (<c>:root:not(Light)</c>) so an explicit light
+    /// choice beats a dark OS preference. Unused when <see cref="SystemFallback"/> is off.
+    /// </summary>
+    public string Light { get; init; } = "[data-theme='light']";
+
+    /// <summary>
+    /// Also follow <c>prefers-color-scheme: dark</c> when no explicit marker is present. Turn off
+    /// when the host always stamps the resolved theme (most class-based dark modes), where the
+    /// absence of <see cref="Dark"/> already means light.
+    /// </summary>
+    public bool SystemFallback { get; init; } = true;
 }
 
 /// <summary>How (or whether) the flow choreography is compiled into the SVG.</summary>
@@ -50,6 +90,13 @@ public sealed class SvgRenderOptions
 
     /// <summary>Overrides <c>meta.theme</c> (<c>auto</c>/<c>light</c>/<c>dark</c>).</summary>
     public ThemeMode? Theme { get; init; }
+
+    /// <summary>
+    /// The host CSS hooks an <see cref="ThemeMode.Auto"/> diagram keys its dark tokens off.
+    /// Defaults to <see cref="ThemeHooks.DataTheme"/>; use <see cref="ThemeHooks.Class"/> for
+    /// Tailwind-style <c>.dark</c>-class sites.
+    /// </summary>
+    public ThemeHooks ThemeHooks { get; init; } = ThemeHooks.DataTheme;
 
     /// <summary>Animation strategy; defaults to <see cref="AnimationMode.Full"/>.</summary>
     public AnimationMode Animation { get; init; } = AnimationMode.Full;

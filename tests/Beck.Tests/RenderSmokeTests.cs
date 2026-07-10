@@ -51,6 +51,39 @@ public sealed class RenderSmokeTests
     }
 
     [Fact]
+    public void ThemeHooksControlTheDarkModeSelectors()
+    {
+        const string yaml = """
+            nodes:
+              - { id: a, title: Node A }
+              - { id: b, title: Node B }
+            edges:
+              - { from: a, to: b }
+            """;
+
+        // Default: data-theme markers plus the OS-preference fallback.
+        var dataTheme = BeckSvg.Render(yaml);
+        Assert.Contains("[data-theme='dark'] .b-", dataTheme);
+        Assert.Contains("@media (prefers-color-scheme: dark){:root:not([data-theme='light']) .b-", dataTheme);
+
+        // Class hooks (Tailwind-style): `.dark` keys the dark tokens, and no OS fallback is
+        // emitted — the class is authoritative on such sites.
+        var classed = BeckSvg.Render(yaml, new SvgRenderOptions { ThemeHooks = ThemeHooks.Class });
+        Assert.Contains(".dark .b-", classed);
+        Assert.DoesNotContain("data-theme", classed);
+        Assert.DoesNotContain("prefers-color-scheme: dark", classed);
+
+        // Custom hooks change the output, so they must change the scoping hash too;
+        // default hooks reproduce the pre-existing hash byte-for-byte.
+        Assert.NotEqual(
+            BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions { ThemeHooks = ThemeHooks.Class }),
+            BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions()));
+        Assert.Equal(
+            BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions { ThemeHooks = new ThemeHooks() }),
+            BeckSvg.ResolveIdSuffix(yaml, new SvgRenderOptions()));
+    }
+
+    [Fact]
     public void ScrubModeDrivesAnimationsOffTheViewTimeline()
     {
         var font = TestFonts.Spec();
