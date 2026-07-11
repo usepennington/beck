@@ -25,6 +25,11 @@ public sealed class ClassicSvgGoldenTests
         ["arch-kitchen"],
         ["seq-kitchen"],
         ["class"],
+        ["flowchart-simple"],
+        ["flowchart-branchy"],
+        ["mindmap-simple"],
+        ["mindmap-kitchen"],
+        ["mindmap-status"],
     ];
 
     [Theory]
@@ -78,7 +83,7 @@ public sealed class ClassicSvgGoldenTests
         }
 
         var srcGoldens = Path.Combine(SourceDir(), "Goldens", "svg");
-        foreach (var name in new[] { "arch-kitchen", "seq-kitchen", "class" })
+        foreach (var name in new[] { "arch-kitchen", "seq-kitchen", "class", "mindmap-simple", "mindmap-kitchen", "mindmap-status" })
         {
             var yaml = File.ReadAllText(Path.Combine(_corpusDir, name + ".yaml"));
             File.WriteAllText(Path.Combine(srcGoldens, name + ".svg"),

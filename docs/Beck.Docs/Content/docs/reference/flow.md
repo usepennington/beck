@@ -1,7 +1,7 @@
 ---
 title: Flow & animation
 description: The flow block, every step type, and the knobs that shape a travelling packet.
-order: 41
+order: 43
 sectionLabel: Reference
 uid: docs.reference.flow
 ---

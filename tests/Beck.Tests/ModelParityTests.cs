@@ -35,6 +35,30 @@ public sealed class ModelParityTests
         }
     }
 
+    /// <summary>
+    /// Rewrites the mindmap model goldens in the SOURCE tree from the current engine (the TS oracle these
+    /// goldens once came from is gone; the C# engine is now the reference for the C#-native diagram types).
+    /// Guarded by <c>BECK_REGEN=1</c>. Only for an intentional model change — diff before committing.
+    /// </summary>
+    [Fact]
+    public void Regenerate()
+    {
+        if (Environment.GetEnvironmentVariable("BECK_REGEN") != "1")
+        {
+            return;
+        }
+
+        var srcModel = Path.Combine(SourceDir(), "Goldens", "model");
+        foreach (var name in new[] { "mindmap-simple", "mindmap-kitchen", "mindmap-status" })
+        {
+            var model = Validate.LoadDiagram(File.ReadAllText(Path.Combine(_corpusDir, name + ".yaml")));
+            File.WriteAllText(Path.Combine(srcModel, name + ".model.json"), ModelJson.Canonical(model));
+        }
+    }
+
+    private static string SourceDir([System.Runtime.CompilerServices.CallerFilePath] string self = "") =>
+        Path.GetDirectoryName(self)!;
+
     /// <summary>Structural first-difference path for a readable failure message.</summary>
     private static string? FirstDifference(string expectedJson, string actualJson)
     {

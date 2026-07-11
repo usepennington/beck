@@ -1,0 +1,10 @@
+type: flowchart
+meta: { direction: LR }
+steps:
+  - { id: submit, text: Submit, kind: terminator, accent: primary }
+  - { id: charge, text: Charge card }
+  - { id: fail, text: Payment failed, accent: danger }
+links:
+  - { from: submit, to: charge, note: "The order is submitted for payment." }
+  - { from: charge, to: fail, label: declined, style: dashed, color: danger, note: "A declined card routes back for a retry." }
+  - { from: fail, to: charge, label: retry }

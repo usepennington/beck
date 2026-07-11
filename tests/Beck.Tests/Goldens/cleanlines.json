@@ -1,8 +1,23 @@
 {
-  "StraightRate": 0.2097946690473154,
-  "MicroJogsPerEdge": 0.01243463843897462,
-  "MergedRunsPerEdge": 0.09992347914806785,
-  "SkewedFaceRate": 0.08127328140873688,
-  "BendsPerEdge": 1.9304297921183522,
-  "TightEdgeRate": 0.08340772860604515
+  "Architecture": {
+    "StraightRate": 0.2097946690473154,
+    "MicroJogsPerEdge": 0.01243463843897462,
+    "MergedRunsPerEdge": 0.09992347914806785,
+    "SkewedFaceRate": 0.08127328140873688,
+    "BendsPerEdge": 1.9304297921183522,
+    "TightEdgeRate": 0.08340772860604515
+  },
+  "Flowchart": {
+    "StraightRate": 0.11445983379501386,
+    "MicroJogsPerEdge": 0.015401662049861495,
+    "MergedRunsPerEdge": 0.6396675900277008,
+    "SkewedFaceRate": 0.07825225621835791,
+    "BendsPerEdge": 1.935567867036011,
+    "TightEdgeRate": 0.05174515235457064
+  },
+  "Mindmap": {
+    "AreaPerNode": 62347.382777808845,
+    "MeanEdgeLength": 127.99757117486371,
+    "HalfBalance": 1.6692628252996586
+  }
 }

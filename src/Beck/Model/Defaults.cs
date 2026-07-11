@@ -22,6 +22,11 @@ internal static class Defaults
             [DiagramType.Sequence] = DefaultSpacing,
             [DiagramType.State] = new(Rank: 130, Node: 72, CornerRadius: 16),
             [DiagramType.Class] = new(Rank: 130, Node: 72, CornerRadius: 16),
+            [DiagramType.Flowchart] = new(Rank: 130, Node: 72, CornerRadius: 16),
+            // Mind maps read best tight (design handoff "Branch accents"): Node 20 gives a leaf-row pitch
+            // of 50 (30px pill + 20 gap), and Rank 70 is the face-to-face gap the fixed branch cubics bow
+            // across (controls at ±40 out of the root / ±35 out of rank 1).
+            [DiagramType.MindMap] = new(Rank: 70, Node: 20, CornerRadius: 16),
         };
 
     /// <summary>Narration is available by default; wpm/min/pad set the reading-time pace.</summary>

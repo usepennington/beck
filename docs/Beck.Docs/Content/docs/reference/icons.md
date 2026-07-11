@@ -1,7 +1,7 @@
 ---
 title: Icons
 description: Every built-in icon key, rendered live from the engine's own registry.
-order: 43
+order: 45
 sectionLabel: Reference
 uid: docs.reference.icons
 ---

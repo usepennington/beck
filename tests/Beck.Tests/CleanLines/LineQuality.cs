@@ -182,7 +182,7 @@ internal static class LineQuality
         }
 
         // ---- anchor fans ----
-        var (faces, skewed, offCenter, fanViolations) = AnalyzeFaces(layout, edges, selfLoops);
+        var (faces, skewed, offCenter, fanViolations) = AnalyzeFaces(model, layout, edges, selfLoops);
         violations.AddRange(fanViolations);
 
         var nonLoop = edges.Count(e => !selfLoops.Contains(e.Edge.Id));
@@ -347,10 +347,17 @@ internal static class LineQuality
     /// consecutive gaps must be equal, and the spread must center on the face.
     /// </summary>
     private static (int Faces, int Skewed, int OffCenter, List<Defect> Violations) AnalyzeFaces(
-        LayoutResult layout, IReadOnlyList<RoutedEdge> edges, HashSet<string> selfLoops)
+        DiagramModel model, LayoutResult layout, IReadOnlyList<RoutedEdge> edges, HashSet<string> selfLoops)
     {
         var violations = new List<Defect>();
         var buckets = new Dictionary<(string Node, Side Side), List<double>>();
+
+        // A parallelogram's left/right faces are slanted: the router nudges those anchors inward
+        // by skew/2 (see Svg/Artwork.cs ParallelogramSkew + Route/EdgePainter.cs paraSkew) so they
+        // land on the slant instead of the bbox edge. Top/bottom faces are unslanted — no nudge.
+        var paraNudge = model.Nodes
+            .Where(n => n.Shape is NodeShape.Parallelogram && layout.Nodes.ContainsKey(n.Id))
+            .ToDictionary(n => n.Id, n => Math.Min(12, layout.Nodes[n.Id].H * 0.4) / 2);
 
         void Record(string nodeId, Point p, string edgeId)
         {
@@ -359,7 +366,8 @@ internal static class LineQuality
                 return;
             }
 
-            var side = FaceOf(r, p);
+            var nudge = paraNudge.GetValueOrDefault(nodeId);
+            var side = FaceOf(r, p, nudge);
             if (side is null)
             {
                 violations.Add(new Defect("anchor-off-face",
@@ -428,7 +436,11 @@ internal static class LineQuality
         return (faces, skewed, offCenter, violations);
     }
 
-    private static Side? FaceOf(Rect r, Point p)
+    /// <param name="nudge">
+    /// A parallelogram's left/right anchors sit <c>nudge</c> px inward of the bbox edge, on the
+    /// shape's slant, rather than exactly on it (0 for every other shape).
+    /// </param>
+    private static Side? FaceOf(Rect r, Point p, double nudge = 0)
     {
         const double Eps = 0.6;
         var inX = p.X >= r.X - Eps && p.X <= r.X + r.W + Eps;
@@ -443,12 +455,12 @@ internal static class LineQuality
             return Side.Bottom;
         }
 
-        if (inY && Math.Abs(p.X - r.X) < Eps)
+        if (inY && Math.Abs(p.X - (r.X + nudge)) < Eps)
         {
             return Side.Left;
         }
 
-        if (inY && Math.Abs(p.X - (r.X + r.W)) < Eps)
+        if (inY && Math.Abs(p.X - (r.X + r.W - nudge)) < Eps)
         {
             return Side.Right;
         }

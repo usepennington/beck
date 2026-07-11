@@ -118,6 +118,21 @@ wwwroot/examples/guides/nodes-07.beck.yaml
 
 A `status` set here is the node's resting state. If you want a status that **changes** while the diagram plays — flipping from `idle` to `busy`, say — that's a flow concern; see [Animate the flow](/docs/guides/flow).
 
+## Add items or a body
+
+`items` renders a bulleted list inside the card; `body` renders a wrapped paragraph under it. Both
+grow the card to fit their content — useful for an endpoint list, a changelog note, or any card that
+needs more than a title and a subtitle. [Mind map topics](/docs/guides/mindmap) use the same two
+fields for the same purpose.
+
+```yaml:symbol
+wwwroot/examples/guides/nodes-10.beck.yaml
+```
+
+```beck:symbol,static
+wwwroot/examples/guides/nodes-10.beck.yaml
+```
+
 ## Make a node a link
 
 To turn a card into a hyperlink, add `href`. Beck renders the whole node as an `<a>`. Add `target: _blank` to open in a new tab.

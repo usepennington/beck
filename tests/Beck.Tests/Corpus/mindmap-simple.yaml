@@ -1,0 +1,13 @@
+type: mindmap
+meta:
+  title: Beck Overview
+root: Beck
+topics:
+  - title: Rendering
+    children:
+      - title: Layout
+      - title: Routing
+  - title: Packages
+    children:
+      - title: Engine
+      - title: Skia

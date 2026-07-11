@@ -303,10 +303,12 @@ internal static class BrandStyling
         .pg-pill[data-type="sequence"]     { color: var(--color-sky-700, #0369a1);     background: color-mix(in srgb, var(--color-sky-500, #0ea5e9) 14%, transparent);     border-color: color-mix(in srgb, var(--color-sky-500, #0ea5e9) 30%, transparent); }
         .pg-pill[data-type="state"]        { color: #b45309;                            background: color-mix(in srgb, #f59e0b 16%, transparent);                            border-color: color-mix(in srgb, #f59e0b 32%, transparent); }
         .pg-pill[data-type="class"]        { color: #6d28d9;                            background: color-mix(in srgb, #8b5cf6 16%, transparent);                            border-color: color-mix(in srgb, #8b5cf6 32%, transparent); }
+        .pg-pill[data-type="mindmap"]      { color: #be123c;                            background: color-mix(in srgb, #f43f5e 14%, transparent);                            border-color: color-mix(in srgb, #f43f5e 30%, transparent); }
         .dark .pg-pill[data-type="architecture"] { color: var(--color-emerald-300, #6ee7b7); }
         .dark .pg-pill[data-type="sequence"]     { color: var(--color-sky-300, #7dd3fc); }
         .dark .pg-pill[data-type="state"]        { color: #fcd34d; }
         .dark .pg-pill[data-type="class"]        { color: #c4b5fd; }
+        .dark .pg-pill[data-type="mindmap"]      { color: #fda4af; }
 
         /* Colour-scheme swatch: a two-tone chip previewing each palette's signature. */
         .pg-swatch { flex: none; width: 15px; height: 15px; border-radius: 4px; border: 1px solid rgb(0 0 0 / .18); }

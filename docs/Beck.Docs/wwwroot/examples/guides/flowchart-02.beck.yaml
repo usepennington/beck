@@ -1,0 +1,16 @@
+type: flowchart
+meta: { title: Validate Input }
+steps:
+  - { id: read, text: Read request, kind: io }
+  - { id: check, text: Valid?, kind: decision }
+  - { id: process, text: Process request }
+  - { id: retry, text: Fix input }
+  - { id: reject, text: Give up, kind: terminator }
+links:
+  - { from: "[*]", to: read }
+  - { from: read, to: check }
+  - { from: check, to: process, label: "yes" }
+  - { from: check, to: retry, label: "no" }
+  - { from: retry, to: check }
+  - { from: retry, to: reject, label: "give up" }
+  - { from: process, to: "[*]" }

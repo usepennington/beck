@@ -6,7 +6,7 @@ namespace Beck.Model;
 // downstream layout/route/render/animate stages switch exhaustively.
 
 /// <summary>What the diagram is; picks the layout + routing strategy.</summary>
-internal enum DiagramType { Architecture, Sequence, State, Class }
+internal enum DiagramType { Architecture, Sequence, State, Class, Flowchart, MindMap }
 
 /// <summary>Primary layout axis.</summary>
 internal enum Direction { Tb, Bt, Lr, Rl }
@@ -77,7 +77,9 @@ internal static class Tokens
         (Model.DiagramType.Architecture, "architecture"),
         (Model.DiagramType.Sequence, "sequence"),
         (Model.DiagramType.State, "state"),
-        (Model.DiagramType.Class, "class"));
+        (Model.DiagramType.Class, "class"),
+        (Model.DiagramType.Flowchart, "flowchart"),
+        (Model.DiagramType.MindMap, "mindmap"));
 
     public static readonly TokenMap<Direction> Direction = new(
         (Model.Direction.Tb, "TB"),

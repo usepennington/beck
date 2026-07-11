@@ -1,7 +1,7 @@
 ---
 title: Author a custom style
 description: Derive a BeckStyle from a built-in with a with-expression, register it, and drive it from meta.style — retinting tokens, choosing a metrics font, and composing an artwork.
-order: 33
+order: 35
 sectionLabel: Cross-cutting
 uid: docs.guide.custom-styles
 ---

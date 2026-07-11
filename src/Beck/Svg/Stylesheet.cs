@@ -15,7 +15,7 @@ internal static class Stylesheet
     private static string Sw(double n) => SvgWriter.Num(n);
     private static string P(int n) => SvgWriter.Int(n);
 
-    public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style, ThemeHooks hooks)
+    public static string Emit(string h, string fontFamily, string monoFamily, ThemeMode theme, BeckStyle style, ThemeHooks hooks, bool mindMap = false)
     {
         var sb = new StringBuilder();
         var scope = $".b-{h}";
@@ -117,6 +117,16 @@ internal static class Stylesheet
         // status pill
         sb.Append($"{scope} .beck-status-bg{{fill:color-mix(in srgb, var(--beck-accent) {P(mix.StatusPill)}%, transparent);}}");
         sb.Append($"{scope} .beck-status-text{{fill:var(--beck-accent);}}");
+
+        // mindmap leaf pill (design handoff): accent-tinted fill + hairline accent border, no shadow.
+        // Defined after .beck-node so the equal-specificity overrides win. .beck-mm-planned is the faint
+        // "planned" label on a ghost branch's cards. Emitted only for mindmaps so the four shipping types
+        // stay byte-identical.
+        if (mindMap)
+        {
+            sb.Append($"{scope} .beck-mm-leaf{{fill:color-mix(in srgb, var(--beck-accent) 8%, var(--beck-node-bg));stroke:color-mix(in srgb, var(--beck-accent) 35%, var(--beck-node-border));stroke-width:1;filter:none;}}");
+            sb.Append($"{scope} .beck-mm-planned{{fill:var(--beck-text-faint);}}");
+        }
 
         // group
         sb.Append($"{scope} .beck-group{{fill:none;stroke:var(--beck-group-border);stroke-width:{Sw(geo.GroupStroke)};stroke-dasharray:{strokes.GroupDash};}}");

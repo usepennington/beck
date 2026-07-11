@@ -1,0 +1,11 @@
+type: mindmap
+root: Beck
+topics:
+  - title: Rendering
+    icon: code
+  - title: Diagram Types
+    icon: chart
+  - title: Packages
+    icon: container
+  - title: Theming
+    icon: browser

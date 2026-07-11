@@ -20,7 +20,7 @@ public sealed class RenderSmokeTests
         var outDir = Path.Combine(RepoRoot, "tools", "oracle", "rendered");
         Directory.CreateDirectory(outDir);
 
-        foreach (var file in new[] { "arch-simple", "arch-grouped", "arch-flow", "arch-kitchen", "state", "class", "sample-architecture", "sequence", "seq-kitchen", "sample-sequence" })
+        foreach (var file in new[] { "arch-simple", "arch-grouped", "arch-flow", "arch-kitchen", "state", "class", "sample-architecture", "sequence", "seq-kitchen", "sample-sequence", "flowchart-simple", "flowchart-branchy", "mindmap-simple", "mindmap-kitchen", "mindmap-status" })
         {
             var yaml = File.ReadAllText(Path.Combine(corpus, file + ".yaml"));
             var svg = BeckSvg.Render(yaml, options);

@@ -140,6 +140,59 @@ public sealed class DiamondParallelogramTests
         }
     }
 
+    // ---- flowchart decision: edges spread across distinct diamond vertices ----
+
+    [Fact]
+    public void Flowchart_DecisionEdges_UseDistinctVertices_NoSharedTrunk()
+    {
+        // A decision with two same-rank-below targets plus a return edge back into it. Point-anchoring
+        // once landed all three on the bottom vertex, sharing a trunk that read as one line forking.
+        // The flowchart reassignment must give them distinct vertices (yes → one side, no → the other,
+        // return → the free vertex), so no two edges leave/enter the diamond on a shared collinear run.
+        const string yaml = """
+            type: flowchart
+            meta: { direction: TB }
+            steps:
+              - { id: check, text: Valid?, kind: decision }
+              - { id: process, text: Process }
+              - { id: retry, text: Fix input }
+            links:
+              - { from: check, to: process, label: "yes" }
+              - { from: check, to: retry, label: "no" }
+              - { from: retry, to: check }
+            """;
+
+        var (_, layout, edges) = LineQuality.Route(yaml);
+        var dia = layout.Nodes["check"];
+        var cx = dia.X + dia.W / 2;
+        var cy = dia.Y + dia.H / 2;
+
+        // Each edge's anchor on the diamond (start if it leaves check, end if it enters).
+        var anchors = edges
+            .Where(e => e.Edge.From == "check" || e.Edge.To == "check")
+            .Select(e => e.Edge.From == "check" ? e.Points[0] : e.Points[^1])
+            .ToList();
+        Assert.Equal(3, anchors.Count);
+
+        // Three free vertices, three edges → three distinct anchor points (no shared vertex/trunk).
+        var distinct = anchors.Select(p => (Math.Round(p.X, 1), Math.Round(p.Y, 1))).Distinct().Count();
+        Assert.Equal(3, distinct);
+
+        // Every anchor sits exactly on one of the four bbox face midpoints (a diamond vertex), and
+        // the two out-branches land on opposite side vertices (Left/Right), not the same bottom point.
+        bool IsVertex(Point p) =>
+            (Near(p.X, cx) && (Near(p.Y, dia.Y) || Near(p.Y, dia.Y + dia.H)))
+            || (Near(p.Y, cy) && (Near(p.X, dia.X) || Near(p.X, dia.X + dia.W)));
+        Assert.All(anchors, p => Assert.True(IsVertex(p), $"anchor ({p.X:0.#},{p.Y:0.#}) is not a diamond vertex"));
+
+        var yes = edges.Single(e => e.Edge.To == "process").Points[0];
+        var no = edges.Single(e => e.Edge.To == "retry").Points[0];
+        Assert.True(Near(yes.Y, cy) && Near(no.Y, cy), "both branches should leave a side (Left/Right) vertex");
+        Assert.False(Near(yes.X, no.X), "yes- and no-branch must leave DIFFERENT side vertices, not one trunk");
+    }
+
+    private static bool Near(double a, double b) => Math.Abs(a - b) < 0.5;
+
     // ---- render smoke ----
 
     [Fact]

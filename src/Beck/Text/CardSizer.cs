@@ -25,6 +25,16 @@ internal static class CardSizer
     /// measured advance matches the run <see cref="SvgRenderer"/> draws (measured == drawn).</summary>
     internal const string ItemBullet = "• ";
 
+    // ---- mindmap depth roles (design handoff "Branch accents"): depth = size + shape ----
+    /// <summary>Root card 210×68, rank-1 card 190×56, leaf pill height 30, and the leaf pill's horizontal
+    /// text padding (16px each side). These bypass the auto card box model so depth reads as fixed size.</summary>
+    internal const double MindMapRootW = 210, MindMapRootH = 68, MindMapRankW = 190, MindMapRankH = 56;
+    internal const double MindMapRootChip = 34, MindMapRankChip = 30, MindMapLeafH = 30, MindMapLeafPadX = 32;
+
+    /// <summary>The leaf pill's label typography (Inter 12 / 500) — measured here and drawn by the renderer
+    /// so the pill hugs the same run the <c>textLength</c> guard pins.</summary>
+    internal static readonly FontRoleSpec MindMapLeafLabel = new(false, 500, 12, 0, false);
+
 
     /// <summary>Measure a node's card to its rounded border-box size. The box-model constants come from
     /// <paramref name="geometry"/> and the per-role typography from <paramref name="roles"/> (both
@@ -32,13 +42,20 @@ internal static class CardSizer
     /// is what makes a remapped role (heavier/uppercased/other-family) size a matching box instead of a
     /// classic one the <c>textLength</c> guard would squeeze the real run into.</summary>
     public static Size Measure(NodeModel node, ITextMeasurer m, StyleGeometry? geometry = null, FontRoleTable? roles = null,
-        string titlePrefix = "", string titleSuffix = "", IReadOnlyList<string>? flowStatuses = null)
+        string titlePrefix = "", string titleSuffix = "", IReadOnlyList<string>? flowStatuses = null, bool mindMap = false)
     {
         var g = geometry ?? BeckStyle.Classic.Geometry;
         var r = roles ?? BeckStyle.Classic.Typography.Roles;
         // The style's node-title decoration (terminal's [brackets]) applied to the measured title, so the
         // box is sized for the same run the renderer draws + word-wraps — the textLength guard stays matched.
         var title = Decorate(node.Title, titlePrefix, titleSuffix);
+        // Mindmap nodes take fixed depth-role sizes (leaf pill / root / rank-1 card); a content card
+        // (items/body) at any depth falls through to the auto box model. Authored width: always wins.
+        if (mindMap && node.Width is null && MindMap(node, m, g, r, title) is { } depthSize)
+        {
+            return depthSize;
+        }
+
         return node.Shape switch
         {
             NodeShape.Pill => Pill(node, m, g, r, title),
@@ -57,6 +74,35 @@ internal static class CardSizer
         pre.Length == 0 && suf.Length == 0 ? title : pre + title + suf;
 
     private static bool IsGhost(NodeModel n) => n.Variant == NodeVariant.Ghost || n.Kind == NodeKind.Ghost;
+
+    /// <summary>Depth-based fixed sizing for a mindmap node (handoff "Branch accents"): a leaf pill hugs its
+    /// 12/500 label at height 30; the root card is 210×68 and a rank-1 card 190×56 (each floored so a long
+    /// heading still fits). Returns null for a content card (items/body) — it uses the auto <see cref="Card"/>
+    /// box. Ghost only changes rendering, not the box, so it is not special-cased here.</summary>
+    private static Size? MindMap(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title)
+    {
+        if (node.Shape == NodeShape.Pill)
+        {
+            var labelW = m.Measure(title, FontRole.PillTitle, MindMapLeafLabel).Width;
+            return new Size(Round(Math.Ceiling(labelW) + MindMapLeafPadX), MindMapLeafH);
+        }
+
+        // A rank 2+ heading is a pill (above); a rank 2+ card always carries content → auto box (null).
+        if (node.Shape != NodeShape.Card || node.Items.Count > 0 || node.Body != null)
+        {
+            return null;
+        }
+
+        var root = (node.Rank ?? 0) == 0;
+        var hasIcon = Icons.ResolveIcon(node.Icon) != null;
+        var iconBlock = hasIcon ? (root ? MindMapRootChip : MindMapRankChip) + g.IconGap : 0;
+        var titleW = W(m, r, title, FontRole.CardTitle);
+        var subW = node.Subtitle != null ? W(m, r, node.Subtitle, FontRole.CardSubtitle) : 0;
+        var natural = Math.Ceiling(Math.Max(titleW, subW)) + iconBlock + g.CardPadX + g.MeasureBorder;
+        return root
+            ? new Size(Round(Math.Max(MindMapRootW, natural)), MindMapRootH)
+            : new Size(Round(Math.Max(MindMapRankW, natural)), MindMapRankH);
+    }
 
     /// <summary>Measured advance width of <paramref name="text"/> at <paramref name="role"/>, resolved
     /// through the active style's <paramref name="roles"/> table (classic when unremapped).</summary>

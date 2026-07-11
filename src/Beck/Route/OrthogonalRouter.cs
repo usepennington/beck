@@ -38,7 +38,11 @@ internal sealed record RouteRequest(
     // Perpendicular inward nudge for a slanted face (parallelogram): a Left/Right anchor slides
     // inward by skew/2 in x so it lands on the slanted face rather than the bbox edge. 0 for every
     // straight-faced shape — byte-identical.
-    double FromNudge = 0, double ToNudge = 0);
+    double FromNudge = 0, double ToNudge = 0,
+    // Mindmap edges use a fixed cubic instead of the proportional 0.4·span S-curve: both control points
+    // hang off the parent's face x by this offset (±40 out of the root, ±35 out of rank 1), so a branch's
+    // children fan from one point as clean equal-curvature threads. 0 keeps the legacy proportional form.
+    double MindMapOffset = 0);
 
 internal sealed record RoutedPath(string D, IReadOnlyList<Point> Points);
 
@@ -297,22 +301,59 @@ internal static class OrthogonalRouter
         var blockers = Blocking(a, b, obstacles);
         double aC = vertical ? a.X : a.Y, bC = vertical ? b.X : b.Y;
 
+        // The near-anchor row/column normally sits a fixed ChannelOffset out from the anchor. That
+        // is enough clearance when nothing else shares the anchor's rank, but a step candidate with
+        // several close siblings (e.g. a decision fanning out over a crowded rank) can put another
+        // node's face exactly there. Push the row/column further out — past that obstacle plus
+        // LanePad — the same "walk past what's in the way" move SameFaceLoop already makes for a
+        // shared-face loop. A row that starts clear is untouched: this only ever adds clearance.
+        double PushClear(double row, double lo, double hi, double dir)
+        {
+            for (var i = 0; i < obstacles.Count; i++)
+            {
+                Rect? hit = null;
+                foreach (var o in obstacles)
+                {
+                    double oCLo = vertical ? o.X : o.Y, oCHi = vertical ? o.X + o.W : o.Y + o.H;
+                    double oLo = vertical ? o.Y : o.X, oHi = vertical ? o.Y + o.H : o.X + o.W;
+                    if (oCLo < hi && oCHi > lo && row > oLo + 0.01 && row < oHi - 0.01)
+                    {
+                        hit = o;
+                        break;
+                    }
+                }
+                if (hit is not { } o2)
+                {
+                    break;
+                }
+
+                double oLo2 = vertical ? o2.Y : o2.X, oHi2 = vertical ? o2.Y + o2.H : o2.X + o2.W;
+                row = dir > 0 ? oHi2 + LanePad : oLo2 - LanePad;
+            }
+            return ClampLane(row, bounds is null ? null : vertical ? bounds.Value.H : bounds.Value.W);
+        }
+
         List<Point> Build(double lane)
         {
             if (vertical)
             {
                 double s = Math.Sign(b.Y - a.Y); var dirY = s != 0 ? s : 1;
-                double ch1 = a.Y + dirY * ChannelOffset, ch2 = b.Y - dirY * ChannelOffset;
+                double ch1 = PushClear(a.Y + dirY * ChannelOffset, Math.Min(a.X, lane), Math.Max(a.X, lane), dirY);
+                double ch2 = PushClear(b.Y - dirY * ChannelOffset, Math.Min(lane, b.X), Math.Max(lane, b.X), -dirY);
                 return [a, new(a.X, ch1), new(lane, ch1), new(lane, ch2), new(b.X, ch2), b];
             }
             double sx = Math.Sign(b.X - a.X); var dirX = sx != 0 ? sx : 1;
-            double cx1 = a.X + dirX * ChannelOffset, cx2 = b.X - dirX * ChannelOffset;
+            double cx1 = PushClear(a.X + dirX * ChannelOffset, Math.Min(a.Y, lane), Math.Max(a.Y, lane), dirX);
+            double cx2 = PushClear(b.X - dirX * ChannelOffset, Math.Min(lane, b.Y), Math.Max(lane, b.Y), -dirX);
             return [a, new(cx1, a.Y), new(cx1, lane), new(cx2, lane), new(cx2, b.Y), b];
         }
 
         // Nudge a lane that sits inside the stub zone of an anchor outward, away from that anchor,
         // so the run into the turn is a segment rather than a nub. Snapping onto the anchor is the
-        // better answer when it is safe; this is the other way out of the same zone.
+        // better answer when it is safe; this is the other way out of the same zone. The lane
+        // arriving here is already clamped inside the canvas (LaneCandidates), but an anchor sitting
+        // near the border (a small node close to the edge, e.g. a flowchart terminator) can still
+        // push it back out — re-clamp so the nudge never lands off-canvas.
         double Push(double lane)
         {
             foreach (var c in new[] { aC, bC })
@@ -323,7 +364,7 @@ internal static class OrthogonalRouter
                     lane = c + (d < 0 ? -LaneSnap : LaneSnap);
                 }
             }
-            return lane;
+            return ClampLane(lane, bounds is null ? null : vertical ? bounds.Value.W : bounds.Value.H);
         }
 
         foreach (var raw in LaneCandidates(blockers, obstacles, vertical, bounds, (aC + bC) / 2))
@@ -549,13 +590,20 @@ internal static class OrthogonalRouter
         return [a, corner, b];
     }
 
-    private static string SCurve(Point a, Point b, Side fromSide)
+    private static string SCurve(Point a, Point b, Side fromSide, double mmOffset)
     {
         string S(double n) => Js.Str(n);
         if (IsVertical(fromSide))
         {
             var off = (b.Y - a.Y) * 0.4;
             return $"M {S(a.X)} {S(a.Y)} C {S(a.X)} {S(a.Y + off)}, {S(b.X)} {S(b.Y - off)}, {S(b.X)} {S(b.Y)}";
+        }
+        // Mindmap: fixed cubic — both controls hang off the parent's face x by mmOffset, giving equal-
+        // curvature sibling threads that fan from the single face midpoint. Right face bends +x, left −x.
+        if (mmOffset != 0)
+        {
+            var cx = a.X + (fromSide == Side.Left ? -mmOffset : mmOffset);
+            return $"M {S(a.X)} {S(a.Y)} C {S(cx)} {S(a.Y)}, {S(cx)} {S(b.Y)}, {S(b.X)} {S(b.Y)}";
         }
         var offx = (b.X - a.X) * 0.4;
         return $"M {S(a.X)} {S(a.Y)} C {S(a.X + offx)} {S(a.Y)}, {S(b.X - offx)} {S(b.Y)}, {S(b.X)} {S(b.Y)}";
@@ -598,7 +646,7 @@ internal static class OrthogonalRouter
 
         if (req.Curve == EdgeCurve.S)
         {
-            return new RoutedPath(SCurve(a, b, fromSide), [a, b]);
+            return new RoutedPath(SCurve(a, b, fromSide, req.MindMapOffset), [a, b]);
         }
 
         var poly = TryStraighten(req.From, req.To, fromSide, toSide, req.FromFanned, req.ToFanned, req.Obstacles, ref a, ref b)
