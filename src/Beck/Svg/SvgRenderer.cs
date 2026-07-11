@@ -583,6 +583,8 @@ internal static class SvgRenderer
                   .Append(Artwork.Circle(style, "beck-end-dot", w / 2, h / 2, 3.5, hash + ":" + node.Id + ":dot"));
                 break;
             case NodeShape.Class: EmitClass(sb, node, w, h, m, hash, style, guard); break;
+            case NodeShape.Diamond: EmitDiamond(sb, node, w, h, m, hash, style, guard); break;
+            case NodeShape.Parallelogram: EmitParallelogram(sb, node, w, h, m, hash, style, guard); break;
             default:
                 if (node.Variant == NodeVariant.Ghost || node.Kind == NodeKind.Ghost)
                 {
@@ -616,6 +618,8 @@ internal static class SvgRenderer
             NodeShape.Pill => r.H / 2,
             NodeShape.Class => geo.ClassRadius,
             NodeShape.Start or NodeShape.End => Math.Min(r.W, r.H) / 2,
+            // Diamond/parallelogram have sharp corners; the fx overlay box is a plain rect, so 0.
+            NodeShape.Diamond or NodeShape.Parallelogram => 0,
             _ => geo.CardRadius,
         };
         var inset = geo.NodeBorderInset;
@@ -711,6 +715,59 @@ internal static class SvgRenderer
         sb.Append("</g>");
     }
 
+    /// <summary>A diamond node (flowchart decision groundwork): the diamond outline plus a centered
+    /// title/subtitle stack wrapped into the inscribed rectangle (<see cref="CardSizer.DiamondTextAvail"/>),
+    /// so the drawn wrap matches the box the sizer measured. Icons are skipped (the point geometry leaves
+    /// no clean icon gutter); every measured run keeps its <c>textLength</c> guard.</summary>
+    private static void EmitDiamond(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard)
+    {
+        var geo = style.Geometry;
+        var bi = geo.NodeBorderInset;
+        sb.Append(Artwork.Diamond(style, "beck-node beck-node--diamond", bi, bi, w - 2 * bi, h - 2 * bi, hash + ":" + node.Id, shadow: true));
+        EmitCenteredStack(sb, node, w, h, m, style, guard,
+            CardSizer.DiamondTextAvail(node, m, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix));
+    }
+
+    /// <summary>A parallelogram node (flowchart I/O groundwork): the skewed outline plus a centered
+    /// title/subtitle stack wrapped into the card text column (<see cref="CardSizer.ParallelogramTextAvail"/>).
+    /// The parallelogram is centrally symmetric, so centering at <c>w/2</c> clears both slants.</summary>
+    private static void EmitParallelogram(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard)
+    {
+        var geo = style.Geometry;
+        var bi = geo.NodeBorderInset;
+        sb.Append(Artwork.Parallelogram(style, "beck-node beck-node--parallelogram", bi, bi, w - 2 * bi, h - 2 * bi, hash + ":" + node.Id, shadow: true));
+        EmitCenteredStack(sb, node, w, h, m, style, guard,
+            CardSizer.ParallelogramTextAvail(node, m, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix));
+    }
+
+    /// <summary>The shared centered title/subtitle stack for the diamond/parallelogram shapes: wrap both
+    /// runs at <paramref name="avail"/> (the SAME width the sizer used), then center the whole block in the
+    /// bbox and each line at <c>w/2</c>. Card-role typography and line metrics; every run carries its guard.</summary>
+    private static void EmitCenteredStack(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, BeckStyle style, bool guard, double avail)
+    {
+        var geo = style.Geometry;
+        double titleLine = geo.CardTitleLine, subLine = geo.CardSubLine, textGap = geo.TextGap;
+        var titleLines = CardSizer.WrapText(m, style.Typography.DecorateTitle(node.Title), FontRole.CardTitle, avail, style.Typography.Roles);
+        var subLines = node.Subtitle != null ? CardSizer.WrapText(m, node.Subtitle, FontRole.CardSubtitle, avail, style.Typography.Roles) : null;
+        var textColH = titleLines.Count * titleLine + (subLines != null ? textGap + subLines.Count * subLine : 0);
+        var stackY = h / 2 - textColH / 2;
+        foreach (var line in titleLines)
+        {
+            CenterLine(sb, line, "beck-node-title", w / 2, stackY + titleLine / 2, m, style, FontRole.CardTitle, guard);
+            stackY += titleLine;
+        }
+
+        if (subLines != null)
+        {
+            stackY += textGap;
+            foreach (var line in subLines)
+            {
+                CenterLine(sb, line, "beck-node-subtitle", w / 2, stackY + subLine / 2, m, style, FontRole.CardSubtitle, guard);
+                stackY += subLine;
+            }
+        }
+    }
+
     /// <summary>A class compartment separator: the straight <c>&lt;line&gt;</c> (classic — byte-identical),
     /// or, when the style sets <see cref="StyleEdges.WobblySeparators"/> (sketch), a subtle wobbly
     /// <c>&lt;path&gt;</c> carrying the same class with its two endpoints preserved and jitter hash-seeded.
@@ -767,6 +824,7 @@ internal static class SvgRenderer
 
         var statusChipH = geo.StatusChipH;
         double titleLine = geo.CardTitleLine, subLine = geo.CardSubLine, textGap = geo.TextGap;
+        double itemLine = geo.ItemLine, itemGap = geo.ItemGap, bodyLine = geo.BodyLine;
         // The same flow-status texts CardSizer sized the box for (row height + widest pill), so
         // wrapping and vertical centering here match the reserved space exactly.
         var stateTexts = NonEmptyStatusTexts(states);
@@ -776,8 +834,13 @@ internal static class SvgRenderer
         var avail = CardSizer.CardTextAvail(node, m, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix, stateTexts);
         var titleLines = CardSizer.WrapText(m, style.Typography.DecorateTitle(node.Title), FontRole.CardTitle, avail, style.Typography.Roles);
         var subLines = node.Subtitle != null ? CardSizer.WrapText(m, node.Subtitle, FontRole.CardSubtitle, avail, style.Typography.Roles) : null;
+        // Items are single rows (never wrapped); the body wraps into CardTextAvail exactly as CardSizer sized it.
+        var hasItems = node.Items.Count > 0;
+        var bodyLines = node.Body != null ? CardSizer.WrapText(m, node.Body, FontRole.CardSubtitle, avail, style.Typography.Roles) : null;
         var textColH = titleLines.Count * titleLine
             + (subLines != null ? textGap + subLines.Count * subLine : 0)
+            + (hasItems ? textGap + node.Items.Count * itemLine + (node.Items.Count - 1) * itemGap : 0)
+            + (bodyLines != null ? textGap + bodyLines.Count * bodyLine : 0)
             + (node.Status != null || hasStates ? textGap + geo.StatusMt + statusChipH : 0);
         var top = h / 2 - textColH / 2;
         var stackY = top;
@@ -793,6 +856,30 @@ internal static class SvgRenderer
             {
                 Line(sb, line, "beck-node-subtitle", textX, stackY + subLine / 2, m, style, FontRole.CardSubtitle, guard);
                 stackY += subLine;
+            }
+        }
+        if (hasItems)
+        {
+            stackY += textGap;
+            for (var i = 0; i < node.Items.Count; i++)
+            {
+                if (i > 0)
+                {
+                    stackY += itemGap;
+                }
+
+                // Bullet baked into the measured+drawn run (CardSizer.ItemBullet) so the textLength guard matches.
+                Line(sb, CardSizer.ItemBullet + node.Items[i], "beck-node-subtitle", textX, stackY + itemLine / 2, m, style, FontRole.CardSubtitle, guard);
+                stackY += itemLine;
+            }
+        }
+        if (bodyLines != null)
+        {
+            stackY += textGap;
+            foreach (var line in bodyLines)
+            {
+                Line(sb, line, "beck-node-subtitle", textX, stackY + bodyLine / 2, m, style, FontRole.CardSubtitle, guard);
+                stackY += bodyLine;
             }
         }
         if (node.Status is { } || states != null)

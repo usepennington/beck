@@ -94,6 +94,8 @@ internal static class Validate
             Id = id,
             Title = OptString(n.GetValueOrDefault("title")) ?? id,
             Subtitle = OptString(n.GetValueOrDefault("subtitle")),
+            Items = StringList(n.GetValueOrDefault("items"), $"node \"{id}\" items"),
+            Body = OptString(n.GetValueOrDefault("body")),
             Icon = rawIcon != null && Icons.IsKnownIcon(rawIcon) ? rawIcon : kd.Icon,
             Kind = kind,
             Variant = OneOf(n.GetValueOrDefault("variant"), Tokens.NodeVariant, $"node \"{id}\" variant", kd.Variant),
@@ -107,7 +109,10 @@ internal static class Validate
             Rank = OptNumber(n.GetValueOrDefault("rank"), $"node \"{id}\" rank"),
             Order = OptNumber(n.GetValueOrDefault("order"), $"node \"{id}\" order"),
             Group = OptString(n.GetValueOrDefault("group")),
-            Shape = NodeShape.Card,
+            // Architecture nodes default to Card; `shape: diamond`/`parallelogram` (flowchart
+            // groundwork) opt into the point/slanted primitives. Absent `shape:` → Card, so every
+            // existing document is byte-identical.
+            Shape = OneOf(n.GetValueOrDefault("shape"), Tokens.NodeShape, $"node \"{id}\" shape", NodeShape.Card),
             Fields = [],
             Methods = [],
         };

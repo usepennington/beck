@@ -33,6 +33,7 @@ internal static class ClassBuilder
             Group = OptString(c.GetValueOrDefault("group")),
             Shape = NodeShape.Class,
             Stereotype = OptString(c.GetValueOrDefault("stereotype")),
+            Items = [],
             Fields = StringList(c.GetValueOrDefault("fields"), $"class \"{id}\" fields"),
             Methods = StringList(c.GetValueOrDefault("methods"), $"class \"{id}\" methods"),
         };

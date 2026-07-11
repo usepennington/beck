@@ -102,9 +102,23 @@ internal static class EdgePainter
         // Terminal dots (state [*] start/end, 16×16) are points, not faces — spreading
         // several edges across one just bends each into a tiny jog. Anchor them all at
         // centre so a lone incoming edge can run straight into the dot.
+        //
+        // Diamonds are point-anchored too: each bbox face-midpoint coincides EXACTLY with a diamond
+        // vertex, so an anchor must stay pinned to it — never spread (suppressed here), and never slid
+        // off by the router's straighten cheat (marked fanned below). Only diamonds get the fanned
+        // override so state start/end routing stays byte-identical.
+        var diamondNodes = model.Nodes
+            .Where(n => n.Shape is NodeShape.Diamond)
+            .Select(n => n.Id).ToHashSet();
         var pointNodes = model.Nodes
             .Where(n => n.Shape is NodeShape.Start or NodeShape.End)
             .Select(n => n.Id).ToHashSet();
+        pointNodes.UnionWith(diamondNodes);
+        // Parallelogram left/right anchors sit on a slanted face: the router nudges them inward by
+        // skew/2 in x. Top/bottom faces are unslanted (no nudge). Keyed by node id → skew.
+        var paraSkew = model.Nodes
+            .Where(n => n.Shape is NodeShape.Parallelogram && layout.Nodes.ContainsKey(n.Id))
+            .ToDictionary(n => n.Id, n => Svg.Artwork.ParallelogramSkew(layout.Nodes[n.Id].H) / 2);
         var shifts = AnchorShifts(model.Edges, prep, pointNodes);
 
         var outEdges = new List<RoutedEdge>();
@@ -118,10 +132,17 @@ internal static class EdgePainter
 
             var edge = model.Edges[i];
             var (from, to) = shifts[i];
+            // A diamond end is pinned to its vertex: mark it fanned (immovable) so straighten leaves it.
+            var fromFanned = from.Fanned || diamondNodes.Contains(edge.From);
+            var toFanned = to.Fanned || diamondNodes.Contains(edge.To);
+            // A parallelogram end's Left/Right anchor slides inward by skew/2 onto the slant (0 otherwise;
+            // NudgePerp no-ops Top/Bottom faces).
+            var fromNudge = paraSkew.TryGetValue(edge.From, out var fn) ? fn : 0;
+            var toNudge = paraSkew.TryGetValue(edge.To, out var tn) ? tn : 0;
             var routed = OrthogonalRouter.RouteEdge(new RouteRequest(
                 p.From, p.To, p.FromSide, p.ToSide, edge.Curve, p.Obstacles, radius, primaryHorizontal,
                 new Size(layout.Width, layout.Height), from.Shift, to.Shift,
-                from.Fanned, to.Fanned, from.Lane, to.Lane));
+                fromFanned, toFanned, from.Lane, to.Lane, fromNudge, toNudge));
             outEdges.Add(new RoutedEdge(edge, routed.D, routed.Points));
         }
         return outEdges;

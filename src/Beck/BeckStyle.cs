@@ -1243,6 +1243,24 @@ public sealed record StyleGeometry
     /// <summary>Class-member line height (px).</summary>
     public required double MemberLine { get; init; }
 
+    // ---- card content blocks (items / body) ----
+    /// <summary>
+    /// Line height (px) of a bulleted card <c>items:</c> row. Optional-with-default so no existing
+    /// style has to set it; the default mirrors <see cref="MemberLine"/> (<c>1.45 · 11.52</c>) so a
+    /// card's bullet list stacks at the same pitch as a class compartment's members — byte-identical
+    /// for any card without <c>items:</c> (the block is never sized when the list is empty).
+    /// </summary>
+    public double ItemLine { get; init; } = 1.45 * 11.52;
+
+    /// <summary>Vertical gap (px) between consecutive card <c>items:</c> rows. Mirrors
+    /// <see cref="MemberGap"/> so a bullet list matches class-compartment spacing.</summary>
+    public double ItemGap { get; init; } = 2;
+
+    /// <summary>Line height (px) of a wrapped card <c>body:</c> paragraph line. Optional-with-default;
+    /// the default mirrors <see cref="CardSubLine"/> (<c>1.35 · 12</c>) since the body renders in the
+    /// card-subtitle font. Never sized when <c>body:</c> is null — byte-identical for cards without it.</summary>
+    public double BodyLine { get; init; } = 1.35 * 12;
+
     // ---- start/end pseudo-state ----
     /// <summary>Side length of the start/end pseudo-state marker box.</summary>
     public required double StartEndSize { get; init; }

@@ -34,6 +34,10 @@ internal sealed record NodeModel
     public required string Id { get; init; }
     public required string Title { get; init; }
     public string? Subtitle { get; init; }
+    /// <summary>Bulleted list rendered under the title/subtitle on a card (empty when unset).</summary>
+    public required IReadOnlyList<string> Items { get; init; }
+    /// <summary>Wrapped paragraph rendered under the items on a card, or null when unset.</summary>
+    public string? Body { get; init; }
     /// <summary>Named icon key OR raw inline <c>&lt;svg&gt;</c> markup. Resolved at render time.</summary>
     public string? Icon { get; init; }
     public required NodeKind Kind { get; init; }
