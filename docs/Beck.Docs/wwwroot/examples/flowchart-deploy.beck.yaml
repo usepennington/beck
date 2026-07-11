@@ -1,0 +1,21 @@
+type: flowchart
+meta:
+  title: Deploy gate
+  subtitle: Every commit runs the gauntlet before it ships
+  direction: TB
+steps:
+  - { id: build, text: Build & test, kind: io }
+  - { id: green, text: All green?, kind: decision }
+  - { id: deploy, text: Deploy to prod, accent: primary }
+  - { id: smoke, text: Smoke test, kind: decision }
+  - { id: rollback, text: Roll back, accent: warn }
+  - { id: page, text: Page on-call, kind: terminator, accent: danger }
+links:
+  - { from: "[*]", to: build, note: "A push to main kicks off the pipeline." }
+  - { from: build, to: green }
+  - { from: green, to: deploy, label: "yes", note: "A green suite ships straight to production." }
+  - { from: green, to: page, label: "no", style: dashed, color: danger, note: "A red build blocks the deploy and pages on-call." }
+  - { from: deploy, to: smoke }
+  - { from: smoke, to: "[*]", label: healthy, note: "Smoke tests pass — the release is live." }
+  - { from: smoke, to: rollback, label: failing, color: warn, note: "A failing smoke test rolls the release back." }
+  - { from: rollback, to: build }
