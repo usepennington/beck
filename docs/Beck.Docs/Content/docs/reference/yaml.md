@@ -1,7 +1,7 @@
 ---
 title: YAML schema
-description: Every key, value, and default in a Beck document — all four diagram types.
-order: 40
+description: Every key, value, and default in a Beck document — all six diagram types.
+order: 42
 sectionLabel: Reference
 uid: docs.reference.yaml
 ---
@@ -17,6 +17,8 @@ in before the diagram is laid out.
 | `sequence` | participants, lifelines, and ordered messages | `meta` `participants` `messages` `flow` |
 | `state` | a state machine of pills and transitions | `meta` `states` `transitions` `flow` |
 | `class` | UML class cards and relations | `meta` `classes` `relations` `groups` `flow` |
+| `flowchart` | a decision/process graph | `meta` `steps` `links` `flow` |
+| `mindmap` | a nested topic tree | `meta` `root` `topics` `flow` |
 
 The `flow` block has its own page: [Flow & animation](/docs/reference/flow). For a visual tour of
 these constructs, see the [syntax cheatsheet](/syntax).
@@ -85,6 +87,8 @@ A list of nodes. Each needs a unique `id`; everything else is optional.
 | `variant` | `solid` `subtle` `ghost` | per kind | Visual weight: `subtle` is dimmed; `ghost` is dashed and transparent. |
 | `icon` | icon key or inline `<svg>` | per kind | A [named icon](#icons) or raw SVG markup. An unknown key falls back to the kind's icon. |
 | `status` | string | — | Status-pill text. |
+| `items` | list of strings | — | Bulleted list rendered inside the card. |
+| `body` | string | — | Wrapped paragraph rendered under the title (and items, if any). |
 | `accent` | token or CSS colour | per kind | A [colour token](#colours-and-theme-tokens) or a raw colour. |
 | `href` | string | — | Renders the card as a link (`<a href>`). |
 | `target` | string | — | Anchor target (e.g. `_blank`); only meaningful with `href`. |
@@ -264,6 +268,82 @@ See the [class diagrams guide](/docs/guides/class).
 Parents rank above children automatically (`inherits`/`implements` are flipped internally so the
 hierarchy reads top-down). Class diagrams are structural, so they don't animate by default: without
 a `flow:` the diagram renders a still frame. Script a `flow:` if you want a guided tour.
+
+## steps and links (`type: flowchart`)
+
+A decision/process graph on the layered engine. Steps referenced only by a link (never declared
+under `steps:`) are auto-created as plain `process` cards, so a terse flowchart needs nothing but
+`links:`. The token `"[*]"` (quote it — YAML) is the start/end pseudo-step: use it as a `from` for
+the start terminator, as a `to` for the end terminator. See the [flowchart guide](/docs/guides/flowchart).
+
+`steps` entries (all optional refinements):
+
+| key | type | default | description |
+|---|---|---|---|
+| `id` | string | — | **Required.** Unique identifier. |
+| `text` | string | = `id` | Display title. |
+| `kind` | `process` `decision` `terminator` `io` `start` `end` | `process` | Shape: `process` → card, `decision` → diamond, `terminator` → pill, `io` → parallelogram, `start`/`end` → the start/end pseudo-shape. |
+| `subtitle` | string | — | Muted second line. |
+| `accent` | token or CSS colour | `neutral` | Step accent — uniform across every `kind`. |
+| `icon` | icon key or inline `<svg>` | — | Same icon vocabulary as [architecture nodes](#icons). |
+| `href`, `target` | string | — | Link the step. |
+| `surface`, `textColor` | CSS colour | theme | Same one-off overrides as architecture nodes. |
+| `width`, `rank`, `order` | number | auto | Same as architecture nodes. |
+
+`links` entries:
+
+| key | type | default | description |
+|---|---|---|---|
+| `from`, `to` | step id or `"[*]"` | — | **Required.** |
+| `label` | string | — | Drawn on the line — e.g. a decision branch's `yes`/`no`. |
+| `style` | `solid` `dashed` | `solid` | Line style. |
+| `color` | token or CSS colour | edge | Stroke colour. |
+| `note` | string | — | Narration caption for this link, shown just before its packet in the derived flow. See [narration](/docs/reference/flow#narration). |
+
+## root and topics (`type: mindmap`)
+
+A nested topic tree drawn as a two-sided "butterfly": a central `root`, first-level branches split
+left/right, subtrees fanning outward. `meta.direction` is accepted but ignored — the layout is
+fixed. See the [mind map guide](/docs/guides/mindmap).
+
+`root` — the centre topic. Either a plain string (shorthand for `title`) or a mapping:
+
+| key | type | default | description |
+|---|---|---|---|
+| `title` | string | — | **Required** (or use the plain-string shorthand). |
+| `id` | string | auto | Explicit id; defaults to an engine-assigned path-derived id. |
+| `subtitle` | string | — | Muted second line. |
+| `items` | list of strings | — | Bulleted list rendered inside the card. |
+| `body` | string | — | Wrapped paragraph rendered under the title/items. |
+| `accent` | token or CSS colour | `primary` | Root accent; flows to first-level branches that don't set their own. |
+| `icon` | icon key or inline `<svg>` | — | Same icon vocabulary as [architecture nodes](#icons). |
+| `href`, `target`, `surface`, `textColor`, `width` | — | — | Same as architecture nodes. |
+
+`topics` — the first-level branches, and (via `children`) every deeper topic. Same fields as
+`root`, plus:
+
+| key | type | default | description |
+|---|---|---|---|
+| `children` | list of topics | — | Nested topics, to any depth. Each is a string or a mapping with the same fields. |
+| `status` | string | — | A semantic status pill on a rank-1 card; the colour follows the word (see below). |
+| `variant` / `ghost` | `ghost` / `true` | — | Mark a not-yet-real branch: it and its whole subtree render neutral, dashed, and shadowless with a faint `planned` label. |
+
+**Depth roles.** Shape and size follow depth: the root (210×68) and every rank-1 branch (190×56) are
+cards; from rank 2 outward a heading is a light pill. A topic with `items`/`body` stays a card at any
+depth. Icons appear only on the root and rank-1 cards.
+
+**Accent cycling and inheritance.** The root resolves to `primary`. Each first-level branch takes the
+next token from the cycle `info`, `primary`, `success`, `warn`, `danger` (wrapping; `neutral` is
+reserved for ghost branches). Every descendant inherits its parent's *resolved* accent unless it
+authors `accent:` explicitly — which then flows to its own children. Edges are undirected parent →
+child curves with no arrowhead, in a muted blend of the child's accent and the edge colour, fanning
+from a single point on each parent.
+
+**Status colours.** `complete`/`done` → success · `in progress` → warn · `blocked` → danger ·
+`review` → info · `planned` → neutral · anything else → the branch accent.
+
+A mind map renders **static** — no packets or narration, identical to the reduced-motion frame. A
+`flow:` is accepted for forward-compatibility but is not animated.
 
 ## Icons
 

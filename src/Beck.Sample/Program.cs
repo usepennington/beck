@@ -3,7 +3,7 @@ using Beck.Sample;
 
 // Emits Beck diagrams from code — the general "generate from any model" pattern.
 // Prints raw YAML (so it can be validated/rendered). Pass an argument to pick a
-// sample: architecture (default) | sequence | state | class | reflection.
+// sample: architecture (default) | sequence | state | class | flowchart | mindmap | reflection.
 var which = args.Length > 0 ? args[0] : "architecture";
 
 if (which == "sequence")
@@ -53,6 +53,45 @@ if (which == "class")
         .Class("line", c => c.Name("OrderLine").Fields("Sku: string", "Qty: int"))
         .Inherits("order", "entity")
         .Composition("order", "line", fromCard: "1", toCard: "*")
+        .ToYaml());
+    return;
+}
+
+if (which == "flowchart")
+{
+    Console.WriteLine(new FlowchartDiagramBuilder("Checkout")
+        .Direction(Direction.Tb)
+        .Io("read", "Read cart")
+        .Decision("valid", "Payment valid?")
+        .Process("charge", "Charge card")
+        .Process("retry", "Fix payment")
+        .Terminator("reject", "Give up")
+        .Link(FlowchartDiagramBuilder.Pseudo, "read")
+        .Link("read", "valid")
+        .Link("valid", "charge", "yes")
+        .Link("valid", "retry", "no")
+        .Link("retry", "valid")
+        .Link("retry", "reject", "give up")
+        .Link("charge", FlowchartDiagramBuilder.Pseudo)
+        .ToYaml());
+    return;
+}
+
+if (which == "mindmap")
+{
+    Console.WriteLine(new MindMapDiagramBuilder("Beck")
+        .Root("Beck", r => r.Subtitle("server-side diagrams"))
+        .Topic("Rendering", t => t
+            .Accent(AccentToken.Info)
+            .Topic("Pipeline", p => p.Items("Model", "Text", "Layout", "Route", "Svg", "Animate"))
+            .Topic("Determinism", d => d.Body("Same YAML, same SVG.")))
+        .Topic("Packages", t => t
+            .Accent(AccentToken.Success)
+            .Topic("Beck", b => b.Items("engine", "authoring"))
+            .Topic("Beck.Skia"))
+        .Topic("Theming", t => t
+            .Topic("CSS variables")
+            .Topic("Dark mode"))
         .ToYaml());
     return;
 }

@@ -21,8 +21,8 @@ internal static class LayeredLayout
     private const double CanvasPad = 16;
     private const double LaneReserve = 22, LabelReserveGap = 10, SelfLoopReserve = 30;
 
-    private sealed record LayItem(string Id, double W, double H, double? Rank, double? Order);
-    private sealed record LayerResult(Dictionary<string, Rect> Rects, double Width, double Height);
+    internal sealed record LayItem(string Id, double W, double H, double? Rank, double? Order);
+    internal sealed record LayerResult(Dictionary<string, Rect> Rects, double Width, double Height);
     private sealed record Composed(Dictionary<string, Rect> NodeRects, Dictionary<string, Rect> GroupRects, double Width, double Height);
 
     public static LayoutResult Compute(DiagramModel model, IReadOnlyDictionary<string, Size> sizes)
@@ -282,7 +282,7 @@ internal static class LayeredLayout
         return need > 0 ? Math.Max(0, Math.Ceiling(need - CanvasPad)) : 0;
     }
 
-    private static LayerResult LayoutLayer(
+    internal static LayerResult LayoutLayer(
         List<LayItem> items, List<(string F, string T)> edges, Direction dir, double gap, double rankGap)
     {
         var horizontal = dir is Direction.Lr or Direction.Rl;

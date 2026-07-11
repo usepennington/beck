@@ -1,0 +1,28 @@
+type: mindmap
+meta: { title: Beck Architecture }
+root:
+  title: Beck
+  subtitle: server-side diagrams
+topics:
+  - title: Rendering
+    children:
+      - title: Pipeline
+        items: [Model, Text, Layout, Route, Svg, Animate]
+      - title: Determinism
+        body: >
+          Same YAML and the same options always produce
+          byte-identical SVG.
+  - title: Packages
+    accent: success
+    children:
+      - title: Beck
+        items: [engine, authoring]
+      - title: Beck.Skia
+        children:
+          - title: HarfBuzz shaping
+          - title: Font metrics
+  - title: Theming
+    accent: danger
+    children:
+      - title: CSS variables
+      - title: Dark mode

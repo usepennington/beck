@@ -173,6 +173,23 @@ public enum ArrowEnds
     Both,
 }
 
+/// <summary>The shape a <c>type: flowchart</c> step renders as.</summary>
+public enum StepKind
+{
+    /// <summary>A rectangular action step — the default. Renders as a card.</summary>
+    Process,
+    /// <summary>A branch point. Renders as a diamond.</summary>
+    Decision,
+    /// <summary>A pipeline entry/exit. Renders as a pill.</summary>
+    Terminator,
+    /// <summary>An input/output step. Renders as a parallelogram.</summary>
+    Io,
+    /// <summary>The flow's start pseudo-step.</summary>
+    Start,
+    /// <summary>The flow's end pseudo-step.</summary>
+    End,
+}
+
 /// <summary>How two classes in a <c>type: class</c> diagram relate.</summary>
 public enum RelationKind
 {
@@ -192,7 +209,7 @@ public enum RelationKind
 
 internal static class Tokens
 {
-    public static string Of(Direction d) => d.ToString();
+    public static string Of(Direction d) => d.ToString().ToUpperInvariant();
     public static string Of(ThemeMode t) => t.ToString().ToLowerInvariant();
     public static string Of(FitMode f) => f.ToString().ToLowerInvariant();
     public static string Of(NodeKind k) => k.ToString().ToLowerInvariant();
@@ -205,6 +222,7 @@ internal static class Tokens
     public static string Of(Side s) => s.ToString().ToLowerInvariant();
     public static string Of(ArrowEnds a) => a.ToString().ToLowerInvariant();
     public static string Of(RelationKind r) => r.ToString().ToLowerInvariant();
+    public static string Of(StepKind k) => k.ToString().ToLowerInvariant();
 
     public static string Of(EdgeCurve c) => c switch
     {

@@ -1,0 +1,24 @@
+type: flowchart
+meta:
+  title: Request Handling
+  direction: TB
+steps:
+  - { id: begin, kind: start }
+  - { id: read, text: Read request, kind: io }
+  - { id: validate, text: Validate input }
+  - { id: check, text: Valid?, kind: decision }
+  - { id: retry, text: Fix input }
+  - { id: process, text: Process request }
+  - { id: notify, text: Notify caller, kind: io }
+  - { id: reject, text: Give up, kind: terminator }
+  - { id: finish, kind: end }
+links:
+  - { from: begin, to: read }
+  - { from: read, to: validate }
+  - { from: validate, to: check }
+  - { from: check, to: process, label: "yes" }
+  - { from: check, to: retry, label: "no" }
+  - { from: retry, to: validate }
+  - { from: retry, to: reject, label: "give up" }
+  - { from: process, to: notify }
+  - { from: notify, to: finish }

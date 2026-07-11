@@ -1,0 +1,8 @@
+type: flowchart
+steps:
+  - { id: begin, kind: start }
+  - { id: process, text: Process order }
+  - { id: finish, kind: end }
+links:
+  - { from: "[*]", to: process }
+  - { from: process, to: "[*]" }

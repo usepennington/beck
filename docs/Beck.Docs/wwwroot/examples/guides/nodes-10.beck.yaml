@@ -1,0 +1,7 @@
+type: architecture
+meta: { direction: LR }
+nodes:
+  - { id: orders, title: Orders Service, items: ["POST /orders", "GET /orders/:id"] }
+  - { id: notes, title: Release Notes, body: "Ships weekly on Thursdays; see the changelog for details." }
+edges:
+  - { from: orders, to: notes }

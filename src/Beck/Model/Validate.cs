@@ -575,6 +575,8 @@ internal static class Validate
             DiagramType.Sequence => SequenceBuilder.Build(root),
             DiagramType.State => StateBuilder.Build(root),
             DiagramType.Class => ClassBuilder.Build(root),
+            DiagramType.Flowchart => FlowchartBuilder.Build(root),
+            DiagramType.MindMap => MindMapBuilder.Build(root),
             _ => BuildArchitectureModel(root),
         };
     }

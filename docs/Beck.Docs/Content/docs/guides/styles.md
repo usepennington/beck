@@ -1,7 +1,7 @@
 ---
 title: Pick a built-in style
 description: The nine built-in styles — classic, minimal, terminal, blueprint, glow, brutalist, sketch, extrude, and circuit — each shown across an architecture, a sequence, and a class diagram.
-order: 32
+order: 34
 sectionLabel: Cross-cutting
 uid: docs.guide.styles
 ---

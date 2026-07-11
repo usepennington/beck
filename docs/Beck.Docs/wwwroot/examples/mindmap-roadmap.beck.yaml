@@ -1,0 +1,35 @@
+type: mindmap
+meta:
+  title: Platform Redesign
+root:
+  title: Platform Redesign
+  subtitle: Q3 initiative
+  icon: model
+topics:
+  - title: Research
+    icon: search
+    status: complete
+    children:
+      - title: User interviews
+      - title: Analytics audit
+      - title: Competitive teardown
+  - title: Design
+    icon: browser
+    status: in progress
+    children:
+      - title: Design tokens
+      - title: Component library
+      - title: Prototype
+  - title: Engineering
+    icon: code
+    children:
+      - title: API migration
+      - title: Frontend rebuild
+      - title: Perf budget
+  - title: Launch
+    icon: cloud
+    ghost: true
+    children:
+      - title: Beta program
+      - title: Marketing site
+      - title: Docs refresh

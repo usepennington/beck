@@ -1,0 +1,47 @@
+type: mindmap
+meta:
+  title: Frontend Roadmap
+root:
+  title: Frontend
+  subtitle: a learning path
+  icon: browser
+topics:
+  - title: Internet
+    icon: globe
+    status: complete
+    children:
+      - title: How the web works
+      - title: HTTP
+      - title: DNS & hosting
+  - title: HTML & CSS
+    icon: code
+    status: complete
+    children:
+      - title: Semantic HTML
+      - title: Flexbox & Grid
+      - title: Responsive design
+  - title: JavaScript
+    icon: bolt
+    status: in progress
+    children:
+      - title: Syntax & types
+      - title: The DOM
+      - title: Fetch & promises
+  - title: Tooling
+    icon: terminal
+    children:
+      - title: Git
+      - title: Package managers
+      - title: Bundlers
+  - title: Frameworks
+    icon: container
+    children:
+      - title: React
+      - title: State management
+  - title: Advanced
+    icon: chart
+    ghost: true
+    children:
+      - title: Testing
+      - title: Performance
+      - title: Accessibility

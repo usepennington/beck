@@ -1,7 +1,7 @@
 ---
 title: Visual reference
 description: Every node kind, edge kind, accent, curve, relation kind, and direction — pulled from the source and shown live.
-order: 42
+order: 44
 sectionLabel: Reference
 uid: docs.reference.gallery
 ---

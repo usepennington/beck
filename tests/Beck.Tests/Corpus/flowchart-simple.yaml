@@ -1,0 +1,11 @@
+type: flowchart
+meta:
+  title: Deploy Pipeline
+  direction: TB
+steps:
+  - { id: begin, kind: start }
+  - { id: build, text: Build artifact }
+  - { id: finish, kind: end }
+links:
+  - { from: begin, to: build }
+  - { from: build, to: finish }

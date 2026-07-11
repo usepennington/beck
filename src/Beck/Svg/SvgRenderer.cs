@@ -50,7 +50,8 @@ internal static class SvgRenderer
         // The non-empty pill texts a node's flow swaps through — sized into the card up front
         // (row height + widest pill), since compiled CSS can't grow the box the way the live-DOM
         // engine could when a status landed on a status-less node.
-        var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix, NonEmptyStatusTexts(StatesFor(n.Id))));
+        var mindMap = model.Meta.Type == DiagramType.MindMap;
+        var sizes = model.Nodes.ToDictionary(n => n.Id, n => CardSizer.Measure(n, measurer, geo, style.Typography.Roles, style.Typography.TitlePrefix, style.Typography.TitleSuffix, NonEmptyStatusTexts(StatesFor(n.Id)), mindMap));
         var extraDefs = "";
         // Per-edge gradient <defs> collected by Edge() when the style paints luminous gradient edges
         // (glow). One userSpaceOnUse gradient per gradient-stroked edge, run along that edge's own
@@ -86,7 +87,7 @@ internal static class SvgRenderer
             {
                 if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r))
                 {
-                    body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, guard, StatesFor(model.Nodes[i].Id)));
+                    body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, guard, StatesFor(model.Nodes[i].Id), mindMap));
                 }
             }
 
@@ -94,7 +95,9 @@ internal static class SvgRenderer
         }
         else
         {
-            layout = LayeredLayout.Compute(model, sizes);
+            layout = model.Meta.Type == DiagramType.MindMap
+                ? MindMapLayout.Compute(model, sizes)
+                : LayeredLayout.Compute(model, sizes);
             var edges = EdgePainter.RouteEdges(model, layout);
             // The effective (possibly bowed) path per edge — computed once and reused for both the
             // rendered edge and its FlowEdge, so a packet rides exactly the drawn curve. At classic
@@ -156,7 +159,7 @@ internal static class SvgRenderer
             {
                 if (layout.Nodes.TryGetValue(model.Nodes[i].Id, out var r))
                 {
-                    body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, guard, StatesFor(model.Nodes[i].Id)));
+                    body.Append(Node(model.Nodes[i], r, measurer, hash, i, style, guard, StatesFor(model.Nodes[i].Id), mindMap));
                 }
             }
 
@@ -235,7 +238,7 @@ internal static class SvgRenderer
         var svg = new StringBuilder();
         svg.Append($"<svg class=\"beck-svg b-{hash}\" viewBox=\"0 0 {N(w)} {N(totalH)}\" width=\"{N(w)}\" height=\"{N(totalH)}\" ")
            .Append($"style=\"max-width:{maxWidth};height:auto\" font-family=\"var(--beck-font)\" role=\"img\" aria-label=\"{SvgWriter.Attr(model.Meta.Title ?? "diagram")}\">");
-        svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style, options.ThemeHooks)).Append(animCss).Append("</style>");
+        svg.Append("<style>").Append(Stylesheet.Emit(hash, font, mono, theme, style, options.ThemeHooks, mindMap)).Append(animCss).Append("</style>");
         svg.Append("<defs>").Append(markers.Defs).Append(extraDefs).Append(animDefs).Append(edgeDefs).Append(Stylesheet.StyleDefs(hash, style)).Append("</defs>");
         svg.Append(TitleBlock(model, w, style));
         svg.Append($"<g class=\"beck-canvas\" transform=\"translate(0,{N(titleH)})\">").Append(body).Append("</g>");
@@ -542,7 +545,7 @@ internal static class SvgRenderer
     }
 
     private static string Node(NodeModel node, Rect rect, ITextMeasurer m, string hash, int idx, BeckStyle style,
-        bool guard, IReadOnlyList<(string Text, string Color)>? statusStates = null)
+        bool guard, IReadOnlyList<(string Text, string Color)>? statusStates = null, bool mindMap = false)
     {
         var sb = new StringBuilder();
         var accentStyle = $"--beck-accent:{node.Accent}";
@@ -574,6 +577,20 @@ internal static class SvgRenderer
         sb.Append("<g class=\"beck-fx-node\">");
 
         double w = rect.W, h = rect.H;
+        // Mindmap nodes use depth-role emitters: a leaf pill (accent-tinted), or a root/rank-1 heading card
+        // (icon chip + semantic status / ghost "planned"). A content card (items/body) and any other shape
+        // fall through to the shared emitters below.
+        if (mindMap && EmitMindMapNode(sb, node, w, h, m, hash, style, guard))
+        {
+            sb.Append("</g></g>");
+            if (node.Href != null)
+            {
+                sb.Append("</a>");
+            }
+
+            return sb.ToString();
+        }
+
         switch (node.Shape)
         {
             case NodeShape.Pill: EmitPill(sb, node, w, h, m, hash, style, guard); break;
@@ -931,6 +948,119 @@ internal static class SvgRenderer
             var statusY = rowTop + rowH + geo.GhostGap;
             Line(sb, status, "beck-status-inline", ghostPadHalf, statusY + geo.StatusInlineLine / 2, m, style, FontRole.StatusInline, guard);
         }
+    }
+
+    /// <summary>Render a mindmap node by its depth role (handoff "Branch accents"): a leaf pill, or a
+    /// root/rank-1 heading card. Returns false for a content card (items/body at rank 2+) so the caller
+    /// falls back to the shared card emitter. Ghost branches route here too (dashed, neutral, "planned").</summary>
+    private static bool EmitMindMapNode(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard)
+    {
+        var ghost = node.Variant == NodeVariant.Ghost || node.Kind == NodeKind.Ghost;
+        if (node.Shape == NodeShape.Pill)
+        {
+            EmitMindMapLeaf(sb, node, w, h, m, hash, style, guard, ghost);
+            return true;
+        }
+
+        var rank = (int)(node.Rank ?? 0);
+        var heading = node.Shape == NodeShape.Card && node.Items.Count == 0 && node.Body == null && rank <= 1;
+        if (ghost || heading)
+        {
+            EmitMindMapCard(sb, node, w, h, m, hash, style, guard, rank, ghost);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>A mindmap leaf pill: accent-tinted fill + hairline accent border (<c>.beck-mm-leaf</c>), no
+    /// shadow, with an Inter 12/500 label left-aligned at 16px (node internals stay LTR on both sides).
+    /// Ghost leaves render the shared dashed transparent treatment with a muted label.</summary>
+    private static void EmitMindMapLeaf(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard, bool ghost)
+    {
+        var bi = style.Geometry.NodeBorderInset;
+        var cls = ghost ? "beck-node beck-node--ghost" : "beck-node beck-node--pill beck-mm-leaf";
+        sb.Append(Artwork.Rect(style, cls, bi, bi, w - 2 * bi, h - 2 * bi, h / 2, hash + ":" + node.Id, shadow: false));
+        LineSpec(sb, style.Typography.DecorateTitle(node.Title), ghost ? "beck-ghost-label" : "beck-node-title",
+            CardSizer.MindMapLeafPadX / 2, h / 2, m, CardSizer.MindMapLeafLabel, guard);
+    }
+
+    /// <summary>A mindmap root/rank-1 heading card: accent-bordered box (dashed + shadowless when ghost),
+    /// an optional icon chip (34 at root, 30 at rank 1), and a centred stack of title (+ optional subtitle)
+    /// (+ a semantic status pill, or a faint "planned" label on a ghost branch). The box was floored to hold
+    /// the single-line heading, so the title never wraps here.</summary>
+    private static void EmitMindMapCard(StringBuilder sb, NodeModel node, double w, double h, ITextMeasurer m, string hash, BeckStyle style, bool guard, int rank, bool ghost)
+    {
+        var geo = style.Geometry;
+        var bi = geo.NodeBorderInset;
+        var radius = rank == 0 ? geo.CardRadius : 12;
+        sb.Append(Artwork.Rect(style, ghost ? "beck-node beck-node--ghost" : "beck-node",
+            bi, bi, w - 2 * bi, h - 2 * bi, radius, hash + ":" + node.Id, shadow: !ghost));
+
+        var hasIcon = Icons.ResolveIcon(node.Icon) != null;
+        var chipW = rank == 0 ? CardSizer.MindMapRootChip : CardSizer.MindMapRankChip;
+        var iconSize = rank == 0 ? 20.0 : 18.0;
+        var padHalf = geo.CardPadX / 2;
+        var textX = padHalf + (hasIcon ? chipW + geo.IconGap : 0);
+        if (hasIcon)
+        {
+            var chipY = h / 2 - chipW / 2;
+            sb.Append($"<rect class=\"beck-icon-chip\" x=\"{N(padHalf)}\" y=\"{N(chipY)}\" width=\"{N(chipW)}\" height=\"{N(chipW)}\" rx=\"{N(geo.IconChipRadius)}\"/>");
+            sb.Append(IconSvg(node.Icon!, padHalf + (chipW - iconSize) / 2, chipY + (chipW - iconSize) / 2, iconSize));
+        }
+
+        double titleLine = geo.CardTitleLine, subLine = geo.CardSubLine, gap = geo.TextGap;
+        var hasSub = node.Subtitle != null;
+        var showStatus = !ghost && node.Status != null;
+        var statusChipH = geo.StatusChipH;
+        var plannedLine = geo.StatusInlineLine;
+        var stackH = titleLine
+            + (hasSub ? gap + subLine : 0)
+            + (showStatus ? gap + statusChipH : 0)
+            + (ghost ? gap + plannedLine : 0);
+        var y = h / 2 - stackH / 2;
+
+        Line(sb, style.Typography.DecorateTitle(node.Title), ghost ? "beck-node-subtitle" : "beck-node-title",
+            textX, y + titleLine / 2, m, style, FontRole.CardTitle, guard);
+        y += titleLine;
+        if (hasSub)
+        {
+            y += gap;
+            Line(sb, node.Subtitle!, "beck-node-subtitle", textX, y + subLine / 2, m, style, FontRole.CardSubtitle, guard);
+            y += subLine;
+        }
+
+        if (showStatus)
+        {
+            StatusPill(sb, node.Status!, MindMapStatusColor(node.Status!), textX, y + gap, statusChipH, m, style, guard);
+        }
+        else if (ghost)
+        {
+            Line(sb, node.Status ?? "planned", "beck-mm-planned", textX, y + gap + plannedLine / 2, m, style, FontRole.StatusInline, guard);
+        }
+    }
+
+    /// <summary>The semantic pill colour for a mindmap status keyword (handoff): the status carries its own
+    /// meaning independent of the branch accent. Unknown keywords fall back to the branch accent.</summary>
+    private static string MindMapStatusColor(string status) => status.Trim().ToLowerInvariant() switch
+    {
+        "complete" or "done" or "shipped" or "live" => "var(--beck-success)",
+        "in progress" or "in-progress" or "active" or "wip" or "building" => "var(--beck-warn)",
+        "blocked" or "failed" or "at risk" or "at-risk" => "var(--beck-danger)",
+        "review" or "in review" or "in-review" => "var(--beck-info)",
+        "planned" or "backlog" or "later" or "todo" => "var(--beck-neutral)",
+        _ => "var(--beck-accent)",
+    };
+
+    /// <summary>A left-aligned single-line text at an explicit <see cref="FontRoleSpec"/> — used for the
+    /// mindmap leaf label, whose Inter 12/500 type isn't a style role. Measured through a sans role so a
+    /// custom measurer still honours the spec; the textLength guard pins the drawn advance to it.</summary>
+    private static void LineSpec(StringBuilder sb, string text, string cls, double x, double cy, ITextMeasurer m, FontRoleSpec spec, bool guard)
+    {
+        var tl = m.Measure(text, FontRole.PillTitle, spec).Width;
+        sb.Append($"<text class=\"{cls}\" x=\"{N(x)}\" y=\"{N(cy)}\" font-size=\"{N(spec.SizePx)}\" font-weight=\"{P(spec.Weight)}\" ")
+          .Append($"dominant-baseline=\"central\" text-anchor=\"start\"{Guard(tl, guard)}>")
+          .Append(SvgWriter.Text(text)).Append("</text>");
     }
 
     private static void Line(StringBuilder sb, string text, string cls, double x, double cy, ITextMeasurer m, BeckStyle style, FontRole role, bool guard)

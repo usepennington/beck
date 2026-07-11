@@ -1,0 +1,42 @@
+type: mindmap
+meta:
+  title: How Beck works
+root:
+  title: Beck
+  subtitle: server-side diagrams
+  icon: model
+topics:
+  - title: Pipeline
+    icon: code
+    children:
+      - title: Model
+        body: YAML becomes a fully-defaulted DiagramModel — nothing downstream sees raw input.
+      - title: Layout
+        items: [rank, order, coords]
+      - title: Route
+        items: [orthogonal, step-round, obstacle avoidance]
+      - title: Animate
+        body: The flow script compiles to shared-cycle CSS keyframes — no client JavaScript.
+  - title: Diagram types
+    icon: chart
+    children:
+      - title: Architecture
+      - title: Sequence
+      - title: State
+      - title: Class
+      - title: Mindmap
+  - title: Packages
+    icon: container
+    children:
+      - title: Beck
+        items: [engine, authoring]
+      - title: Beck.Skia
+        children:
+          - title: HarfBuzz shaping
+          - title: Font metrics
+  - title: Theming
+    icon: browser
+    children:
+      - title: CSS variables
+      - title: Dark mode
+      - title: Named styles

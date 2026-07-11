@@ -45,8 +45,8 @@ That is a complete diagram. With no `flow:` block, Beck derives a packet animati
 ## The document shape
 
 A Beck document is a YAML mapping that **always opens with a root `type:`** — one of
-`architecture`, `sequence`, `state`, or `class`. The type picks the top-level keys; `meta` and
-`flow` are shared by all four. For `type: architecture`:
+`architecture`, `sequence`, `state`, `class`, `flowchart`, or `mindmap`. The type picks the
+top-level keys; `meta` and `flow` are shared by all six. For `type: architecture`:
 
 ```yaml
 type: architecture # REQUIRED first — architecture | sequence | state | class
@@ -59,7 +59,8 @@ flow:    { ... }   # optional — scripted animation; omit and one is derived
 
 The other types swap the middle keys: `type: sequence` uses `participants` + `messages`,
 `type: state` uses `states` + `transitions`, `type: class` uses `classes` + `relations` (+
-`groups`). Their cheat-sheets are [below](#the-other-diagram-types-sequence-state-class).
+`groups`), `type: flowchart` uses `steps` + `links`, `type: mindmap` uses `root` + `topics`. Their
+cheat-sheets are [below](#the-other-diagram-types-sequence-state-class-flowchart-mindmap).
 
 Inline (`{ }` / `[ ]`) and block YAML are both fine. Use whichever is clearer.
 
@@ -84,8 +85,9 @@ field tables and defaults, see the [YAML schema reference](/docs/reference/yaml)
 
 ### nodes — `id` required, rest optional
 
-Key fields: `id`, `title` (= `id`), `subtitle`, `kind`, `variant`, `icon`, `status`, `accent`,
-`href`/`target`, `surface`/`textColor`, `width`, `rank`, `order`, `group`.
+Key fields: `id`, `title` (= `id`), `subtitle`, `kind`, `variant`, `icon`, `status`, `items` (bulleted
+list), `body` (wrapped paragraph), `accent`, `href`/`target`, `surface`/`textColor`, `width`,
+`rank`, `order`, `group`.
 
 `kind` is shorthand that sets the default **icon + accent + variant** at once; override any of them
 individually.
@@ -152,11 +154,12 @@ For anything else, pass raw inline `<svg>…</svg>` using `fill="currentColor"`/
 and a `0 0 24 24` viewBox so it inherits the node's accent and theme. Full live catalogue:
 [Icons reference](/docs/reference/icons).
 
-## The other diagram types: sequence, state, class
+## The other diagram types: sequence, state, class, flowchart, mindmap
 
-All three share `meta`, `flow`, colours, and theming with architecture diagrams. Only the middle
+All five share `meta`, `flow`, colours, and theming with architecture diagrams. Only the middle
 keys differ. Full tables: [YAML schema](/docs/reference/yaml); guides:
-[sequence](/docs/guides/sequence) · [state](/docs/guides/state) · [class](/docs/guides/class).
+[sequence](/docs/guides/sequence) · [state](/docs/guides/state) · [class](/docs/guides/class) ·
+[flowchart](/docs/guides/flowchart) · [mindmap](/docs/guides/mindmap).
 
 ### `type: sequence` — participants + messages
 
@@ -231,6 +234,56 @@ classes:
 relations:
   - { from: order, to: entity, kind: inherits }
   - { from: order, to: line, kind: composition, fromCard: "1", toCard: "*" }
+```
+
+### `type: flowchart` — steps + links
+
+A decision/process graph on the layered engine. `steps:` is optional refinement (`id`, `text`,
+`kind`, `subtitle`, `accent`, `icon`, `href`/`target`, `surface`/`textColor`, `width`, `rank`,
+`order`) — ids used only in `links` are auto-created as `process` cards. `kind` is one of `process`
+(card, default), `decision` (diamond), `terminator` (pill), `io` (parallelogram), `start`/`end` (the
+start/end pseudo-shape). `"[*]"` (quoted!) works as a `from`/`to` shorthand for the start/end
+pseudo-step, exactly like state diagrams. Link fields: `from`, `to`, `label`, `style`, `color`,
+`note` (narrates the link in the derived flow). With no `flow:`, one packet rides each link in
+declared order.
+
+```beck
+type: flowchart
+steps:
+  - { id: check, text: Valid?, kind: decision }
+links:
+  - { from: "[*]", to: check }
+  - { from: check, to: charge, label: "yes" }
+  - { from: check, to: retry, label: "no" }
+  - { from: retry, to: check }
+  - { from: charge, to: "[*]" }
+```
+
+### `type: mindmap` — root + topics
+
+A nested topic tree drawn as a two-sided butterfly (root centred, branches fanning left/right).
+`root` is required — a plain string (its title) or a mapping (`title`, `id`, `subtitle`, `items`,
+`body`, `accent`, `icon`, `href`/`target`, `surface`/`textColor`, `width`). `topics:` are the
+first-level branches; each can nest further via its own `children:`, to any depth, with the same
+fields as `root`. A heading-only leaf renders as a pill; anything with `items`/`body` or `children`
+renders as a card. First-level branches cycle through `primary`, `info`, `success`, `warn`,
+`danger`, `neutral`; deeper topics inherit their parent's resolved accent unless they set their own.
+`meta.direction` is accepted but ignored — the layout is always the fixed butterfly. With no
+`flow:`, packets broadcast from the root out to the leaves.
+
+```beck
+type: mindmap
+root: Beck
+topics:
+  - title: Rendering
+    children:
+      - title: Pipeline
+        items: [Model, Text, Layout]
+      - title: Determinism
+        body: Same YAML, same SVG.
+  - title: Packages
+    accent: success
+    children: [Beck, Beck.Skia]
 ```
 
 ## Flow (animation)
@@ -334,10 +387,12 @@ message, or transition to caption a derived flow.
 
 Each diagram type has its own builder: `DiagramBuilder` (architecture),
 `SequenceDiagramBuilder` (`Participant`/`Message`/`Reply`/`Section`), `StateDiagramBuilder`
-(`State`/`Transition`/`Initial`/`Final`), and `ClassDiagramBuilder`
+(`State`/`Transition`/`Initial`/`Final`), `ClassDiagramBuilder`
 (`Class`/`Inherits`/`Composition`/…, plus **`ClassDiagramBuilder.FromTypes(typeof(…), …)`**, which
 reflects real CLR types into an always-current class diagram — base types become `inherits`,
-interfaces `implements`, property types labelled associations).
+interfaces `implements`, property types labelled associations), `FlowchartDiagramBuilder`
+(`Step`/`Process`/`Decision`/`Terminator`/`Io`/`Start`/`End`/`Link`), and `MindMapDiagramBuilder`
+(`Root`/`Topic`, with `Topic` nestable to any depth for `children`).
 
 C# enums map to schema tokens (lowercased), with one special case: `EdgeCurve.StepRound` →
 `step-round`. `Direction` stays uppercase. Enums available: `Direction`, `NodeKind`, `NodeVariant`,
@@ -383,6 +438,9 @@ or [Add Beck to a Pennington site](/docs/guides/pennington).
   structural reference material and renders a still frame unless you script a `flow:` yourself.
   `meta.loop: false` plays once; `meta.animate: false` (or the reader's reduced-motion setting)
   renders a static frame.
+- **`type: mindmap` ignores `meta.direction`** — the butterfly layout is always fixed left/right.
+- **Flowchart `"[*]"`** works as a `links` `from`/`to` shorthand for the start/end pseudo-step,
+  exactly like state diagrams' entry/exit pseudo-state — quote it, since `[*]` is YAML syntax.
 - **Flow steps are ordered**, single-key mappings; `parallel` runs its children simultaneously;
   `status`/`working`/`stream`/`activate` persist until cleared or `reset`.
 - **It's plain YAML** — the parser reports friendly errors (with a line number for syntax issues),

@@ -50,7 +50,7 @@ public static class BeckSchema
 
     // ---- per-section key lists (curated against Model/Schema.cs) -------------
     /// <summary>Top-level document keys.</summary>
-    public static IReadOnlyList<string> TopKeys { get; } = ["type", "meta", "nodes", "edges", "groups", "flow"];
+    public static IReadOnlyList<string> TopKeys { get; } = ["type", "meta", "nodes", "edges", "groups", "flow", "steps", "links", "root", "topics"];
     /// <summary><c>meta:</c> keys.</summary>
     public static IReadOnlyList<string> MetaKeys { get; } = ["title", "subtitle", "style", "direction", "theme", "animate", "loop", "fit", "spacing", "narrate",
     ];
@@ -62,6 +62,16 @@ public static class BeckSchema
     ];
     /// <summary>Group entry keys.</summary>
     public static IReadOnlyList<string> GroupKeys { get; } = ["id", "label", "members", "accent"];
+    /// <summary>Flowchart <c>steps:</c> entry keys.</summary>
+    public static IReadOnlyList<string> StepKeys { get; } = ["id", "text", "kind", "subtitle", "icon", "accent", "href", "target", "surface", "textColor", "width", "rank", "order",
+    ];
+    /// <summary>Flowchart <c>links:</c> entry keys.</summary>
+    public static IReadOnlyList<string> LinkKeys { get; } = ["from", "to", "label", "style", "color", "note"];
+    /// <summary>Flowchart step <c>kind:</c> values.</summary>
+    public static IReadOnlyList<string> StepKinds { get; } = ["process", "decision", "terminator", "io", "start", "end"];
+    /// <summary>Mind-map <c>root:</c> / <c>topics:</c> entry keys (a topic may also be a plain title string).</summary>
+    public static IReadOnlyList<string> TopicKeys { get; } = ["id", "title", "subtitle", "accent", "icon", "items", "body", "children", "href", "target", "surface", "textColor", "width",
+    ];
 
     /// <summary>Fields whose <em>value</em> is a declared node/group id — completed from the document.</summary>
     public static IReadOnlyList<string> IdValuedFields { get; } = ["from", "to", "via", "members", "node", "group"];
@@ -86,7 +96,7 @@ public static class BeckSchema
         "accent" or "color" => Accents,
         "fromSide" or "toSide" => Sides,
         "animate" or "loop" => Bool,
-        "kind" => section == "edges" ? EdgeKinds : Kinds,
+        "kind" => section switch { "edges" => EdgeKinds, "steps" => StepKinds, _ => Kinds },
         _ => null,
     };
 
@@ -95,12 +105,19 @@ public static class BeckSchema
     public static IReadOnlyDictionary<string, string> Docs { get; } = new Dictionary<string, string>
     {
         // sections
-        ["type"] = "Root diagram type: `architecture`, `sequence`, `state` or `class`.",
+        ["type"] = "Root diagram type: `architecture`, `sequence`, `state`, `class`, `flowchart` or `mindmap`.",
         ["meta"] = "Diagram-wide settings — title, direction, theme, animation.",
         ["nodes"] = "The boxes in your diagram. Each needs an `id`; `title`/`kind`/`icon` are optional.",
         ["edges"] = "Connections between nodes. `from` + `to` are required.",
         ["groups"] = "Boundaries that wrap members (nodes or nested groups) in a labelled box.",
         ["flow"] = "A scripted animation: packets, highlights and status changes over time.",
+        ["steps"] = "Flowchart steps. Each needs an `id`; `text`/`kind` are optional.",
+        ["links"] = "Connections between flowchart steps. `from` + `to` are required.",
+        ["root"] = "The centre topic of a mind map (a mapping, or a plain title string).",
+        ["topics"] = "First-level mind-map branches, split left/right around the root.",
+        ["children"] = "Nested child topics under this topic (arbitrary depth).",
+        ["items"] = "Bulleted list rendered on the topic/node card.",
+        ["body"] = "Wrapped paragraph rendered on the topic/node card.",
         // meta fields
         ["title"] = "Display name on the card / diagram heading.",
         ["subtitle"] = "Secondary line under the title.",
@@ -146,6 +163,15 @@ public static class BeckSchema
         ["sequence"] = "Participants exchanging messages over time.",
         ["state"] = "States and transitions.",
         ["class"] = "Classes with compartments and UML relations.",
+        ["flowchart"] = "Process/decision flow: steps and links.",
+        ["mindmap"] = "A nested topic tree drawn as a two-sided butterfly around a central root.",
+        ["text"] = "Step display text — defaults to the step `id`.",
+        ["process"] = "A rectangular process step (default).",
+        ["decision"] = "A diamond branch point.",
+        ["terminator"] = "A pill-shaped terminator step.",
+        ["io"] = "A parallelogram input/output step.",
+        ["start"] = "A start terminator step.",
+        ["end"] = "An end terminator step.",
         ["service"] = "A generic service box.",
         ["db"] = "A database (cylinder).",
         ["queue"] = "A message queue.",

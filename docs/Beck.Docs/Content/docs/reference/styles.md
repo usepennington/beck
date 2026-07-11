@@ -1,7 +1,7 @@
 ---
 title: Style system
 description: The BeckStyle record and its sub-records, the built-in registry, style resolution and precedence, the metrics-font and artwork vocabularies, and the custom-style sanitizer.
-order: 44
+order: 46
 sectionLabel: Reference
 uid: docs.reference.styles
 ---
