@@ -76,6 +76,18 @@ internal static class ModelJson
             o["subtitle"] = n.Subtitle;
         }
 
+        // New card content blocks. Emitted only when present so every existing model-parity
+        // golden (which predates these fields) stays byte-identical.
+        if (n.Items.Count > 0)
+        {
+            o["items"] = n.Items.ToList<object?>();
+        }
+
+        if (n.Body != null)
+        {
+            o["body"] = n.Body;
+        }
+
         if (n.Icon != null)
         {
             o["icon"] = n.Icon;

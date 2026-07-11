@@ -122,6 +122,96 @@ internal static class Artwork
     }
 
     /// <summary>
+    /// A diamond node (flowchart decision groundwork): a clean four-vertex closed <c>&lt;path&gt;</c>
+    /// through the bbox face midpoints under <see cref="StyleArtwork.Plain"/>, or a wobbly variant
+    /// under <see cref="StyleArtwork.Sketch"/>. The four vertices sit exactly on the bbox face
+    /// midpoints, so the router's default face anchors coincide with them. Depth (<paramref name="shadow"/>)
+    /// reuses the brutalist hard-offset sticker shadow, offset as a polygon rather than a rect so it
+    /// stays coherent with the shape; extruded/circuit depth is rect-edge specific and omitted here.
+    /// </summary>
+    public static string Diamond(BeckStyle style, string cls, double x, double y, double w, double h,
+        string seed, string? styleAttr = null, bool shadow = false)
+    {
+        var sa = styleAttr != null ? $" style=\"{styleAttr}\"" : "";
+        double cx = x + w / 2, cy = y + h / 2;
+        var pts = new (double X, double Y)[] { (cx, y), (x + w, cy), (cx, y + h), (x, cy) };
+        var sh = BehindPoly(style, shadow, pts);
+        if (style.Artwork != StyleArtwork.Sketch)
+        {
+            return $"{sh}<path class=\"{cls}\" d=\"{Poly(pts)}\"{sa}/>";
+        }
+
+        return $"{sh}<path class=\"{cls}\" d=\"{WobblePolygon(pts, Math.Max(w, h), seed)}\"{sa}/>";
+    }
+
+    /// <summary>
+    /// A parallelogram node (flowchart I/O groundwork): a four-corner closed <c>&lt;path&gt;</c> with a
+    /// fixed horizontal skew of <c>min(12, h·0.4)</c>, the top edge shifted right. Plain draws a clean
+    /// polygon; sketch wobbles it. The top/bottom edges lie on the bbox faces (so those anchors need no
+    /// adjustment); the left/right faces are slanted (the router shifts those anchors by skew/2).
+    /// Depth reuses the brutalist offset-polygon shadow as for <see cref="Diamond"/>.
+    /// </summary>
+    public static string Parallelogram(BeckStyle style, string cls, double x, double y, double w, double h,
+        string seed, string? styleAttr = null, bool shadow = false)
+    {
+        var sa = styleAttr != null ? $" style=\"{styleAttr}\"" : "";
+        var skew = ParallelogramSkew(h);
+        var pts = new (double X, double Y)[]
+        {
+            (x + skew, y), (x + w, y), (x + w - skew, y + h), (x, y + h),
+        };
+        var sh = BehindPoly(style, shadow, pts);
+        if (style.Artwork != StyleArtwork.Sketch)
+        {
+            return $"{sh}<path class=\"{cls}\" d=\"{Poly(pts)}\"{sa}/>";
+        }
+
+        return $"{sh}<path class=\"{cls}\" d=\"{WobblePolygon(pts, Math.Max(w, h), seed)}\"{sa}/>";
+    }
+
+    /// <summary>The parallelogram's fixed horizontal skew — the amount the top edge shifts right (and the
+    /// bottom edge left). The router adds <c>skew/2</c> to left/right anchors so they land on the slant.</summary>
+    public static double ParallelogramSkew(double h) => Math.Min(12, h * 0.4);
+
+    /// <summary>A closed straight polygon path (<c>M…L…L…Z</c>) through <paramref name="pts"/>.</summary>
+    private static string Poly(IReadOnlyList<(double X, double Y)> pts)
+    {
+        var sb = new StringBuilder();
+        sb.Append('M').Append(F(pts[0]));
+        for (var i = 1; i < pts.Count; i++)
+        {
+            sb.Append('L').Append(F(pts[i]));
+        }
+
+        sb.Append('Z');
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// The behind-the-node depth treatment for arbitrary polygon shapes (diamond/parallelogram). Only
+    /// <see cref="StyleArtwork.Brutalist"/>'s hard offset "sticker" shadow generalizes cleanly — the same
+    /// solid, blur-free polygon offset down-right by <see cref="StyleGeometry.ShadowOffset"/> px, filled
+    /// through <c>--beck-shadow</c>. Extruded's two lit faces and circuit's edge pins are rect-edge
+    /// specific, so they are omitted for these shapes (byte-identical for every other style / zero offset).
+    /// </summary>
+    private static string BehindPoly(BeckStyle style, bool want, IReadOnlyList<(double X, double Y)> pts)
+    {
+        if (!want || style.Artwork != StyleArtwork.Brutalist)
+        {
+            return "";
+        }
+
+        var o = style.Geometry.ShadowOffset;
+        if (o <= 0)
+        {
+            return "";
+        }
+
+        var shifted = pts.Select(p => (p.X + o, p.Y + o)).ToList();
+        return $"<path class=\"beck-shadow\" d=\"{Poly(shifted)}\" style=\"fill:var(--beck-shadow, var(--beck-node-border))\"/>";
+    }
+
+    /// <summary>
     /// A pseudo-state circle (start/end nodes, the end dot): a true <c>&lt;circle&gt;</c> under
     /// <see cref="StyleArtwork.Plain"/>, or a wobbly closed blob <c>&lt;path&gt;</c> with the same
     /// <paramref name="cls"/> under <see cref="StyleArtwork.Sketch"/>.
@@ -358,6 +448,37 @@ internal static class Artwork
         for (var i = 0; i < N; i++)
         {
             sb.Append('Q').Append(F(p[i])).Append(' ').Append(F(Mid(i, (i + 1) % N)));
+        }
+
+        sb.Append('Z');
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// A closed hand-drawn polygon: each vertex jittered a touch off true, each straight edge bowed
+    /// through a jittered midpoint (the true midpoint as the quadratic control), so the shape stays
+    /// closed and gently hand-drawn. Amplitudes track the shape's long dimension exactly as
+    /// <see cref="WobbleRoundRect"/> does, and every value comes from the deterministic
+    /// <paramref name="seed"/> stream — no RNG, no time. Used by <see cref="Diamond"/>/<see cref="Parallelogram"/>.
+    /// </summary>
+    private static string WobblePolygon(IReadOnlyList<(double X, double Y)> pts, double longDim, string seed)
+    {
+        var rng = new Rng(seed);
+        var s = Math.Clamp((longDim - 90) / 220.0, 0, 1);
+        var a = 2.2 + 1.4 * s;   // vertex jitter amplitude
+        var b = 1.8 + 1.1 * s;   // edge-bow amplitude
+        double J() => (rng.Next() - 0.5) * 2 * a;
+        double Bow() => (rng.Next() - 0.5) * 2 * b;
+
+        var v = pts.Select(p => (X: p.X + J(), Y: p.Y + J())).ToList();
+        var sb = new StringBuilder();
+        sb.Append('M').Append(F(v[0]));
+        for (var i = 0; i < v.Count; i++)
+        {
+            var p = v[i];
+            var q = v[(i + 1) % v.Count];
+            (double X, double Y) mid = ((p.X + q.X) / 2 + Bow(), (p.Y + q.Y) / 2 + Bow());
+            sb.Append('Q').Append(F(mid)).Append(' ').Append(F(q));
         }
 
         sb.Append('Z');

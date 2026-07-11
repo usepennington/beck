@@ -34,7 +34,11 @@ internal sealed record RouteRequest(
     // evenly spread by AnchorShifts, and sliding any one of them — including the middle edge,
     // whose shift is 0 — breaks that spacing. Not inferable from the shift alone.
     bool FromFanned = false, bool ToFanned = false,
-    Lane FromLane = default, Lane ToLane = default);
+    Lane FromLane = default, Lane ToLane = default,
+    // Perpendicular inward nudge for a slanted face (parallelogram): a Left/Right anchor slides
+    // inward by skew/2 in x so it lands on the slanted face rather than the bbox edge. 0 for every
+    // straight-faced shape — byte-identical.
+    double FromNudge = 0, double ToNudge = 0);
 
 internal sealed record RoutedPath(string D, IReadOnlyList<Point> Points);
 
@@ -355,6 +359,24 @@ internal static class OrthogonalRouter
         return IsVertical(side) ? new Point(p.X + off, p.Y) : new Point(p.X, p.Y + off);
     }
 
+    /// <summary>Slide a Left/Right anchor inward along x by <paramref name="nudge"/> so it lands on a
+    /// slanted (parallelogram) face; Top/Bottom faces are unslanted, so they are left alone. Left moves
+    /// right (+x), Right moves left (−x). A zero nudge is a no-op (every straight-faced shape).</summary>
+    private static Point NudgePerp(Point p, Side side, double nudge)
+    {
+        if (nudge == 0)
+        {
+            return p;
+        }
+
+        return side switch
+        {
+            Side.Left => new Point(p.X + nudge, p.Y),
+            Side.Right => new Point(p.X - nudge, p.Y),
+            _ => p,
+        };
+    }
+
     private static List<Point> SameFaceLoop(Point a, Point b, Side side, IReadOnlyList<Rect> obstacles, Size? bounds)
     {
         if (IsVertical(side))
@@ -566,8 +588,8 @@ internal static class OrthogonalRouter
         var auto = AutoSides(req.From, req.To, req.PrimaryHorizontal);
         var fromSide = req.FromSide ?? auto.FromSide;
         var toSide = req.ToSide ?? auto.ToSide;
-        var a = ShiftAnchor(Anchor(req.From, fromSide), fromSide, req.FromShift);
-        var b = ShiftAnchor(Anchor(req.To, toSide), toSide, req.ToShift);
+        var a = NudgePerp(ShiftAnchor(Anchor(req.From, fromSide), fromSide, req.FromShift), fromSide, req.FromNudge);
+        var b = NudgePerp(ShiftAnchor(Anchor(req.To, toSide), toSide, req.ToShift), toSide, req.ToNudge);
 
         if (req.Curve == EdgeCurve.Straight)
         {

@@ -37,6 +37,7 @@ internal static class StateBuilder
             Rank = OptNumber(s.GetValueOrDefault("rank"), $"state \"{id}\" rank"),
             Order = OptNumber(s.GetValueOrDefault("order"), $"state \"{id}\" order"),
             Shape = NodeShape.Pill,
+            Items = [],
             Fields = [],
             Methods = [],
         };
@@ -50,6 +51,7 @@ internal static class StateBuilder
         Variant = NodeVariant.Solid,
         Accent = "var(--beck-text)",
         Shape = id == StartId ? NodeShape.Start : NodeShape.End,
+        Items = [],
         Fields = [],
         Methods = [],
     };

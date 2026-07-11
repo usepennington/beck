@@ -12,6 +12,8 @@ public sealed class NodeBuilder
     private readonly string _id;
     private string? _title;
     private string? _subtitle;
+    private readonly List<string> _items = new();
+    private string? _body;
     private string? _icon;
     private string? _status;
     private string? _accent;
@@ -36,6 +38,15 @@ public sealed class NodeBuilder
 
     /// <summary>Set the muted subtitle line.</summary>
     public NodeBuilder Subtitle(string subtitle) { _subtitle = subtitle; return this; }
+
+    /// <summary>Add one bullet to the card's item list.</summary>
+    public NodeBuilder Item(string item) { _items.Add(item); return this; }
+
+    /// <summary>Add several bullets to the card's item list at once.</summary>
+    public NodeBuilder Items(params string[] items) { _items.AddRange(items); return this; }
+
+    /// <summary>Set the wrapped body paragraph rendered under the items.</summary>
+    public NodeBuilder Body(string body) { _body = body; return this; }
 
     /// <summary>Set a named icon key or raw inline <c>&lt;svg&gt;</c> markup.</summary>
     public NodeBuilder Icon(string icon) { _icon = icon; return this; }
@@ -87,6 +98,16 @@ public sealed class NodeBuilder
         if (_subtitle != null)
         {
             pairs.Add(("subtitle", YamlWriter.Scalar(_subtitle)));
+        }
+
+        if (_items.Count > 0)
+        {
+            pairs.Add(("items", YamlWriter.FlowSeq(_items.Select(YamlWriter.Scalar))));
+        }
+
+        if (_body != null)
+        {
+            pairs.Add(("body", YamlWriter.Scalar(_body)));
         }
 
         if (_kind is { } k)

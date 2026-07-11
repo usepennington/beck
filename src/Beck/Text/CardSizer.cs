@@ -21,6 +21,11 @@ namespace Beck.Text;
 /// </remarks>
 internal static class CardSizer
 {
+    /// <summary>The bullet prefix baked into each card <c>items:</c> row before measuring, so the
+    /// measured advance matches the run <see cref="SvgRenderer"/> draws (measured == drawn).</summary>
+    internal const string ItemBullet = "• ";
+
+
     /// <summary>Measure a node's card to its rounded border-box size. The box-model constants come from
     /// <paramref name="geometry"/> and the per-role typography from <paramref name="roles"/> (both
     /// default to <see cref="BeckStyle.Classic"/>'s). Passing the style's <see cref="FontRoleTable"/>
@@ -39,6 +44,8 @@ internal static class CardSizer
             NodeShape.Pill => Pill(node, m, g, r, title),
             NodeShape.Start or NodeShape.End => new Size(g.StartEndSize, g.StartEndSize),
             NodeShape.Class => Class(node, m, g, r, title),
+            NodeShape.Diamond => Diamond(node, m, g, r, title),
+            NodeShape.Parallelogram => Parallelogram(node, m, g, r, title),
             _ => IsGhost(node) ? Ghost(node, m, g, r, title) : Card(node, m, g, r, title, flowStatuses),
         };
     }
@@ -70,6 +77,18 @@ internal static class CardSizer
             textH += g.TextGap + WrapLines(m, node.Subtitle, FontRole.CardSubtitle, avail, r) * g.CardSubLine;
         }
 
+        // Bulleted items — single rows (never wrapped), stacked at the class-compartment pitch.
+        if (node.Items.Count > 0)
+        {
+            textH += g.TextGap + node.Items.Count * g.ItemLine + (node.Items.Count - 1) * g.ItemGap;
+        }
+
+        // Wrapped paragraph body in the card-subtitle font, wrapping at the same avail as the title.
+        if (node.Body != null)
+        {
+            textH += g.TextGap + WrapLines(m, node.Body, FontRole.CardSubtitle, avail, r) * g.BodyLine;
+        }
+
         if (node.Status != null || flowStatuses is { Count: > 0 })
         {
             textH += g.TextGap + g.StatusMt + g.StatusChipH;
@@ -77,6 +96,90 @@ internal static class CardSizer
 
         var content = Math.Max(hasIcon ? g.IconW : 0, textH);
         return new Size(Round(width), Round(content + g.CardPadY + g.MeasureBorder));
+    }
+
+    /// <summary>
+    /// A diamond (flowchart decision). The text column must fit the <em>inscribed</em> rectangle: for a
+    /// diamond whose bbox is w×h (half-diagonals w/2, h/2), the max-area centered axis-aligned rectangle
+    /// has half-extents w/4, h/4 — i.e. a centered rect of exactly w/2 × h/2. So to seat a padded text
+    /// block of width TW and height TH we need
+    /// <code>w/2 ≥ TW + CardPadX + border   →  w = 2·(TW + CardPadX + border)</code>
+    /// <code>h/2 ≥ TH + CardPadY + border   →  h = 2·(TH + CardPadY + border)</code>
+    /// i.e. the diamond is twice the padded text block on each axis. Text wraps against <c>w/2</c> (the
+    /// inscribed rect's width, exposed by <see cref="DiamondTextAvail"/>), so drawn wrap == measured wrap.
+    /// </summary>
+    private static Size Diamond(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title)
+    {
+        var width = DiamondWidth(node, m, g, r, title);
+        var avail = width / 2 - g.CardPadX - g.MeasureBorder;
+        var textH = WrapLines(m, title, FontRole.CardTitle, avail, r) * g.CardTitleLine;
+        if (node.Subtitle != null)
+        {
+            textH += g.TextGap + WrapLines(m, node.Subtitle, FontRole.CardSubtitle, avail, r) * g.CardSubLine;
+        }
+
+        var height = 2 * (textH + g.CardPadY + g.MeasureBorder);
+        return new Size(Round(width), Round(height));
+    }
+
+    /// <summary>The diamond's bbox width: twice the padded single-line text block (so the inscribed rect
+    /// holds the widest row without wrapping), floored at <see cref="StyleGeometry.CardMinW"/>; an authored
+    /// <c>width:</c> is honoured (also floored at <c>CardMinW</c>).</summary>
+    private static double DiamondWidth(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title)
+    {
+        if (node.Width is { } authored)
+        {
+            return Math.Max(g.CardMinW, authored);
+        }
+
+        var titleW = W(m, r, title, FontRole.CardTitle);
+        var subW = node.Subtitle != null ? W(m, r, node.Subtitle, FontRole.CardSubtitle) : 0;
+        var block = Math.Max(titleW, subW);
+        var natural = Math.Ceiling(2 * (block + g.CardPadX + g.MeasureBorder));
+        return Math.Max(g.CardMinW, natural);
+    }
+
+    /// <summary>The horizontal space a diamond's centered text column wraps within — the inscribed rect's
+    /// width (<c>w/2</c>) less padding. Matches <see cref="Diamond"/> so the renderer draws the same wrap.</summary>
+    internal static double DiamondTextAvail(NodeModel node, ITextMeasurer m, StyleGeometry? geometry = null, FontRoleTable? roles = null,
+        string titlePrefix = "", string titleSuffix = "")
+    {
+        var g = geometry ?? BeckStyle.Classic.Geometry;
+        var r = roles ?? BeckStyle.Classic.Typography.Roles;
+        return DiamondWidth(node, m, g, r, Decorate(node.Title, titlePrefix, titleSuffix)) / 2 - g.CardPadX - g.MeasureBorder;
+    }
+
+    /// <summary>
+    /// A parallelogram (flowchart I/O). Sizes the text exactly like a (no-icon) card, then widens the
+    /// bbox by the horizontal skew so the centered text column clears both slanted sides:
+    /// <code>skew = min(12, h·0.4);  width = cardWidth + skew</code>
+    /// The skew is taken off the rounded height, matching the renderer (which reads the rounded rect
+    /// height back and recomputes the same skew). Text wraps against the card text column
+    /// (<see cref="ParallelogramTextAvail"/>), unaffected by the skew, so drawn wrap == measured wrap.
+    /// </summary>
+    private static Size Parallelogram(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title)
+    {
+        var cardW = CardWidth(node, m, 0, g, r, title);
+        var avail = cardW - g.CardPadX - g.MeasureBorder;
+        var textH = WrapLines(m, title, FontRole.CardTitle, avail, r) * g.CardTitleLine;
+        if (node.Subtitle != null)
+        {
+            textH += g.TextGap + WrapLines(m, node.Subtitle, FontRole.CardSubtitle, avail, r) * g.CardSubLine;
+        }
+
+        var height = Round(textH + g.CardPadY + g.MeasureBorder);
+        var skew = Beck.Svg.Artwork.ParallelogramSkew(height);
+        return new Size(Round(cardW + skew), height);
+    }
+
+    /// <summary>The horizontal space a parallelogram's centered text column wraps within — the card text
+    /// column (independent of the skew, which only widens the bbox). Matches <see cref="Parallelogram"/>.</summary>
+    internal static double ParallelogramTextAvail(NodeModel node, ITextMeasurer m, StyleGeometry? geometry = null, FontRoleTable? roles = null,
+        string titlePrefix = "", string titleSuffix = "")
+    {
+        var g = geometry ?? BeckStyle.Classic.Geometry;
+        var r = roles ?? BeckStyle.Classic.Typography.Roles;
+        return CardWidth(node, m, 0, g, r, Decorate(node.Title, titlePrefix, titleSuffix)) - g.CardPadX - g.MeasureBorder;
     }
 
     private static Size Pill(NodeModel node, ITextMeasurer m, StyleGeometry g, FontRoleTable r, string title)
@@ -207,6 +310,15 @@ internal static class CardSizer
         var chrome = g.CardPadX + g.MeasureBorder + iconBlock;
         var titleW = W(m, r, title, FontRole.CardTitle);
         var subW = node.Subtitle != null ? W(m, r, node.Subtitle, FontRole.CardSubtitle) : 0;
+        // The card grows to hold the widest single-line item (bullet baked in) and the body's
+        // single-line width, both clamped by CardMaxW below (past which they wrap/overflow).
+        double itemW = 0;
+        foreach (var it in node.Items)
+        {
+            itemW = Math.Max(itemW, W(m, r, ItemBullet + it, FontRole.CardSubtitle));
+        }
+
+        var bodyW = node.Body != null ? W(m, r, node.Body, FontRole.CardSubtitle) : 0;
         // A flow status/fail step swaps a pill into this card; the box pre-grows to the widest
         // pill (text + 16px chip padding) since compiled CSS can't reflow the way the live-DOM
         // engine did. Statuses never wrap, so past CardMaxW a pill still overflows (like the JS
@@ -221,7 +333,8 @@ internal static class CardSizer
         }
         // Ceiling (not Round): the width must never shave the text column below the measured
         // single-line width, or the title would wrap inside a box sized to hold it on one line.
-        var natural = Math.Ceiling(Math.Max(Math.Max(titleW, subW), statusW)) + chrome;
+        var widest = Math.Max(Math.Max(Math.Max(titleW, subW), statusW), Math.Max(itemW, bodyW));
+        var natural = Math.Ceiling(widest) + chrome;
         return Math.Clamp(natural, g.CardMinW, g.CardMaxW);
     }
 

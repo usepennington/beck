@@ -19,7 +19,7 @@ internal enum NodeKind { Service, Db, Queue, Cache, Gateway, External, User, Gho
 internal enum NodeVariant { Solid, Subtle, Ghost }
 
 /// <summary>Structural form of a node.</summary>
-internal enum NodeShape { Card, Pill, Start, End, Class }
+internal enum NodeShape { Card, Pill, Start, End, Class, Diamond, Parallelogram }
 
 internal enum EdgeStyle { Solid, Dashed }
 
@@ -114,7 +114,9 @@ internal static class Tokens
         (Model.NodeShape.Pill, "pill"),
         (Model.NodeShape.Start, "start"),
         (Model.NodeShape.End, "end"),
-        (Model.NodeShape.Class, "class"));
+        (Model.NodeShape.Class, "class"),
+        (Model.NodeShape.Diamond, "diamond"),
+        (Model.NodeShape.Parallelogram, "parallelogram"));
 
     public static readonly TokenMap<EdgeStyle> EdgeStyle = new(
         (Model.EdgeStyle.Solid, "solid"),
