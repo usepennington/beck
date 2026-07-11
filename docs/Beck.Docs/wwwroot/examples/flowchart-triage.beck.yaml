@@ -1,0 +1,22 @@
+type: flowchart
+meta:
+  title: Ticket triage
+  subtitle: How an inbound support ticket finds its owner
+  direction: LR
+steps:
+  - { id: intake, text: New ticket, kind: io }
+  - { id: urgent, text: Urgent?, kind: decision }
+  - { id: known, text: Known issue?, kind: decision }
+  - { id: escalate, text: Page on-call, kind: terminator, accent: danger }
+  - { id: kb, text: Send KB article, accent: primary }
+  - { id: queue, text: Assign to queue }
+links:
+  - { from: "[*]", to: intake }
+  - { from: intake, to: urgent }
+  - { from: urgent, to: escalate, label: "yes", color: danger, note: "Anything urgent pages the on-call engineer." }
+  - { from: urgent, to: known, label: "no" }
+  - { from: known, to: kb, label: "yes", note: "A known issue gets an instant KB reply." }
+  - { from: known, to: queue, label: "no", note: "Everything else is queued for a human." }
+  - { from: kb, to: "[*]" }
+  - { from: queue, to: "[*]" }
+  - { from: escalate, to: "[*]" }
