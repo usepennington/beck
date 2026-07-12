@@ -3,6 +3,7 @@
     <!-- Tag-driven versioning + source link for the shipping package. -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="MonorailCss" Version="0.1.3" />
   </ItemGroup>
   <ItemGroup>
     <!-- Pennington content engine, consumed from NuGet so the docs site builds on CI

@@ -212,7 +212,11 @@
     if (!svg || document.querySelector('.beck-lightbox')) return;
 
     var dialog = document.createElement('dialog');
-    dialog.className = 'beck-lightbox';
+    // Utility classes here are discovered by MonorailCSS's scan of this JS file, so the
+    // box lives with the element that creates it. `beck-lightbox` stays only as the hook
+    // BrandStyling keys the ::backdrop / @starting-style / cloned-svg sizing off — those
+    // can't be expressed as utilities.
+    dialog.className = 'beck-lightbox border-0 p-0 m-auto bg-transparent w-screen h-screen max-w-[100vw] max-h-[100vh] overflow-hidden cursor-zoom-out open:flex open:items-center open:justify-center';
     dialog.setAttribute('aria-label', 'Diagram, full screen');
 
     var clone = svg.cloneNode(true);
@@ -224,7 +228,9 @@
 
     var close = document.createElement('button');
     close.type = 'button';
-    close.className = 'beck-lightbox-close';
+    // Fully utility-styled (no BrandStyling rule) — MonorailCSS scans this file, so these
+    // classes are emitted just like markup ones.
+    close.className = 'fixed top-[18px] right-[18px] flex items-center justify-center w-[38px] h-[38px] p-0 cursor-pointer rounded-full border border-[rgb(255_255_255_/_0.25)] bg-[rgb(0_0_0_/_0.35)] text-white [transition:background-color_0.15s] hover:bg-[rgb(0_0_0_/_0.55)]';
     close.setAttribute('aria-label', 'Close full screen view');
     close.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
     dialog.appendChild(close);

@@ -13,26 +13,26 @@
     <div class="flex items-center gap-3 px-5 py-[9px] border-b border-base-200 dark:border-base-800 bg-base-50 dark:bg-base-900">
         @* Examples: a rich grouped dropdown. Open/close/select are component state; each
            item fetches its sample's YAML from the site's /examples over HttpClient. *@
-        <div id="pg-examples" class="pg-dd @(_open == Dd.Examples ? "is-open" : "")">
-            <button type="button" class="pg-dd-trigger" @onclick="ToggleExamples" @onkeydown="e => OnTriggerKey(e, Dd.Examples)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Examples)">
-                <span class="pg-dd-value">@_exampleLabel</span>
-                <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <div id="pg-examples" class="group relative @(_open == Dd.Examples ? "is-open" : "")">
+            <button type="button" class="@DdTrigger" @onclick="ToggleExamples" @onkeydown="e => OnTriggerKey(e, Dd.Examples)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Examples)">
+                <span class="whitespace-nowrap">@_exampleLabel</span>
+                <svg class="@DdCaret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
             @if (_open == Dd.Examples)
             {
-                <div class="pg-dd-panel" role="listbox" aria-label="Example diagrams">
+                <div class="@DdPanel left-0 min-w-[384px]" role="listbox" aria-label="Example diagrams">
                     @foreach (var group in ExampleGroups)
                     {
                         <div class="pg-dd-group">
-                            <div class="pg-dd-group-label">@group.Label</div>
+                            <div class="font-mono text-[10px] font-semibold tracking-[0.09em] uppercase text-base-400 pt-1 px-[11px] pb-2 dark:text-base-500">@group.Label</div>
                             @foreach (var ex in group.Items)
                             {
-                                <button type="button" class="pg-dd-item" role="option" @onclick="() => LoadExample(ex)" @onkeydown="e => OnOptionKey(e, Dd.Examples)">
-                                    <span class="pg-dd-item-main">
-                                        <span class="pg-dd-item-title">@ex.Label</span>
-                                        <span class="pg-dd-item-desc">@ex.Desc</span>
+                                <button type="button" class="@DdItem gap-[14px] py-[9px]" role="option" @onclick="() => LoadExample(ex)" @onkeydown="e => OnOptionKey(e, Dd.Examples)">
+                                    <span class="@DdItemMain">
+                                        <span class="@DdItemTitle">@ex.Label</span>
+                                        <span class="@DdItemDesc">@ex.Desc</span>
                                     </span>
-                                    <span class="pg-pill" data-type="@group.Type">@group.Glyph @group.Short</span>
+                                    <span class="pg-pill flex-none font-mono text-[10px] font-semibold px-2 py-[3px] rounded-full whitespace-nowrap border border-transparent" data-type="@group.Type">@group.Glyph @group.Short</span>
                                 </button>
                             }
                         </div>
@@ -45,22 +45,22 @@
            meta.style still wins — the documented precedence — so this is a default, not an
            override; the panel hints as much. Classic is first and is the default. Changing it
            rebuilds the options and re-renders. *@
-        <div id="pg-style" class="pg-dd ml-auto @(_open == Dd.Style ? "is-open" : "")">
-            <button type="button" class="pg-dd-trigger" @onclick="ToggleStyle" @onkeydown="e => OnTriggerKey(e, Dd.Style)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Style)" title="Default style — a diagram's meta.style overrides">
-                <span class="pg-dd-trigger-label">Style</span>
-                <span class="pg-dd-value">@_styleLabel</span>
-                <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <div id="pg-style" class="group relative ml-auto @(_open == Dd.Style ? "is-open" : "")">
+            <button type="button" class="@DdTrigger" @onclick="ToggleStyle" @onkeydown="e => OnTriggerKey(e, Dd.Style)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Style)" title="Default style — a diagram's meta.style overrides">
+                <span class="font-medium text-base-400 dark:text-base-500">Style</span>
+                <span class="whitespace-nowrap">@_styleLabel</span>
+                <svg class="@DdCaret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
             @if (_open == Dd.Style)
             {
-                <div class="pg-dd-panel pg-dd-panel--right" role="listbox" aria-label="Diagram style">
-                    <div class="pg-dd-note">Default style — a diagram's <code>meta.style</code> overrides.</div>
+                <div class="@DdPanel right-0 min-w-[216px]" role="listbox" aria-label="Diagram style">
+                    <div class="text-[11.5px] leading-[1.45] text-base-500 pt-[6px] px-3 pb-2 mb-1 border-b border-base-100 dark:text-base-400 dark:border-base-800">Default style — a diagram's <code class="font-mono text-[11px]">meta.style</code> overrides.</div>
                     @foreach (var st in Styles)
                     {
-                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_styleName == st.Name)" @onclick="() => SelectStyle(st)" @onkeydown="e => OnOptionKey(e, Dd.Style)">
-                            <span class="pg-dd-item-main">
-                                <span class="pg-dd-item-title">@st.Label</span>
-                                <span class="pg-dd-item-desc">@st.Desc</span>
+                        <button type="button" class="@DdSchemeItem" role="option" aria-selected="@(_styleName == st.Name ? "true" : "false")" @onclick="() => SelectStyle(st)" @onkeydown="e => OnOptionKey(e, Dd.Style)">
+                            <span class="@DdItemMain">
+                                <span class="@DdItemTitle">@st.Label</span>
+                                <span class="@DdItemDesc">@st.Desc</span>
                             </span>
                         </button>
                     }
@@ -71,20 +71,20 @@
         @* Colour scheme: recolours the live diagram by overriding its --beck-* tokens
            on #pg-host[data-scheme] (see BrandStyling). Pure CSS — setting the attribute is
            enough, no re-render. "Default" keeps the site palette and the light/dark toggle. *@
-        <div id="pg-scheme" class="pg-dd @(_open == Dd.Scheme ? "is-open" : "")">
-            <button type="button" class="pg-dd-trigger" @onclick="ToggleScheme" @onkeydown="e => OnTriggerKey(e, Dd.Scheme)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Scheme)">
-                <span class="pg-swatch" data-scheme="@_scheme"></span>
-                <span class="pg-dd-value">@_schemeLabel</span>
-                <svg class="pg-dd-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <div id="pg-scheme" class="group relative @(_open == Dd.Scheme ? "is-open" : "")">
+            <button type="button" class="@DdTrigger" @onclick="ToggleScheme" @onkeydown="e => OnTriggerKey(e, Dd.Scheme)" aria-haspopup="listbox" aria-expanded="@(_open == Dd.Scheme)">
+                <span class="@DdSwatch" data-scheme="@_scheme"></span>
+                <span class="whitespace-nowrap">@_schemeLabel</span>
+                <svg class="@DdCaret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
             @if (_open == Dd.Scheme)
             {
-                <div class="pg-dd-panel pg-dd-panel--right" role="listbox" aria-label="Colour scheme">
+                <div class="@DdPanel right-0 min-w-[216px]" role="listbox" aria-label="Colour scheme">
                     @foreach (var s in Schemes)
                     {
-                        <button type="button" class="pg-dd-item pg-dd-item--scheme" role="option" aria-selected="@(_scheme == s.Value)" @onclick="() => SelectScheme(s)" @onkeydown="e => OnOptionKey(e, Dd.Scheme)">
-                            <span class="pg-swatch" data-scheme="@s.Value"></span>
-                            <span class="pg-dd-item-title">@s.Label</span>
+                        <button type="button" class="@DdSchemeItem" role="option" aria-selected="@(_scheme == s.Value ? "true" : "false")" @onclick="() => SelectScheme(s)" @onkeydown="e => OnOptionKey(e, Dd.Scheme)">
+                            <span class="@DdSwatch" data-scheme="@s.Value"></span>
+                            <span class="@DdItemTitle">@s.Label</span>
                         </button>
                     }
                 </div>
@@ -96,7 +96,7 @@
        it. Sits below the panel (z-index) so panel items stay clickable. *@
     @if (_open != Dd.None)
     {
-        <div class="pg-dd-backdrop" @onclick="CloseDropdowns"></div>
+        <div class="fixed inset-0 z-30" @onclick="CloseDropdowns"></div>
     }
 
     <div id="pg-panes" class="flex-1 grid grid-cols-2 min-h-0 max-md:grid-cols-1 max-md:grid-rows-2">
@@ -173,6 +173,37 @@
     private BeckStyle _style = BeckStyle.Classic;
     private string _styleName = BeckStyle.Classic.Name;
     private string _styleLabel = "Classic";
+
+    // ---- toolbar dropdown utility classes -----------------------------------
+    // The dropdowns are Tailwind utilities directly on the elements (MonorailCSS scans this
+    // component's compiled IL). Only strings that repeat verbatim across the three identical
+    // dropdowns are named here; one-offs stay inline in the markup above. `pg-dd-trigger` /
+    // `pg-dd-item` survive only as hooks for beck-editor.js's querySelectors; `pg-pill` /
+    // `pg-swatch` as hooks for the per-type/scheme colour tables in BrandStyling. State rides
+    // attributes Blazor already sets: aria-expanded: (open-trigger ring), group-[.is-open]:
+    // (caret flip), aria-selected: (chosen style/scheme).
+    private const string DdTrigger =
+        "pg-dd-trigger inline-flex items-center gap-2 leading-none text-[13px] font-medium cursor-pointer " +
+        "text-base-700 bg-white border border-base-300 rounded-lg px-[11px] py-[7px] " +
+        "transition-[border-color,background-color,box-shadow] duration-150 hover:border-base-400 " +
+        "dark:text-base-300 dark:bg-base-900 dark:border-base-700 dark:hover:border-base-600 " +
+        // Open-state ring rides the wrapper's .is-open (Blazor renders aria-expanded as a
+        // minimized boolean attribute — ="" not ="true" — so an aria-expanded: variant can't match).
+        "group-[.is-open]:border-primary-500 group-[.is-open]:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary-500)_20%,transparent)]";
+    private const string DdCaret = "w-[13px] h-[13px] opacity-50 [transition:transform_0.18s_ease] group-[.is-open]:rotate-180";
+    private const string DdPanel =
+        "absolute top-[calc(100%+7px)] z-40 max-h-[min(66vh,560px)] overflow-y-auto bg-white border border-base-200 " +
+        "rounded-[13px] p-2 shadow-[0_12px_34px_-10px_rgb(0_0_0_/_0.28),0_3px_10px_-3px_rgb(0_0_0_/_0.12)] " +
+        "dark:bg-base-900 dark:border-base-700 dark:shadow-[0_14px_40px_-10px_rgb(0_0_0_/_0.7)]";
+    private const string DdItem =
+        "pg-dd-item flex items-center w-full text-left cursor-pointer bg-transparent border-0 rounded-[9px] px-3 " +
+        "text-base-800 hover:bg-base-100 dark:text-base-100 dark:hover:bg-base-800";
+    private const string DdSchemeItem = DdItem +
+        " gap-[10px] py-2 aria-selected:bg-primary-50 dark:aria-selected:bg-[color-mix(in_srgb,var(--color-primary-950)_45%,transparent)]";
+    private const string DdItemMain = "flex flex-col gap-[3px] min-w-0 flex-auto";
+    private const string DdItemTitle = "text-[13px] font-medium truncate";
+    private const string DdItemDesc = "text-[11.5px] leading-[1.4] text-base-500 truncate dark:text-base-400";
+    private const string DdSwatch = "pg-swatch flex-none w-[15px] h-[15px] rounded border border-[rgb(0_0_0_/_0.18)] dark:border-[rgb(255_255_255_/_0.22)]";
 
     // Ask for the site's IBM Plex families (rewrites --beck-font); glyphs are measured in the
     // browser via canvas measureText (CanvasTextMeasurer), so card sizing matches exactly what
