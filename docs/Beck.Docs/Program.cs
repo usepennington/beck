@@ -78,6 +78,12 @@ builder.Services.AddMonorailCss(_ => new MonorailCssOptions
         BaseColorName = ColorName.Slate,      // neutral grays
     },
     ExtraStyles = BrandStyling.ExtraStyles,
+    // Component classes as utility compositions, expanded into @layer components. See
+    // BrandStyling.Applies for the split between this and the declarative ExtraStyles residue.
+    CustomCssFrameworkSettings = settings => settings with
+    {
+        Applies = settings.Applies.SetItems(BrandStyling.Applies),
+    },
 });
 
 // `:symbol` source embeds — pull real source out of files by path. ContentRoot is

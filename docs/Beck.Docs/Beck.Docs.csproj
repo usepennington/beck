@@ -36,6 +36,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Explicitly use the latest version here, it has some bug fixes that we want that aren't in Pennington yet -->
+    <PackageReference Include="MonorailCss" />
     <!-- Pennington content engine, from NuGet so the site builds on CI without a local
          b:\penn checkout. Versions are pinned centrally in Directory.Packages.props.
          - Pennington            : bare content host (markdown pipeline, RunOrBuildAsync).
