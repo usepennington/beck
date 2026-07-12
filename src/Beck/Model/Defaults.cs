@@ -27,6 +27,9 @@ internal static class Defaults
             // of 50 (30px pill + 20 gap), and Rank 70 is the face-to-face gap the fixed branch cubics bow
             // across (controls at ±40 out of the root / ±35 out of rank 1).
             [DiagramType.MindMap] = new(Rank: 70, Node: 20, CornerRadius: 16),
+            // Charts don't use rank/node spacing (no layered layout); the entry only satisfies the
+            // per-type lookup in BuildMeta. CornerRadius carries through as the chart's bar radius.
+            [DiagramType.Chart] = new(Rank: 96, Node: 32, CornerRadius: 16),
         };
 
     /// <summary>Narration is available by default; wpm/min/pad set the reading-time pace.</summary>

@@ -345,6 +345,43 @@ from a single point on each parent.
 A mind map renders **static** — no packets or narration, identical to the reduced-motion frame. A
 `flow:` is accepted for forward-compatibility but is not animated.
 
+## chart series (`type: chart`)
+
+A small, static data chart — bar, line, pie/donut, or scatter. Charts carry no nodes or edges and
+share only the [`meta`](#meta) block. Every series colour is derived from `--beck-primary` by the
+chosen palette, so the chart adopts your palette and flips light/dark. See the [chart
+guide](/docs/guides/chart).
+
+Top-level keys:
+
+| key | type | default | description |
+|---|---|---|---|
+| `chart` | `bar` \| `line` \| `pie` \| `donut` \| `scatter` | `bar` | The chart kind. |
+| `palette` | `analogous` \| `monochromatic` \| `complementary` \| `sequential` | `analogous` | How series colours beyond the first are derived from `--beck-primary`. |
+| `legend` | `right` \| `top` \| `bottom` \| `none` | `right` | Legend placement. |
+| `legendValues` | bool | `false` | Annotate each legend entry with its value (a right-hand column of single-magnitude series). |
+| `center` | string | — | Pie/donut centre headline (e.g. a total). |
+| `centerLabel` | string | — | Pie/donut centre sub-caption under `center`. |
+| `series` | list | — | **Required.** One entry per bar, slice, line, or point cluster. |
+
+Each `series` entry:
+
+| key | type | default | description |
+|---|---|---|---|
+| `label` | string | `Series N` | Legend / label text. |
+| `value` | number | — | A single magnitude — **bar / pie / donut**. |
+| `values` | list of numbers | — | A value per x-step — **line**. |
+| `points` | list of `[x, y]` pairs | — | Data points — **scatter**. |
+| `color` | token or CSS colour | palette slot | Override this series' derived colour. |
+
+**Palettes.** `analogous` steps the hue either side of the primary (categorical, the default);
+`monochromatic` mixes the primary toward the surface (ordered magnitude); `complementary` alternates
+the primary with its opposite, lightening per pair (two-way comparison); `sequential` fades the
+primary toward neutral (one continuous scale). Each is a pure `color-mix`/relative-colour expression
+over the tokens — swap `--beck-primary` and every series follows.
+
+Charts render **static** — no flow or animation.
+
 ## Icons
 
 Set a node's `icon` to one of these named keys. Many keys are aliases that share a glyph. An unknown

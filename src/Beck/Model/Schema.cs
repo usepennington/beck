@@ -250,6 +250,44 @@ internal sealed record FlowModel
 /// <summary>A labelled horizontal band in a sequence diagram, drawn before message <c>At</c>.</summary>
 internal sealed record SectionMark(string Label, int At, string Accent);
 
+/// <summary>An (x, y) data point for a scatter series.</summary>
+internal sealed record ChartPoint(double X, double Y);
+
+/// <summary>
+/// One data series in a <c>type: chart</c> chart. Which member carries the data depends on the
+/// chart kind: bar/pie/donut read <see cref="Values"/>[0] (one magnitude per category), line reads
+/// the whole <see cref="Values"/> list, and scatter reads <see cref="Points"/>. <see cref="Color"/>
+/// overrides the derived palette slot for this series (else null → take the palette colour).
+/// </summary>
+internal sealed record ChartSeries
+{
+    public required string Label { get; init; }
+    /// <summary>CSS colour override (e.g. <c>var(--beck-info)</c> or a raw hex), or null to take the
+    /// palette-derived slot for this series' index.</summary>
+    public string? Color { get; init; }
+    public required IReadOnlyList<double> Values { get; init; }
+    public required IReadOnlyList<ChartPoint> Points { get; init; }
+}
+
+/// <summary>
+/// A <c>type: chart</c> data chart. Rendered static (no flow), on its own painter that bypasses the
+/// node/edge layout+route pipeline; every series colour is a <see cref="ChartPalette"/> expression
+/// over <c>--beck-primary</c>, so the chart re-tints with the host palette and flips light↔dark.
+/// </summary>
+internal sealed record ChartModel
+{
+    public required ChartKind Kind { get; init; }
+    public required ChartPalette Palette { get; init; }
+    public required LegendPlacement Legend { get; init; }
+    /// <summary>Annotate each legend entry with its (single) value — bar/pie/donut only.</summary>
+    public required bool LegendValues { get; init; }
+    public required IReadOnlyList<ChartSeries> Series { get; init; }
+    /// <summary>Pie/donut centre headline (e.g. a total), or null.</summary>
+    public string? Center { get; init; }
+    /// <summary>Pie/donut centre sub-caption under <see cref="Center"/>, or null.</summary>
+    public string? CenterLabel { get; init; }
+}
+
 internal sealed record DiagramModel
 {
     public required DiagramMeta Meta { get; init; }
@@ -258,4 +296,6 @@ internal sealed record DiagramModel
     public required IReadOnlyList<EdgeModel> Edges { get; init; }
     public required FlowModel Flow { get; init; }
     public required IReadOnlyList<SectionMark> Sections { get; init; }
+    /// <summary>Chart payload for <c>type: chart</c>; null for every graph type.</summary>
+    public ChartModel? Chart { get; init; }
 }

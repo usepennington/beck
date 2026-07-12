@@ -1,0 +1,16 @@
+type: chart
+meta:
+  title: Requests by service
+  subtitle: Last 24 hours
+chart: donut
+palette: analogous
+legend: right
+legendValues: true
+center: 134M
+centerLabel: total
+series:
+  - { label: Gateway, value: 42 }
+  - { label: Catalog, value: 33 }
+  - { label: Checkout, value: 28 }
+  - { label: Search, value: 19 }
+  - { label: Accounts, value: 12 }

@@ -1,0 +1,16 @@
+type: chart
+meta:
+  title: Cloud spend by service
+  subtitle: This month
+chart: donut
+palette: analogous
+legend: right
+legendValues: true
+center: $128k
+centerLabel: total
+series:
+  - { label: Compute, value: 52 }
+  - { label: Storage, value: 34 }
+  - { label: Network, value: 22 }
+  - { label: Database, value: 14 }
+  - { label: Other, value: 6 }

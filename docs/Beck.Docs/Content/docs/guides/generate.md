@@ -1,7 +1,7 @@
 ---
 title: Generate diagrams from your code
 description: Build diagrams with the C# DiagramBuilder so they regenerate from your real model.
-order: 33
+order: 34
 sectionLabel: Cross-cutting
 uid: docs.guide.generate
 ---

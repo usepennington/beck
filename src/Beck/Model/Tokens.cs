@@ -6,7 +6,16 @@ namespace Beck.Model;
 // downstream layout/route/render/animate stages switch exhaustively.
 
 /// <summary>What the diagram is; picks the layout + routing strategy.</summary>
-internal enum DiagramType { Architecture, Sequence, State, Class, Flowchart, MindMap }
+internal enum DiagramType { Architecture, Sequence, State, Class, Flowchart, MindMap, Chart }
+
+/// <summary>The visual form of a <c>type: chart</c> data chart.</summary>
+internal enum ChartKind { Bar, Line, Pie, Donut, Scatter }
+
+/// <summary>How a chart derives series colours beyond the first from <c>--beck-primary</c>.</summary>
+internal enum ChartPalette { Analogous, Monochromatic, Complementary, Sequential }
+
+/// <summary>Where a chart's legend sits (or that there is none).</summary>
+internal enum LegendPlacement { None, Top, Right, Bottom }
 
 /// <summary>Primary layout axis.</summary>
 internal enum Direction { Tb, Bt, Lr, Rl }
@@ -79,7 +88,27 @@ internal static class Tokens
         (Model.DiagramType.State, "state"),
         (Model.DiagramType.Class, "class"),
         (Model.DiagramType.Flowchart, "flowchart"),
-        (Model.DiagramType.MindMap, "mindmap"));
+        (Model.DiagramType.MindMap, "mindmap"),
+        (Model.DiagramType.Chart, "chart"));
+
+    public static readonly TokenMap<ChartKind> ChartKind = new(
+        (Model.ChartKind.Bar, "bar"),
+        (Model.ChartKind.Line, "line"),
+        (Model.ChartKind.Pie, "pie"),
+        (Model.ChartKind.Donut, "donut"),
+        (Model.ChartKind.Scatter, "scatter"));
+
+    public static readonly TokenMap<ChartPalette> ChartPalette = new(
+        (Model.ChartPalette.Analogous, "analogous"),
+        (Model.ChartPalette.Monochromatic, "monochromatic"),
+        (Model.ChartPalette.Complementary, "complementary"),
+        (Model.ChartPalette.Sequential, "sequential"));
+
+    public static readonly TokenMap<LegendPlacement> LegendPlacement = new(
+        (Model.LegendPlacement.None, "none"),
+        (Model.LegendPlacement.Top, "top"),
+        (Model.LegendPlacement.Right, "right"),
+        (Model.LegendPlacement.Bottom, "bottom"));
 
     public static readonly TokenMap<Direction> Direction = new(
         (Model.Direction.Tb, "TB"),

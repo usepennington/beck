@@ -365,4 +365,130 @@ internal static class DiagramFuzzer
 
         return sb.ToString();
     }
+
+    private static readonly string[] _chartKinds = ["bar", "line", "pie", "donut", "scatter"];
+    private static readonly string[] _chartPalettes = ["analogous", "monochromatic", "complementary", "sequential"];
+    private static readonly string[] _chartLegends = ["right", "top", "bottom", "none"];
+    private static readonly string[] _chartColors = ["primary", "info", "success", "warn", "danger", "neutral", "#ff8800", "#22aa55"];
+
+    /// <summary>
+    /// Deterministic <c>type: chart</c> generator for the graceful-degradation chaos monkey. Emits a
+    /// structurally valid chart (so the model builder never throws — it's the <em>painter</em> under
+    /// test) but with deliberately hostile numbers: zero, negative, huge (`1e300`), tiny, fractional,
+    /// and an overflow literal (`1e400`) that parses to <c>Infinity</c>. Also stresses the layout with
+    /// 1–12 series, single-point lines (the <c>cols == 1</c> edge case), empty and very long labels,
+    /// per-series colour overrides, and every kind/palette/legend combination. The chart never has to
+    /// look <em>good</em> under this — it just has to render to finite, on-canvas SVG without throwing.
+    /// Seed → YAML is pure; a failing case reproduces from its seed alone.
+    /// </summary>
+    public static string ChartYaml(int seed)
+    {
+        var rng = new Random(seed);
+        var kind = _chartKinds[rng.Next(_chartKinds.Length)];
+        var palette = _chartPalettes[rng.Next(_chartPalettes.Length)];
+        var legend = _chartLegends[rng.Next(_chartLegends.Length)];
+        var series = 1 + rng.Next(12);   // 1..12 series, including the single-series edge case
+
+        // A wild but parseable numeric literal.
+        string Wild() => rng.Next(100) switch
+        {
+            < 52 => (1 + rng.Next(100)).ToString(CultureInfo.InvariantCulture),
+            < 62 => "0",
+            < 75 => (-1 - rng.Next(100)).ToString(CultureInfo.InvariantCulture),
+            < 83 => new[] { "1e3", "1e6", "1e9", "1e15", "1e300" }[rng.Next(5)],
+            < 90 => new[] { "0.0001", "0.000001", "1e-9" }[rng.Next(3)],
+            < 96 => (rng.Next(1, 400) / 7.0).ToString("0.###", CultureInfo.InvariantCulture),
+            _ => "1e400",   // overflows double → Infinity; the painter must stay finite
+        };
+
+        string Label()
+        {
+            if (rng.Next(8) == 0)
+            {
+                return "";   // omit → the builder defaults it to "Series N"
+            }
+
+            var n = rng.Next(10) == 0 ? 6 : 1 + rng.Next(2);   // occasional very long label (legend width)
+            return string.Join(' ', Enumerable.Range(0, n).Select(_ => _words[rng.Next(_words.Length)]));
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("type: chart");
+        if (rng.Next(2) == 0)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"meta: {{ title: \"{_words[rng.Next(_words.Length)]} chart\" }}");
+        }
+
+        sb.AppendLine(CultureInfo.InvariantCulture, $"chart: {kind}");
+        if (rng.Next(5) != 0)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"palette: {palette}");   // else default
+        }
+
+        if (rng.Next(5) != 0)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"legend: {legend}");
+        }
+
+        if (rng.Next(3) == 0)
+        {
+            sb.AppendLine("legendValues: true");
+        }
+
+        if ((kind == "pie" || kind == "donut") && rng.Next(2) == 0)
+        {
+            sb.AppendLine(CultureInfo.InvariantCulture, $"center: \"{Wild()}\"");
+            if (rng.Next(2) == 0)
+            {
+                sb.AppendLine("centerLabel: total");
+            }
+        }
+
+        sb.AppendLine("series:");
+        for (var i = 0; i < series; i++)
+        {
+            var parts = new StringBuilder();
+            var label = Label();
+            if (label.Length > 0)
+            {
+                parts.Append(CultureInfo.InvariantCulture, $"label: \"{label}\"");
+            }
+
+            void Comma()
+            {
+                if (parts.Length > 0)
+                {
+                    parts.Append(", ");
+                }
+            }
+
+            switch (kind)
+            {
+                case "line":
+                    Comma();
+                    parts.Append(CultureInfo.InvariantCulture,
+                        $"values: [{string.Join(", ", Enumerable.Range(0, 1 + rng.Next(8)).Select(_ => Wild()))}]");
+                    break;
+                case "scatter":
+                    Comma();
+                    parts.Append(CultureInfo.InvariantCulture,
+                        $"points: [{string.Join(", ", Enumerable.Range(0, 1 + rng.Next(8)).Select(_ => $"[{Wild()}, {Wild()}]"))}]");
+                    break;
+                default:
+                    Comma();
+                    parts.Append(CultureInfo.InvariantCulture, $"value: {Wild()}");
+                    break;
+            }
+
+            if (rng.Next(5) == 0)
+            {
+                Comma();
+                parts.Append(CultureInfo.InvariantCulture, $"color: \"{_chartColors[rng.Next(_chartColors.Length)]}\"");
+            }
+
+            sb.AppendLine(CultureInfo.InvariantCulture, $"  - {{ {parts} }}");
+        }
+
+        return sb.ToString();
+    }
 }

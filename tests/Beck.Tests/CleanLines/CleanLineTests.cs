@@ -267,6 +267,49 @@ public sealed class CleanLineTests
         }
     }
 
+    /// <summary>
+    /// The chart chaos monkey: every fuzzed chart — fed zero, negative, huge, and Infinity values,
+    /// 1–12 series, single-point lines, and empty/long labels — must still render to a finite,
+    /// on-canvas SVG rather than throw or emit <c>NaN</c>/<c>∞</c>/off-canvas coordinates. Charts have
+    /// no routing to score, so this is a pure graceful-degradation gate; every violation is hard.
+    /// Reproduce a failing seed with
+    /// <c>BECK_SEED=&lt;seed&gt; BECK_FUZZ=chart dotnet test --filter FullyQualifiedName~DumpSeed</c>.
+    /// </summary>
+    [Fact]
+    public void ChaosMonkey_Chart_DegradesGracefully()
+    {
+        var failures = new List<string>();
+        for (var seed = 0; seed < SeedCount; seed++)
+        {
+            foreach (var d in ChartQuality.Analyze(DiagramFuzzer.ChartYaml(seed)).Take(3))
+            {
+                failures.Add($"seed {seed}: [{d.Kind}] {d.Detail}");
+            }
+
+            if (failures.Count > 30)
+            {
+                break;
+            }
+        }
+        Assert.True(failures.Count == 0,
+            $"{failures.Count} chart grace violations over {SeedCount} fuzzed charts "
+            + $"(reproduce with BECK_SEED=<seed> BECK_FUZZ=chart ... --filter DumpSeed):\n  " + string.Join("\n  ", failures));
+    }
+
+    /// <summary>
+    /// Determinism over the chart pipeline: a fuzzed chart renders byte-identically twice, across 25
+    /// seeds spread over the fuzz range.
+    /// </summary>
+    [Fact]
+    public void Chart_RenderIsDeterministic()
+    {
+        for (var seed = 0; seed < SeedCount; seed += SeedCount / 25)
+        {
+            var yaml = DiagramFuzzer.ChartYaml(seed);
+            Assert.Equal(BeckSvg.Render(yaml), BeckSvg.Render(yaml));
+        }
+    }
+
     private static (Baseline Got, int Edges, int Faces, List<(double Score, int Seed, QualityReport R)> Worst) Aggregate(
         Func<int, string> yamlFor)
     {
@@ -365,6 +408,17 @@ public sealed class CleanLineTests
             }
 
             foreach (var d in mm.Violations)
+            {
+                _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
+            }
+            return;
+        }
+
+        if (fuzz == "chart")
+        {
+            var cyaml = DiagramFuzzer.ChartYaml(seed);
+            _out.WriteLine(cyaml);
+            foreach (var d in ChartQuality.Analyze(cyaml))
             {
                 _out.WriteLine($"  !! [{d.Kind}] {d.Detail}");
             }
