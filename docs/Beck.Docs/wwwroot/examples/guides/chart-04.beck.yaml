@@ -1,0 +1,12 @@
+type: chart
+meta:
+  title: Response time under load
+  subtitle: Each point a load test, grouped by build
+chart: scatter
+palette: sequential
+legend: bottom
+series:
+  - { label: v3.1, points: [[10, 42], [16, 48], [12, 39]] }
+  - { label: v3.2, points: [[30, 55], [36, 61], [33, 50]] }
+  - { label: v3.3, points: [[52, 70], [58, 66], [55, 78]] }
+  - { label: v3.4, points: [[74, 88], [80, 95], [77, 84]] }

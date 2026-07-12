@@ -93,6 +93,16 @@ internal static class SvgRenderer
 
             body.Append("</g>");
         }
+        else if (model.Meta.Type == DiagramType.Chart)
+        {
+            // Charts skip the whole node/edge/flow pipeline: the painter draws straight to SVG, and a
+            // dummy LayoutResult carries only its size into the shared shell (title + token <style>).
+            // meta.Animate is forced false in the builder, so the animation gates below never fire.
+            var (chartBody, chartW, chartH) = ChartPainter.Render(model.Chart!, measurer, guard);
+            layout = new LayoutResult(new Dictionary<string, Rect>(), new Dictionary<string, Rect>(), chartW, chartH);
+            body.Append(chartBody);
+            flowEdges = [];
+        }
         else
         {
             layout = model.Meta.Type == DiagramType.MindMap

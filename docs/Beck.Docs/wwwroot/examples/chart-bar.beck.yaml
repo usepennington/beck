@@ -1,0 +1,13 @@
+type: chart
+meta:
+  title: Revenue by region
+  subtitle: Trailing twelve months, in millions
+chart: bar
+palette: analogous
+legend: right
+series:
+  - { label: North America, value: 42 }
+  - { label: EMEA, value: 33 }
+  - { label: APAC, value: 28 }
+  - { label: SE Asia, value: 19 }
+  - { label: LATAM, value: 12 }

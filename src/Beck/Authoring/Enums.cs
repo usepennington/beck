@@ -190,6 +190,47 @@ public enum StepKind
     End,
 }
 
+/// <summary>The visual form of a <c>type: chart</c> data chart.</summary>
+public enum ChartKind
+{
+    /// <summary>Vertical bars, one per series — a magnitude per category.</summary>
+    Bar,
+    /// <summary>Poly-lines, one per series across a shared x-axis.</summary>
+    Line,
+    /// <summary>A filled pie, one wedge per series.</summary>
+    Pie,
+    /// <summary>A ring (pie with a hole), with an optional centre label.</summary>
+    Donut,
+    /// <summary>An x/y scatter, one colour per series (point cluster).</summary>
+    Scatter,
+}
+
+/// <summary>How a chart derives series colours beyond the first from <c>--beck-primary</c>.</summary>
+public enum ChartPalette
+{
+    /// <summary>Small hue steps either side of the primary — the categorical default.</summary>
+    Analogous,
+    /// <summary>Tints of one hue, mixed toward the surface — ordered magnitude.</summary>
+    Monochromatic,
+    /// <summary>Primary alternating with its opposite — a two-way comparison.</summary>
+    Complementary,
+    /// <summary>Primary fading toward neutral — one continuous scale (density/heat).</summary>
+    Sequential,
+}
+
+/// <summary>Where a chart's legend sits (or that there is none).</summary>
+public enum LegendPlacement
+{
+    /// <summary>No legend.</summary>
+    None,
+    /// <summary>A centered row above the plot.</summary>
+    Top,
+    /// <summary>A column to the right of the plot (the default).</summary>
+    Right,
+    /// <summary>A centered row below the plot.</summary>
+    Bottom,
+}
+
 /// <summary>How two classes in a <c>type: class</c> diagram relate.</summary>
 public enum RelationKind
 {
@@ -223,6 +264,9 @@ internal static class Tokens
     public static string Of(ArrowEnds a) => a.ToString().ToLowerInvariant();
     public static string Of(RelationKind r) => r.ToString().ToLowerInvariant();
     public static string Of(StepKind k) => k.ToString().ToLowerInvariant();
+    public static string Of(ChartKind k) => k.ToString().ToLowerInvariant();
+    public static string Of(ChartPalette p) => p.ToString().ToLowerInvariant();
+    public static string Of(LegendPlacement l) => l.ToString().ToLowerInvariant();
 
     public static string Of(EdgeCurve c) => c switch
     {

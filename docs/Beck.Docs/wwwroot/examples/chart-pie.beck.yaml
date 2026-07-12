@@ -1,0 +1,12 @@
+type: chart
+meta:
+  title: Storage by tier
+  subtitle: Tints of one hue for an ordered magnitude
+chart: pie
+palette: monochromatic
+legend: right
+series:
+  - { label: Hot, value: 48 }
+  - { label: Warm, value: 27 }
+  - { label: Cold, value: 15 }
+  - { label: Archive, value: 10 }

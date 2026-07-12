@@ -45,8 +45,9 @@ That is a complete diagram. With no `flow:` block, Beck derives a packet animati
 ## The document shape
 
 A Beck document is a YAML mapping that **always opens with a root `type:`** — one of
-`architecture`, `sequence`, `state`, `class`, `flowchart`, or `mindmap`. The type picks the
-top-level keys; `meta` and `flow` are shared by all six. For `type: architecture`:
+`architecture`, `sequence`, `state`, `class`, `flowchart`, `mindmap`, or `chart`. The type picks the
+top-level keys; `meta` is shared by all, and `flow` by every type except `chart` (which is static).
+For `type: architecture`:
 
 ```yaml
 type: architecture # REQUIRED first — architecture | sequence | state | class
@@ -59,8 +60,9 @@ flow:    { ... }   # optional — scripted animation; omit and one is derived
 
 The other types swap the middle keys: `type: sequence` uses `participants` + `messages`,
 `type: state` uses `states` + `transitions`, `type: class` uses `classes` + `relations` (+
-`groups`), `type: flowchart` uses `steps` + `links`, `type: mindmap` uses `root` + `topics`. Their
-cheat-sheets are [below](#the-other-diagram-types-sequence-state-class-flowchart-mindmap).
+`groups`), `type: flowchart` uses `steps` + `links`, `type: mindmap` uses `root` + `topics`, and
+`type: chart` uses `series`. Their
+cheat-sheets are [below](#the-other-diagram-types-sequence-state-class-flowchart-mindmap-chart).
 
 Inline (`{ }` / `[ ]`) and block YAML are both fine. Use whichever is clearer.
 
@@ -154,12 +156,12 @@ For anything else, pass raw inline `<svg>…</svg>` using `fill="currentColor"`/
 and a `0 0 24 24` viewBox so it inherits the node's accent and theme. Full live catalogue:
 [Icons reference](/docs/reference/icons).
 
-## The other diagram types: sequence, state, class, flowchart, mindmap
+## The other diagram types: sequence, state, class, flowchart, mindmap, chart
 
-All five share `meta`, `flow`, colours, and theming with architecture diagrams. Only the middle
-keys differ. Full tables: [YAML schema](/docs/reference/yaml); guides:
+All share `meta`, colours, and theming with architecture diagrams (charts are static — no `flow`).
+Only the middle keys differ. Full tables: [YAML schema](/docs/reference/yaml); guides:
 [sequence](/docs/guides/sequence) · [state](/docs/guides/state) · [class](/docs/guides/class) ·
-[flowchart](/docs/guides/flowchart) · [mindmap](/docs/guides/mindmap).
+[flowchart](/docs/guides/flowchart) · [mindmap](/docs/guides/mindmap) · [chart](/docs/guides/chart).
 
 ### `type: sequence` — participants + messages
 
@@ -286,6 +288,30 @@ topics:
     children: [Beck, Beck.Skia]
 ```
 
+### `type: chart` — series
+
+A small, static data chart: `chart:` is `bar`, `line`, `pie`, `donut`, or `scatter`. `series:` is
+required — one entry per bar/slice (`value:`), line (`values: [...]`), or scatter cluster
+(`points: [[x, y], ...]`); any series may set its own `color:`. Series colours are derived from
+`--beck-primary` by `palette:` (`analogous` default, `monochromatic`, `complementary`, `sequential`)
+— pure token expressions, so they re-tint with the host palette and flip light/dark. `legend:` is
+`right` (default), `top`, `bottom`, or `none`; `legendValues: true` prints values in a right-hand
+legend; `center` / `centerLabel` set a donut's centre. No `flow` — charts don't animate.
+
+```beck
+type: chart
+chart: donut
+palette: analogous
+legend: right
+legendValues: true
+center: 134M
+centerLabel: total
+series:
+  - { label: Gateway, value: 42 }
+  - { label: Catalog, value: 33 }
+  - { label: Checkout, value: 28 }
+```
+
 ## Flow (animation)
 
 A `flow` is an ordered list of single-key step mappings the engine compiles into a timeline and
@@ -391,14 +417,15 @@ Each diagram type has its own builder: `DiagramBuilder` (architecture),
 (`Class`/`Inherits`/`Composition`/…, plus **`ClassDiagramBuilder.FromTypes(typeof(…), …)`**, which
 reflects real CLR types into an always-current class diagram — base types become `inherits`,
 interfaces `implements`, property types labelled associations), `FlowchartDiagramBuilder`
-(`Step`/`Process`/`Decision`/`Terminator`/`Io`/`Start`/`End`/`Link`), and `MindMapDiagramBuilder`
-(`Root`/`Topic`, with `Topic` nestable to any depth for `children`).
+(`Step`/`Process`/`Decision`/`Terminator`/`Io`/`Start`/`End`/`Link`), `MindMapDiagramBuilder`
+(`Root`/`Topic`, with `Topic` nestable to any depth for `children`), and `ChartDiagramBuilder`
+(`Palette`/`Legend`/`Center`/`Series`, one `Series` per bar/line/point-cluster).
 
 C# enums map to schema tokens (lowercased), with one special case: `EdgeCurve.StepRound` →
 `step-round`. `Direction` stays uppercase. Enums available: `Direction`, `NodeKind`, `NodeVariant`,
 `EdgeStyle`, `EdgeCurve`, `EdgeKind`, `RelationKind`, `PacketEase`, `PacketShape`, `ThemeMode`,
-`FitMode`, `AccentToken`, `Side`, `ArrowEnds`. The builders throw if an edge/message/relation
-references an undeclared id. Full surface: [API reference](/api) · tutorial: [Author a diagram in
+`FitMode`, `AccentToken`, `Side`, `ArrowEnds`, `ChartKind`, `ChartPalette`, `LegendPlacement`. The
+builders throw if an edge/message/relation references an undeclared id. Full surface: [API reference](/api) · tutorial: [Author a diagram in
 C#](/docs/tutorials/csharp) · keeping diagrams in sync with your model: [Generate diagrams from
 your code](/docs/guides/generate).
 

@@ -305,12 +305,14 @@ internal static class BrandStyling
         .pg-pill[data-type="class"]        { color: #6d28d9;                            background: color-mix(in srgb, #8b5cf6 16%, transparent);                            border-color: color-mix(in srgb, #8b5cf6 32%, transparent); }
         .pg-pill[data-type="flowchart"]    { color: #0f766e;                            background: color-mix(in srgb, #14b8a6 15%, transparent);                            border-color: color-mix(in srgb, #14b8a6 30%, transparent); }
         .pg-pill[data-type="mindmap"]      { color: #be123c;                            background: color-mix(in srgb, #f43f5e 14%, transparent);                            border-color: color-mix(in srgb, #f43f5e 30%, transparent); }
+        .pg-pill[data-type="chart"]        { color: #0e7490;                            background: color-mix(in srgb, #06b6d4 15%, transparent);                            border-color: color-mix(in srgb, #06b6d4 30%, transparent); }
         .dark .pg-pill[data-type="architecture"] { color: var(--color-emerald-300, #6ee7b7); }
         .dark .pg-pill[data-type="sequence"]     { color: var(--color-sky-300, #7dd3fc); }
         .dark .pg-pill[data-type="state"]        { color: #fcd34d; }
         .dark .pg-pill[data-type="class"]        { color: #c4b5fd; }
         .dark .pg-pill[data-type="flowchart"]    { color: #5eead4; }
         .dark .pg-pill[data-type="mindmap"]      { color: #fda4af; }
+        .dark .pg-pill[data-type="chart"]        { color: #67e8f9; }
 
         /* Colour-scheme swatch: a two-tone chip previewing each palette's signature. */
         .pg-swatch { flex: none; width: 15px; height: 15px; border-radius: 4px; border: 1px solid rgb(0 0 0 / .18); }

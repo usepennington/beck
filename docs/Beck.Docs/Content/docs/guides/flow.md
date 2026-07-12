@@ -1,7 +1,7 @@
 ---
 title: Animate the flow
 description: Script packets, bursts, status pills, and effects to tell a story with motion.
-order: 32
+order: 33
 sectionLabel: Cross-cutting
 uid: docs.guide.flow
 ---

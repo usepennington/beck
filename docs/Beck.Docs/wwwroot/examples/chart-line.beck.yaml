@@ -1,0 +1,10 @@
+type: chart
+meta:
+  title: Signups, this year vs last
+  subtitle: Monthly, first half — a two-way comparison
+chart: line
+palette: complementary
+legend: top
+series:
+  - { label: This year, values: [30, 38, 42, 51, 58, 67] }
+  - { label: Last year, values: [24, 27, 33, 36, 40, 45] }

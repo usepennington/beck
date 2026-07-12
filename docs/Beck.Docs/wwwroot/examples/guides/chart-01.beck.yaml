@@ -1,0 +1,13 @@
+type: chart
+meta:
+  title: Requests by endpoint
+  subtitle: Peak hour, thousands per minute
+chart: bar
+palette: analogous
+legend: right
+series:
+  - { label: /search, value: 48 }
+  - { label: /catalog, value: 36 }
+  - { label: /cart, value: 24 }
+  - { label: /checkout, value: 15 }
+  - { label: /account, value: 9 }

@@ -1,0 +1,13 @@
+type: chart
+meta:
+  title: Latency vs throughput
+  subtitle: Each point a node, coloured by region
+chart: scatter
+palette: sequential
+legend: bottom
+series:
+  - { label: us-east, points: [[20, 72], [26, 80], [31, 68], [24, 88]] }
+  - { label: us-west, points: [[38, 60], [44, 66], [41, 54], [49, 62]] }
+  - { label: eu-west, points: [[55, 50], [60, 44], [52, 58], [64, 52]] }
+  - { label: ap-south, points: [[70, 38], [76, 44], [72, 30], [80, 40]] }
+  - { label: sa-east, points: [[86, 24], [92, 30], [88, 18], [95, 26]] }
