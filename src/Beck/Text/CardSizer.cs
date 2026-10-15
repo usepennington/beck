@@ -365,11 +365,12 @@ internal static class CardSizer
         }
 
         var bodyW = node.Body != null ? W(m, r, node.Body, FontRole.CardSubtitle) : 0;
-        // A flow status/fail step swaps a pill into this card; the box pre-grows to the widest
-        // pill (text + 16px chip padding) since compiled CSS can't reflow the way the live-DOM
-        // engine did. Statuses never wrap, so past CardMaxW a pill still overflows (like the JS
-        // engine's un-wrappable chip).
-        double statusW = 0;
+        // The status chip (text + 16px chip padding) is a row like any other: an authored
+        // `status:` wider than the title must grow the box, or the chip overhangs the card. A flow
+        // status/fail step swaps a pill into this card too; the box pre-grows to the widest pill
+        // since compiled CSS can't reflow the way the live-DOM engine did. Statuses never wrap, so
+        // past CardMaxW a pill still overflows (like the JS engine's un-wrappable chip).
+        var statusW = node.Status != null ? W(m, r, node.Status, FontRole.Status) + 16 : 0;
         if (flowStatuses != null)
         {
             foreach (var s in flowStatuses)

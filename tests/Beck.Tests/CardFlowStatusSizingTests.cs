@@ -39,6 +39,22 @@ public sealed class CardFlowStatusSizingTests
     }
 
     [Fact]
+    public void AuthoredStatus_WiderThanTitle_GrowsCardWidth()
+    {
+        // The static chip is sized exactly like a flow pill (text + 16px chip padding): a short
+        // title under a long `status:` must not leave the chip overhanging the card.
+        const string Status = "may hold error symbols";
+        var plain = CardSizer.Measure(Node("MIR"), _m, _geo);
+        var node = Node("MIR", status: Status);
+        var sized = CardSizer.Measure(node, _m, _geo);
+
+        Assert.True(sized.W > plain.W, $"wide status must grow the card ({plain.W} → {sized.W})");
+        var chipW = _m.Measure(Status, FontRole.Status, BeckStyle.Classic.Typography.Roles.Of(FontRole.Status)).Width + 16;
+        var chrome = plain.W - CardSizer.CardTextAvail(Node("MIR"), _m, _geo);
+        Assert.Equal(Math.Clamp(Math.Ceiling(chipW) + chrome, _geo.CardMinW, _geo.CardMaxW), sized.W);
+    }
+
+    [Fact]
     public void FlowStatuses_ReserveTheSameRowAsAnAuthoredStatus()
     {
         // The reserved status row must be exactly the one an authored `status:` gets — a flow that
