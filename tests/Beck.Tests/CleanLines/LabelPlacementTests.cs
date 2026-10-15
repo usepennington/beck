@@ -52,6 +52,54 @@ public sealed class LabelPlacementTests
         throw new Xunit.Sdk.XunitException($"no edge label '{text}' in the rendered SVG");
     }
 
+    private const string ShortGap = """
+        type: architecture
+        meta:
+          direction: LR
+          spacing: { rank: 56, node: 32 }
+        nodes:
+          - { id: lir, title: LIR, icon: stream }
+          - id: emit
+            title: Emitter
+            icon: function
+            items:
+              - System.Reflection.Metadata
+              - writes the IL itself
+          - { id: dll, title: Assembly, subtitle: .dll, kind: external, icon: file }
+          - { id: cfg, title: Runtime config, subtitle: what the host reads, kind: external, icon: file }
+          - { id: pdb, title: Debug database, subtitle: lines of Mew, kind: external, icon: file }
+        edges:
+          - { from: lir, to: emit, label: write }
+          - { from: emit, to: dll }
+          - { from: emit, to: cfg }
+          - { from: emit, to: pdb }
+        """;
+
+    [Fact]
+    public void ShortGap_LabelSitsBetweenTheCards()
+    {
+        // A 56px rank gap holds "write" with room to spare, but only at the gap's middle. The
+        // router splits the straight run at its midpoint, and the placer used to sample each half
+        // at one point near its far end, so both candidates nosed into a card and the label was
+        // drawn across LIR's border. The middle of the run must be a candidate.
+        var svg = BeckSvg.Render(ShortGap, new SvgRenderOptions { Animation = AnimationMode.Static });
+
+        var label = Regex.Match(svg, """<text class="beck-edge-label"[^>]*\sx="(?<x>[-\d.]+)"[^>]*textLength="(?<w>[-\d.]+)"[^>]*>write</text>""");
+        Assert.True(label.Success, "no 'write' label in the rendered SVG");
+        double x = double.Parse(label.Groups["x"].Value, CultureInfo.InvariantCulture);
+        double w = double.Parse(label.Groups["w"].Value, CultureInfo.InvariantCulture);
+
+        static double NodeX(string svg, string id) => double.Parse(
+            Regex.Match(svg, $"""data-node="{id}" transform="translate\((?<x>[-\d.]+),""").Groups["x"].Value, CultureInfo.InvariantCulture);
+        static double NodeW(string svg, string id) => double.Parse(
+            Regex.Match(svg, @"data-node=""" + id + @"""[^>]*>.*?\swidth=""(?<w>[-\d.]+)""", RegexOptions.Singleline).Groups["w"].Value, CultureInfo.InvariantCulture);
+        var gapLeft = NodeX(svg, "lir") + NodeW(svg, "lir");
+        var gapRight = NodeX(svg, "emit");
+
+        Assert.True(x - w / 2 > gapLeft + 2 && x + w / 2 < gapRight - 2,
+            $"'write' spans {x - w / 2:0.#}..{x + w / 2:0.#} but the gap between the cards is {gapLeft:0.#}..{gapRight:0.#}");
+    }
+
     [Fact]
     public void ParallelTransition_LabelClearsTheOppositeRung()
     {

@@ -51,7 +51,11 @@ internal sealed class LabelPlacer
         var h = _edgeLabel.SizePx; // edge-label ink height ≈ font size
         double hw = w / 2 + LabelPadX, hh = h / 2 + LabelPadY;
         var all = _placed.Count > 0 ? _obstacles.Concat(_placed).ToList() : _obstacles;
-        var box = ChooseLabelBox(points, hw, hh, all, lines, selfIndex, PolylineMidpoint(points));
+        // Candidates are sampled per segment, so a straight run the router split at a waypoint
+        // (A → mid → B, all collinear) would only ever offer the two half-runs' midpoints — never
+        // the middle of the gap. Dropping the collinear joins first makes that run one segment.
+        var run = DropCollinear(points);
+        var box = ChooseLabelBox(run, hw, hh, all, lines, selfIndex, PolylineMidpoint(run));
         var tx = box.Anchor == "start" ? box.Cx - w / 2 : box.Anchor == "end" ? box.Cx + w / 2 : box.Cx;
         _placed.Add(new Rect(box.Cx - box.Hw, box.Cy - box.Hh, box.Hw * 2, box.Hh * 2));
         return $"<text class=\"beck-edge-label\" x=\"{I(tx)}\" y=\"{I(box.Cy)}\" text-anchor=\"{box.Anchor}\" dominant-baseline=\"central\" font-size=\"{N(_edgeLabel.SizePx)}\" font-weight=\"{P(_edgeLabel.Weight)}\"{Guard(w)}>{SvgWriter.Text(text)}</text>";
@@ -166,6 +170,30 @@ internal sealed class LabelPlacer
         return (node, line);
     }
 
+    /// <summary>The polyline with every interior point that lies on the straight line between its
+    /// neighbours removed — the same path, but a straight run is one segment rather than several.</summary>
+    private static IReadOnlyList<Point> DropCollinear(IReadOnlyList<Point> points)
+    {
+        if (points.Count < 3)
+        {
+            return points;
+        }
+
+        var kept = new List<Point>(points.Count) { points[0] };
+        for (var i = 1; i < points.Count - 1; i++)
+        {
+            Point a = kept[^1], b = points[i], c = points[i + 1];
+            var cross = (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
+            if (Math.Abs(cross) > 0.01)
+            {
+                kept.Add(b);
+            }
+        }
+
+        kept.Add(points[^1]);
+        return kept;
+    }
+
     private static Point PolylineMidpoint(IReadOnlyList<Point> points)
     {
         var segs = new List<double>();
@@ -230,6 +258,14 @@ internal sealed class LabelPlacer
 
             var inset = Math.Min(LabelEndInset / len, 0.5);
             var steps = Math.Max(1, Math.Min(6, (int)Math.Floor(len / 40)));
+            // An even step count puts a sample at the segment's midpoint, so the middle of a gap
+            // between two cards is always on offer — an odd count straddles it, and on a short
+            // segment the two samples it does take both nose into the cards at either end.
+            if (steps % 2 == 1)
+            {
+                steps++;
+            }
+
             for (var k = 0; k <= steps; k++)
             {
                 var tt = inset + (1 - 2 * inset) * ((double)k / steps);
